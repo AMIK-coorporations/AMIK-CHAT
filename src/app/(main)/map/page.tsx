@@ -8,20 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import dynamic from 'next/dynamic';
 
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-// This is the standard fix for the Leaflet + Next.js/Webpack icon issue.
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: markerIcon2x.src,
-    iconUrl: markerIcon.src,
-    shadowUrl: markerShadow.src,
-});
+// Dynamically import Leaflet to avoid SSR issues
+const L = dynamic(() => import('leaflet'), { ssr: false });
 
 
 interface SearchResult {
@@ -68,6 +58,17 @@ export default function MapPage() {
 
     useEffect(() => {
         if (mapContainerRef.current && !mapInstanceRef.current) {
+            // Import Leaflet CSS dynamically
+            import('leaflet/dist/leaflet.css');
+            
+            // Fix Leaflet icon issues
+            delete (L.Icon.Default.prototype as any)._getIconUrl;
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            });
+
             const map = L.map(mapContainerRef.current, {
                 center: [30.3753, 69.3451], // Centered on Pakistan
                 zoom: 5,
