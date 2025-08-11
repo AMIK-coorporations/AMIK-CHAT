@@ -11,7 +11,8 @@ import type {
 const TOAST_LIMIT = 3
 const TOAST_REMOVE_DELAY = 10000
 
-type ToasterToast = ToastProps & {
+// Allow optional custom id when creating a toast
+export type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -140,10 +141,11 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+// Accept an optional id when creating toast
+type Toast = Omit<ToasterToast, "id"> & { id?: string }
 
-function toast({ ...props }: Toast) {
-  const id = genId()
+function toast({ id: providedId, ...props }: Toast) {
+  const id = providedId ?? genId()
 
   const update = (props: ToasterToast) =>
     dispatch({
