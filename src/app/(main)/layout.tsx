@@ -51,8 +51,12 @@ export default function MainAppLayout({
         })) as Chat[];
         
         chatsData.sort((a, b) => {
-            const timeA = a.lastMessage?.timestamp?.toDate()?.getTime() || a.createdAt?.toDate()?.getTime() || 0;
-            const timeB = b.lastMessage?.timestamp?.toDate()?.getTime() || b.createdAt?.toDate()?.getTime() || 0;
+            const t1: any = a.lastMessage?.timestamp as any;
+            const c1: any = a.createdAt as any;
+            const t2: any = b.lastMessage?.timestamp as any;
+            const c2: any = b.createdAt as any;
+            const timeA = (typeof t1?.toDate === 'function' ? t1.toDate().getTime() : (typeof c1?.toDate === 'function' ? c1.toDate().getTime() : 0));
+            const timeB = (typeof t2?.toDate === 'function' ? t2.toDate().getTime() : (typeof c2?.toDate === 'function' ? c2.toDate().getTime() : 0));
             return timeB - timeA;
         });
 

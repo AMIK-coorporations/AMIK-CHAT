@@ -77,7 +77,8 @@ function ChatItem({ chat, currentUserId }: { chat: Chat; currentUserId: string }
     const updateFuzzyTime = () => {
       if (chat.lastMessage?.timestamp) {
         try {
-          const date = chat.lastMessage.timestamp.toDate();
+          const ts: any = chat.lastMessage.timestamp as any;
+          const date = typeof ts?.toDate === 'function' ? ts.toDate() : new Date();
           setTime(formatUrduDistanceToNow(date));
         } catch (e) {
           setTime('');
