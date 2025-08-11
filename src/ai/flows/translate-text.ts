@@ -44,7 +44,7 @@ const translateTextFlow = ai.defineFlow(
     inputSchema: TranslateTextInputSchema,
     outputSchema: TranslateTextOutputSchema,
   },
-  async input => {
+  async (input: TranslateTextInput) => {
     const {output} = await prompt(input);
     return output!;
   }

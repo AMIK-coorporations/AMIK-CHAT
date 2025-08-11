@@ -72,7 +72,7 @@ const searchFlow = ai.defineFlow(
     inputSchema: SearchInputSchema,
     outputSchema: SearchOutputSchema,
   },
-  async input => {
+  async (input: SearchInput) => {
     const {output} = await prompt(input);
     return output!;
   }

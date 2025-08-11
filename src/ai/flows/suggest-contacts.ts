@@ -54,7 +54,7 @@ const suggestContactsFlow = ai.defineFlow(
     inputSchema: SuggestContactsInputSchema,
     outputSchema: SuggestContactsOutputSchema,
   },
-  async input => {
+  async (input: SuggestContactsInput) => {
     const {output} = await prompt(input);
     return output!;
   }
