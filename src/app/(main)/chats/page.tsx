@@ -113,23 +113,17 @@ function ChatItem({ chat, currentUserId }: { chat: Chat; currentUserId: string }
   );
 }
 
-export default function ChatsPage({ chats: initialChats, loading }: { chats: Chat[], loading: boolean }) {
-  const [chats, setChats] = useState<Chat[]>(initialChats || []);
+export default function ChatsPage() {
+  const [chats, setChats] = useState<Chat[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading] = useState(false);
   const router = useRouter();
   const { user: currentUser } = useAuth();
 
-  useEffect(() => {
-    if (initialChats) {
-      setChats(initialChats);
-    }
-  }, [initialChats]);
-  
   const filteredChats = chats.filter(chat => {
     if (!currentUser) return false;
     const otherParticipantId = chat.participantIds.find(id => id !== currentUser.uid);
     if (!otherParticipantId) return false;
-    
     const otherParticipant = chat.participantsInfo[otherParticipantId];
     return otherParticipant?.name.toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -167,7 +161,7 @@ export default function ChatsPage({ chats: initialChats, loading }: { chats: Cha
           </DropdownMenu>
         </div>
       </header>
-       <div className="p-4 border-b">
+      <div className="p-4 border-b">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input 
@@ -187,7 +181,7 @@ export default function ChatsPage({ chats: initialChats, loading }: { chats: Cha
             currentUser && <ChatItem key={chat.id} chat={chat} currentUserId={currentUser.uid} />
           ))
         ) : (
-           <p className="p-4 text-center text-muted-foreground">کوئی چیٹ نہیں ملی۔</p>
+          <p className="p-4 text-center text-muted-foreground">کوئی چیٹ نہیں ملی۔</p>
         )}
       </div>
     </div>
