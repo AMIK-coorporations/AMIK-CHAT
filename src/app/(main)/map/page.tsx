@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import dynamic from 'next/dynamic';
+import type * as Leaflet from 'leaflet';
 
-// Dynamically import Leaflet to avoid SSR issues
-const L = dynamic(() => import('leaflet'), { ssr: false });
+// Runtime Leaflet namespace, assigned on client only
+let L: typeof Leaflet | null = null;
 
 
 interface SearchResult {
@@ -45,9 +45,9 @@ interface OSRMResponse {
 export default function MapPage() {
     const router = useRouter();
     const mapContainerRef = useRef<HTMLDivElement>(null);
-    const mapInstanceRef = useRef<L.Map | null>(null);
-    const markerLayerRef = useRef<L.LayerGroup | null>(null);
-    const routeLayerRef = useRef<L.LayerGroup | null>(null);
+    const mapInstanceRef = useRef<Leaflet.Map | null>(null);
+    const markerLayerRef = useRef<Leaflet.LayerGroup | null>(null);
+    const routeLayerRef = useRef<Leaflet.LayerGroup | null>(null);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
@@ -57,33 +57,46 @@ export default function MapPage() {
     const { toast } = useToast();
 
     useEffect(() => {
-        if (mapContainerRef.current && !mapInstanceRef.current) {
-            // Import Leaflet CSS dynamically
-            import('leaflet/dist/leaflet.css');
-            
+        let isCancelled = false;
+        const setup = async () => {
+            if (!mapContainerRef.current || mapInstanceRef.current) return;
+
+            // Load Leaflet only on client
+            const mod = await import('leaflet');
+            // Some bundlers expose default, some named
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            L = (mod as any).default ?? (mod as unknown as typeof Leaflet);
+
+            await import('leaflet/dist/leaflet.css');
+
             // Fix Leaflet icon issues
-            delete (L.Icon.Default.prototype as any)._getIconUrl;
-            L.Icon.Default.mergeOptions({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (L!.Icon.Default.prototype as any)._getIconUrl;
+            L!.Icon.Default.mergeOptions({
                 iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
                 iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
                 shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
             });
 
-            const map = L.map(mapContainerRef.current, {
+            if (isCancelled) return;
+
+            const map = L!.map(mapContainerRef.current, {
                 center: [30.3753, 69.3451], // Centered on Pakistan
                 zoom: 5,
             });
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            L!.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
             
-            markerLayerRef.current = L.layerGroup().addTo(map);
-            routeLayerRef.current = L.layerGroup().addTo(map);
+            markerLayerRef.current = L!.layerGroup().addTo(map);
+            routeLayerRef.current = L!.layerGroup().addTo(map);
             mapInstanceRef.current = map;
-        }
+        };
 
+        setup();
         return () => {
+            isCancelled = true;
             if (mapInstanceRef.current) {
                 mapInstanceRef.current.remove();
                 mapInstanceRef.current = null;
@@ -93,7 +106,7 @@ export default function MapPage() {
     
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!searchQuery.trim()) return;
+        if (!searchQuery.trim() || !L) return;
         
         setLoadingSearch(true);
         setError(null);
@@ -119,14 +132,15 @@ export default function MapPage() {
         }
     }
     
-    const getDirections = async (destination: L.LatLng) => {
+    const getDirections = async (destination: Leaflet.LatLng) => {
+      if (!L) return;
       setLoadingRoute(true);
       markerLayerRef.current?.clearLayers();
       routeLayerRef.current?.clearLayers();
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          const userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
+          const userLatLng = L!.latLng(position.coords.latitude, position.coords.longitude);
 
           const start = `${userLatLng.lng},${userLatLng.lat}`;
           const end = `${destination.lng},${destination.lat}`;
@@ -140,12 +154,12 @@ export default function MapPage() {
             }
             
             const route = data.routes[0].geometry;
-            const routeLine = L.geoJSON(route, { style: { color: 'hsl(var(--primary))', weight: 5 } });
+            const routeLine = L!.geoJSON(route, { style: { color: 'hsl(var(--primary))', weight: 5 } });
             
             routeLayerRef.current?.addLayer(routeLine);
             
-            L.marker(userLatLng).addTo(markerLayerRef.current!).bindPopup("آپ کا مقام").openPopup();
-            L.marker(destination).addTo(markerLayerRef.current!).bindPopup("منزل").openPopup();
+            L!.marker(userLatLng).addTo(markerLayerRef.current!).bindPopup("آپ کا مقام").openPopup();
+            L!.marker(destination).addTo(markerLayerRef.current!).bindPopup("منزل").openPopup();
             
             mapInstanceRef.current?.fitBounds(routeLine.getBounds());
           } catch (err) {
@@ -164,9 +178,10 @@ export default function MapPage() {
     }
 
     const handleResultClick = (result: SearchResult) => {
+        if (!L) return;
         const lat = parseFloat(result.lat);
         const lon = parseFloat(result.lon);
-        const destination = L.latLng(lat, lon);
+        const destination = L!.latLng(lat, lon);
         
         setResults([]);
         setSearchQuery('');
