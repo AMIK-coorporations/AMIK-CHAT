@@ -1,4 +1,4 @@
-import type { Timestamp } from "firebase/firestore";
+import type { Timestamp, FieldValue } from "firebase/firestore";
 
 export type User = {
   id: string;
@@ -9,7 +9,7 @@ export type User = {
 export type Message = {
   id:string;
   text: string;
-  timestamp: Timestamp;
+  timestamp: Timestamp | FieldValue;
   senderId: string;
   isRead: boolean;
   isDeleted?: boolean;
@@ -29,8 +29,8 @@ export type Chat = {
   lastMessage?: {
     text: string;
     senderId: string;
-    timestamp: Timestamp;
+    timestamp: Timestamp | FieldValue;
     isRead: boolean;
   } | null;
-  createdAt?: Timestamp;
+  createdAt?: Timestamp | FieldValue;
 };
