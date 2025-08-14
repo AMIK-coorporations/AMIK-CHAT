@@ -75,15 +75,11 @@ function ChatItem({ chat, currentUserId }: { chat: Chat; currentUserId: string }
 
     let timeoutId: NodeJS.Timeout;
     const updateFuzzyTime = () => {
-      if (chat.lastMessage?.timestamp) {
-        try {
-          const ts: any = chat.lastMessage.timestamp as any;
-          const date = typeof ts?.toDate === 'function' ? ts.toDate() : new Date();
-          setTime(formatUrduDistanceToNow(date));
-        } catch (e) {
-          setTime('');
-        }
-      } else {
+      try {
+        const ts: any = chat.lastMessage?.timestamp as any;
+        const date = ts && typeof ts.toDate === 'function' ? ts.toDate() : null;
+        setTime(date ? formatUrduDistanceToNow(date) : '');
+      } catch {
         setTime('');
       }
       timeoutId = setTimeout(updateFuzzyTime, 60000);
@@ -114,19 +110,17 @@ function ChatItem({ chat, currentUserId }: { chat: Chat; currentUserId: string }
   );
 }
 
-export default function ChatsPage() {
-  const [chats, setChats] = useState<Chat[]>([]);
+export default function ChatsPage({ chats, loading }: { chats: Chat[]; loading: boolean }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading] = useState(false);
   const router = useRouter();
   const { user: currentUser } = useAuth();
-  
-  const filteredChats = chats.filter(chat => {
+
+  const filteredChats = (chats || []).filter(chat => {
     if (!currentUser) return false;
     const otherParticipantId = chat.participantIds.find(id => id !== currentUser.uid);
     if (!otherParticipantId) return false;
     const otherParticipant = chat.participantsInfo[otherParticipantId];
-    return otherParticipant?.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return otherParticipant?.name?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   return (
@@ -162,7 +156,7 @@ export default function ChatsPage() {
           </DropdownMenu>
         </div>
       </header>
-       <div className="p-4 border-b">
+      <div className="p-4 border-b">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input 
@@ -182,7 +176,7 @@ export default function ChatsPage() {
             currentUser && <ChatItem key={chat.id} chat={chat} currentUserId={currentUser.uid} />
           ))
         ) : (
-           <p className="p-4 text-center text-muted-foreground">کوئی چیٹ نہیں ملی۔</p>
+          <p className="p-4 text-center text-muted-foreground">کوئی چیٹ نہیں ملی۔</p>
         )}
       </div>
     </div>
