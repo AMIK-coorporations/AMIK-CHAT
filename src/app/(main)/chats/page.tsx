@@ -120,7 +120,7 @@ export default function ChatsPage() {
   const [loading] = useState(false);
   const router = useRouter();
   const { user: currentUser } = useAuth();
-
+  
   const filteredChats = chats.filter(chat => {
     if (!currentUser) return false;
     const otherParticipantId = chat.participantIds.find(id => id !== currentUser.uid);
@@ -162,7 +162,7 @@ export default function ChatsPage() {
           </DropdownMenu>
         </div>
       </header>
-      <div className="p-4 border-b">
+       <div className="p-4 border-b">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input 
@@ -182,7 +182,7 @@ export default function ChatsPage() {
             currentUser && <ChatItem key={chat.id} chat={chat} currentUserId={currentUser.uid} />
           ))
         ) : (
-          <p className="p-4 text-center text-muted-foreground">کوئی چیٹ نہیں ملی۔</p>
+           <p className="p-4 text-center text-muted-foreground">کوئی چیٹ نہیں ملی۔</p>
         )}
       </div>
     </div>

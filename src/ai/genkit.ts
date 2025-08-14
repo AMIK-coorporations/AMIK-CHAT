@@ -7,9 +7,9 @@ let ai: any;
 if (typeof window === 'undefined') {
   // Server-side only
   ai = genkit({
-    plugins: [googleAI()],
-    model: 'googleai/gemini-2.0-flash',
-  });
+  plugins: [googleAI()],
+  model: 'googleai/gemini-2.0-flash',
+});
 } else {
   // Client-side fallback
   ai = {

@@ -71,7 +71,8 @@ export default function MainAppLayout({
             const isViewingChat = pathname === `/chats/${chatId}`;
 
             if (lastMessage && lastMessage.senderId !== user.uid && !lastMessage.isRead && !isViewingChat) {
-                const messageTimestamp = lastMessage.timestamp?.toMillis() ?? Date.now();
+                const ts: any = lastMessage.timestamp as any;
+                const messageTimestamp = typeof ts?.toMillis === 'function' ? ts.toMillis() : Date.now();
                 const messageKey = `${chatId}-${messageTimestamp}`;
 
                 if (notifiedMessageKeys.current.has(messageKey)) {
