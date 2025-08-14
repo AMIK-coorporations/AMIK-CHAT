@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { Chat, User } from '@/lib/types';
+import type { User } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -14,70 +14,6 @@ import { Search, Plus, MessageCircle, UserPlus, ScanLine, Landmark } from 'lucid
 import { db } from '@/lib/firebase';
 import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { createOrNavigateToChat } from '@/lib/chatUtils';
-
-function formatUrduDistanceToNow(date: Date): string {
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  const urduNumbers: { [key: number]: string } = { 1: 'ایک', 2: 'دو', 3: 'تین', 4: 'چار', 5: 'پانچ', 6: 'چھ', 7: 'سات', 8: 'آٹھ', 9: 'نو', 10: 'دس' };
-  const toUrduWord = (n: number) => urduNumbers[n] || String(n);
-  if (seconds < 2) return "ابھی ابھی";
-  if (seconds < 60) { const numWord = toUrduWord(seconds); return `${numWord} سیکنڈ پہلے`; }
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) { const numWord = toUrduWord(minutes); return `${numWord} منٹ پہلے`; }
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) { if (hours === 1) return 'ایک گھنٹہ پہلے'; const numWord = toUrduWord(hours); return `${numWord} گھنٹے پہلے`; }
-  const days = Math.floor(hours / 24);
-  if (days < 30) { const numWord = toUrduWord(days); return `${numWord} دن پہلے`; }
-  const months = Math.floor(days / 30);
-  if (months < 12) { if (months === 1) return 'ایک مہینہ پہلے'; const numWord = toUrduWord(months); return `${numWord} مہینے پہلے`; }
-  const years = Math.floor(days / 365);
-  const numWord = toUrduWord(years);
-  return `${numWord} سال پہلے`;
-}
-
-function ChatItem({ chat, currentUserId }: { chat: Chat; currentUserId: string }) {
-  const otherParticipantId = chat.participantIds.find(id => id !== currentUserId);
-  const otherParticipant = otherParticipantId ? chat.participantsInfo[otherParticipantId] : null;
-  const [time, setTime] = useState('');
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => { setHasMounted(true); }, []);
-
-  useEffect(() => {
-    if (!hasMounted) return;
-    let timeoutId: NodeJS.Timeout;
-    const updateFuzzyTime = () => {
-      try {
-        const ts: any = chat.lastMessage?.timestamp as any;
-        const date = ts && typeof ts.toDate === 'function' ? ts.toDate() : null;
-        setTime(date ? formatUrduDistanceToNow(date) : '');
-      } catch { setTime(''); }
-      timeoutId = setTimeout(updateFuzzyTime, 60000);
-    };
-    updateFuzzyTime();
-    return () => clearTimeout(timeoutId);
-  }, [chat.lastMessage?.timestamp, hasMounted]);
-
-  if (!otherParticipant) return null;
-
-  return (
-    <Link href={`/chats/${chat.id}`} className="block transition-colors hover:bg-muted/50">
-      <div className="flex items-center gap-4 p-4">
-        <Avatar className="h-12 w-12 border">
-          <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} data-ai-hint="person avatar" />
-          <AvatarFallback>{otherParticipant.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 overflow-hidden">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold truncate text-base">{otherParticipant.name}</p>
-            {hasMounted && chat.lastMessage && <p className="text-xs text-muted-foreground">{time}</p>}
-          </div>
-          <p className="text-sm text-muted-foreground truncate">{chat.lastMessage?.text || 'ابھی تک کوئی پیغام نہیں'}</p>
-        </div>
-      </div>
-    </Link>
-  );
-}
 
 function ContactRow({ contact, onClick }: { contact: User; onClick: () => void }) {
   return (
@@ -93,7 +29,7 @@ function ContactRow({ contact, onClick }: { contact: User; onClick: () => void }
   );
 }
 
-export default function ChatsPage({ chats, loading }: { chats: Chat[]; loading: boolean }) {
+export default function ChatsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [contacts, setContacts] = useState<User[]>([]);
   const [contactsLoading, setContactsLoading] = useState(true);
@@ -115,14 +51,6 @@ export default function ChatsPage({ chats, loading }: { chats: Chat[]; loading: 
     return () => unsub();
   }, [currentUser]);
 
-  const filteredChats = (chats || []).filter(chat => {
-    if (!currentUser) return false;
-    const otherParticipantId = chat.participantIds.find(id => id !== currentUser.uid);
-    if (!otherParticipantId) return false;
-    const otherParticipant = chat.participantsInfo[otherParticipantId];
-    return otherParticipant?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-  });
-
   const filteredContacts = (contacts || []).filter(c => c.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const startChat = async (contact: User) => {
@@ -130,8 +58,6 @@ export default function ChatsPage({ chats, loading }: { chats: Chat[]; loading: 
     const chatId = await createOrNavigateToChat(currentUser.uid, userData, contact);
     router.push(`/chats/${chatId}`);
   };
-
-  const showChats = filteredChats.length > 0;
 
   return (
     <div>
