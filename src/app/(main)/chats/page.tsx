@@ -173,13 +173,7 @@ export default function ChatsPage({ chats, loading }: { chats: Chat[]; loading: 
         </div>
       </div>
       <div className="divide-y">
-        {loading ? (
-          <p className="p-4 text-center text-muted-foreground">چیٹس لوڈ ہو رہی ہیں...</p>
-        ) : showChats ? (
-          filteredChats.map(chat => currentUser && (
-            <ChatItem key={chat.id} chat={chat} currentUserId={currentUser.uid} />
-          ))
-        ) : contactsLoading ? (
+        {contactsLoading ? (
           <p className="p-4 text-center text-muted-foreground">رابطے لوڈ ہو رہے ہیں...</p>
         ) : filteredContacts.length > 0 ? (
           filteredContacts.map(contact => (
