@@ -65,7 +65,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Image 
-            src="https://storage.googleapis.com/project-123-files/user-upload-5f6962ce-4b8c-4467-9c98-132da9700305.png?v=8"
+            src="/logo.png"
             alt="AMIK CHAT Logo" 
             width={64} 
             height={64} 
