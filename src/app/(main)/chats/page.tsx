@@ -62,9 +62,7 @@ function formatUrduDistanceToNow(date: Date): string {
 
 function ChatItem({ chat, currentUserId }: { chat: Chat; currentUserId: string }) {
   const otherParticipantId = chat.participantIds.find(id => id !== currentUserId);
-  const otherParticipant = otherParticipantId ? chat.participantsInfo?.[otherParticipantId] : null;
-  const displayName = otherParticipant?.name || 'Contact';
-  const avatarUrl = otherParticipant?.avatarUrl || '/logo.png';
+  const otherParticipant = otherParticipantId ? chat.participantsInfo[otherParticipantId] : null;
   const [time, setTime] = useState('');
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -91,18 +89,18 @@ function ChatItem({ chat, currentUserId }: { chat: Chat; currentUserId: string }
     return () => clearTimeout(timeoutId);
   }, [chat.lastMessage?.timestamp, hasMounted]);
 
-  if (!otherParticipantId) return null;
+  if (!otherParticipant) return null;
 
   return (
     <Link href={`/chats/${chat.id}`} className="block transition-colors hover:bg-muted/50">
       <div className="flex items-center gap-4 p-4">
         <Avatar className="h-12 w-12 border">
-          <AvatarImage src={avatarUrl} alt={displayName} data-ai-hint="person avatar" />
-          <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
+          <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} data-ai-hint="person avatar" />
+          <AvatarFallback>{otherParticipant.name.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex-1 overflow-hidden">
           <div className="flex items-center justify-between">
-            <p className="font-semibold truncate text-base">{displayName}</p>
+            <p className="font-semibold truncate text-base">{otherParticipant.name}</p>
             {hasMounted && chat.lastMessage && <p className="text-xs text-muted-foreground">{time}</p>}
           </div>
           <p className="text-sm text-muted-foreground truncate">{chat.lastMessage?.text || 'ابھی تک کوئی پیغام نہیں'}</p>
@@ -121,10 +119,8 @@ export default function ChatsPage({ chats, loading }: { chats: Chat[]; loading: 
     if (!currentUser) return false;
     const otherParticipantId = chat.participantIds.find(id => id !== currentUser.uid);
     if (!otherParticipantId) return false;
-    const otherParticipant = chat.participantsInfo?.[otherParticipantId];
-    if (!searchTerm) return true;
-    const name = otherParticipant?.name || 'Contact';
-    return name.toLowerCase().includes(searchTerm.toLowerCase());
+    const otherParticipant = chat.participantsInfo[otherParticipantId];
+    return otherParticipant?.name?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   return (
