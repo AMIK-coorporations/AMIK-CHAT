@@ -10,9 +10,9 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   themeColor: '#05c765',
   icons: {
-    icon: '/logo.png?v=2',
-    shortcut: '/logo.png?v=2',
-    apple: '/logo.png?v=2',
+    icon: '/favicon.ico?v=3',
+    shortcut: '/favicon.ico?v=3',
+    apple: '/favicon.ico?v=3',
   },
 };
 
