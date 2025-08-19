@@ -14,6 +14,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import Image from 'next/image';
+import AppLogo from '@/components/AppLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -64,14 +65,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Image 
-            src="/logo.png"
-            alt="AMIK CHAT Logo" 
-            width={64} 
-            height={64} 
-            className="mx-auto" 
-            data-ai-hint="logo chat bubble"
-          />
+          <AppLogo width={64} height={64} className="mx-auto" alt="AMIK CHAT Logo" />
           <h1 className="text-4xl font-bold mt-4">AMIK CHAT</h1>
         </div>
         <Card>

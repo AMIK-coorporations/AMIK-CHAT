@@ -96,15 +96,16 @@ export default function QrCodePage() {
                     bgColor="#FFFFFF"
                     level="H"
                   />
-                  <div className="absolute top-1/2 left-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 bg-white p-1 flex items-center justify-center rounded-md border shadow-md">
-                     <NextImage
-                        src="/logo.png"
-                        alt="AMIK Logo"
-                        width={48}
-                        height={48}
-                        data-ai-hint="logo chat bubble"
-                    />
-                  </div>
+                  <div className="absolute top-1/2 left-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 overflow-hidden">
+                      <NextImage
+                         src="/logo.png"
+                         alt="AMIK Logo"
+                         width={64}
+                         height={64}
+                         className="w-full h-full object-cover"
+                         data-ai-hint="logo chat bubble"
+                     />
+                   </div>
               </div>
 
               <p className="text-muted-foreground">دوست کے طور پر شامل کرنے کے لیے کیو آر کوڈ اسکین کریں</p>
