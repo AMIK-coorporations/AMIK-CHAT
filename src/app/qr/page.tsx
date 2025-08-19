@@ -2,8 +2,8 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
-import { useRef } from 'react';
-// import QRCode from 'react-qr-code';
+import { useRef, useState } from 'react';
+import QRCode from 'react-qr-code';
 import { useAuth } from '@/hooks/useAuth';
 import { ChevronLeft, MoreHorizontal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +12,6 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import NextImage from 'next/image';
-import StyledQr from '@/components/StyledQr';
 
 export default function QrCodePage() {
   const router = useRouter();
@@ -90,7 +89,23 @@ export default function QrCodePage() {
               </div>
 
               <div ref={qrCodeRef} className="bg-white p-4 rounded-lg shadow-md relative">
-                 <StyledQr value={qrValue} />
+                <QRCode
+                  value={qrValue}
+                  size={256}
+                  fgColor="hsl(var(--primary))"
+                  bgColor="#FFFFFF"
+                  level="H"
+                />
+                <div className="absolute top-1/2 left-1/2 h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2 overflow-hidden border rounded-md border-white/90">
+                    <NextImage
+                       src="/logo.png"
+                       alt="AMIK Logo"
+                       width={72}
+                       height={72}
+                       className="w-full h-full object-cover"
+                       data-ai-hint="logo chat bubble"
+                   />
+                </div>
               </div>
 
               <p className="text-muted-foreground">دوست کے طور پر شامل کرنے کے لیے کیو آر کوڈ اسکین کریں</p>
@@ -100,25 +115,24 @@ export default function QrCodePage() {
                 <div className="flex items-center gap-4 self-start w-full">
                     <Skeleton className="h-16 w-16 rounded-full" />
                     <div className="space-y-2">
-                       <Skeleton className="h-6 w-32" />
-                       <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-4 w-24" />
                     </div>
                 </div>
-                <Skeleton className="h-[288px] w-[288px] rounded-lg" />
-                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-64 w-64 rounded-lg" />
+                <Skeleton className="h-4 w-64" />
             </div>
           )}
         </div>
 
-        <footer className="w-full max-w-sm pb-4">
-          <div className="flex items-center justify-center space-x-2">
-            <Button variant="link" className="text-muted-foreground hover:text-primary px-2" onClick={() => router.push('/scan')}>کیو آر اسکین</Button>
-            <Separator orientation="vertical" className="h-4" />
-            <Button variant="link" className="text-muted-foreground hover:text-primary px-2">اسٹائل تبدیل کریں</Button>
-            <Separator orientation="vertical" className="h-4" />
-            <Button variant="link" className="text-muted-foreground hover:text-primary px-2" onClick={handleSaveImage}>تصویر محفوظ کریں</Button>
+        <div className="w-full">
+          <Separator className="my-4" />
+          <div className="flex justify-center space-x-4">
+            <Button onClick={handleSaveImage} variant="outline">
+              کیو آر کوڈ محفوظ کریں
+            </Button>
           </div>
-        </footer>
+        </div>
       </main>
     </div>
   );

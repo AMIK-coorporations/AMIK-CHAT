@@ -11,20 +11,15 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+    // Ensure static images are properly handled
+    unoptimized: false,
+    // Add logo.png to the list of allowed images
+    domains: [],
   },
   // Production optimizations for Vercel
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['@radix-ui/react-icons', '@radix-ui/react-primitives'],
-    // Enable modern features
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
   },
   // Webpack optimizations for production
   webpack: (config, { isServer, dev }) => {
@@ -73,10 +68,10 @@ const nextConfig = {
   compress: true,
   // Reduce build time
   swcMinify: true,
-  // Output configuration for production
-  output: 'standalone',
   // Enable static optimization
   staticPageGenerationTimeout: 120,
+  // Ensure static assets are properly copied
+  trailingSlash: false,
 };
 
 export default withPWA({

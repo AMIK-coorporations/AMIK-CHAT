@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
 import PrefetchRoutes from '@/components/PrefetchRoutes';
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: 'اے ایم آئی کے چیٹ',
@@ -32,6 +33,7 @@ export default function RootLayout({
           <PrefetchRoutes />
           {children}
           <Toaster />
+          <Analytics />
         </AuthProvider>
       </body>
     </html>
