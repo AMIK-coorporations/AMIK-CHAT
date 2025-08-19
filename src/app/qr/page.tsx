@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef } from 'react';
-import QRCode from 'react-qr-code';
+// import QRCode from 'react-qr-code';
 import { useAuth } from '@/hooks/useAuth';
 import { ChevronLeft, MoreHorizontal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import NextImage from 'next/image';
+import StyledQr from '@/components/StyledQr';
 
 export default function QrCodePage() {
   const router = useRouter();
@@ -89,23 +90,7 @@ export default function QrCodePage() {
               </div>
 
               <div ref={qrCodeRef} className="bg-white p-4 rounded-lg shadow-md relative">
-                  <QRCode
-                    value={qrValue}
-                    size={256}
-                    fgColor="hsl(var(--primary))"
-                    bgColor="#FFFFFF"
-                    level="H"
-                  />
-                  <div className="absolute top-1/2 left-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 overflow-hidden">
-                      <NextImage
-                         src="/logo.png"
-                         alt="AMIK Logo"
-                         width={64}
-                         height={64}
-                         className="w-full h-full object-cover"
-                         data-ai-hint="logo chat bubble"
-                     />
-                   </div>
+                 <StyledQr value={qrValue} />
               </div>
 
               <p className="text-muted-foreground">دوست کے طور پر شامل کرنے کے لیے کیو آر کوڈ اسکین کریں</p>
