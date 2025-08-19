@@ -98,7 +98,7 @@ export default function QrCodePage() {
                   />
                   <div className="absolute top-1/2 left-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 bg-white p-1 flex items-center justify-center rounded-md border shadow-md">
                      <NextImage
-                        src="https://storage.googleapis.com/project-123-files/user-upload-5f6962ce-4b8c-4467-9c98-132da9700305.png?v=8"
+                        src="/logo.png"
                         alt="AMIK Logo"
                         width={48}
                         height={48}
