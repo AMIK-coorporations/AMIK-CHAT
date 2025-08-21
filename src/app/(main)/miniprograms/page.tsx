@@ -59,7 +59,7 @@ export default function MiniProgramsPage() {
 				<Button variant="ghost" size="icon" onClick={() => router.back()}>
 					<ChevronLeft className="h-6 w-6" />
 				</Button>
-				<h1 className="flex-1 truncate text-lg font-semibold">منی پروگرامز</h1>
+				<h1 className="flex-1 truncate text-lg font-semibold" dir="rtl">منی پروگرامز</h1>
 			</header>
 
 			<div className="p-4 flex flex-col gap-4">
@@ -94,7 +94,7 @@ export default function MiniProgramsPage() {
 						<Link href={selectedApp?.url || '#'} target="_blank" rel="noopener noreferrer">
 							<Button variant="outline" className="w-full h-14 flex items-center gap-3 justify-start">
 								<Globe className="h-5 w-5" />
-								<div className="text-left">
+								<div className="text-right" dir="rtl">
 									<div className="font-medium">ویب سائٹ</div>
 									<div className="text-xs text-muted-foreground">براؤزر میں کھولیں</div>
 								</div>
@@ -107,7 +107,7 @@ export default function MiniProgramsPage() {
 							onClick={() => selectedApp && handleDownloadAPK(selectedApp.androidApk)}
 						>
 							<Download className="h-5 w-5" />
-							<div className="text-left">
+							<div className="text-right" dir="rtl">
 								<div className="font-medium">اینڈرائیڈ</div>
 								<div className="text-xs text-muted-foreground">APK فائل ڈاؤن لوڈ کریں</div>
 							</div>
@@ -119,7 +119,7 @@ export default function MiniProgramsPage() {
 							onClick={handleIOSClick}
 						>
 							<Smartphone className="h-5 w-5" />
-							<div className="text-left">
+							<div className="text-right" dir="rtl">
 								<div className="font-medium">آئی فون</div>
 								<div className="text-xs text-muted-foreground">iOS ایپ ڈاؤن لوڈ کریں</div>
 							</div>
@@ -131,17 +131,17 @@ export default function MiniProgramsPage() {
 			<AlertDialog open={isIOSDialogOpen} onOpenChange={setIsIOSDialogOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle className="flex items-center gap-2">
+						<AlertDialogTitle className="flex items-center gap-2" dir="rtl">
 							<Smartphone className="h-5 w-5 text-blue-500" />
 							iOS ایپ کی تیاری جاری ہے
 						</AlertDialogTitle>
-						<AlertDialogDescription className="text-right text-base leading-relaxed">
+						<AlertDialogDescription className="text-right text-base leading-relaxed" dir="rtl">
 							آپ کی iOS ایپ فی الحال تیار کی جا رہی ہے۔ ہم جلد ہی App Store پر اسے شائع کریں گے۔
 							<br /><br />
 							براہ کرم تھوڑا انتظار کریں یا ابھی ویب سائٹ استعمال کریں۔
 						</AlertDialogDescription>
 					</AlertDialogHeader>
-					<AlertDialogAction className="w-full">ٹھیک ہے</AlertDialogAction>
+					<AlertDialogAction className="w-full" dir="rtl">ٹھیک ہے</AlertDialogAction>
 				</AlertDialogContent>
 			</AlertDialog>
 		</div>
