@@ -3,7 +3,8 @@
 
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
-import { suggestContacts, type SuggestContactsOutput } from "@/ai/flows/suggest-contacts";
+// Call server via API to avoid bundling AI SDK on client
+type SuggestContactsOutput = { suggestedContacts: string[] };
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,7 +45,13 @@ export default function ContactSuggestions() {
     }
 
     try {
-        const result = await suggestContacts({ profileInformation, communicationPatterns });
+        const res = await fetch('/api/suggest-contacts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profileInformation, communicationPatterns })
+        });
+        if (!res.ok) throw new Error('Suggest contacts request failed');
+        const result: SuggestContactsOutput = await res.json();
         setState(result);
     } catch (error) {
         console.error("Error suggesting contacts:", error);

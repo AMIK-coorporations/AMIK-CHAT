@@ -1,5 +1,5 @@
 
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
@@ -10,12 +10,15 @@ export const metadata: Metadata = {
   title: 'اے ایم آئی کے چیٹ',
   description: 'ایک جدید چیٹ ایپلیکیشن',
   manifest: '/manifest.json',
-  themeColor: '#05c765',
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
     apple: '/logo.png',
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#05c765',
 };
 
 export default function RootLayout({
@@ -26,7 +29,6 @@ export default function RootLayout({
   return (
     <html lang="ur" dir="ltr" suppressHydrationWarning={true}>
       <head>
-        <meta name="theme-color" content="#05c765" />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning={true}>
         <AuthProvider>

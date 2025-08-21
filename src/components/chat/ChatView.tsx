@@ -12,7 +12,7 @@ import MessageBubble from "./MessageBubble";
 import { Label } from "@/components/ui/label";
 import { db } from "@/lib/firebase";
 import { collection, serverTimestamp, query, orderBy, onSnapshot, writeBatch, doc, updateDoc, getDoc } from "firebase/firestore";
-import { translateText } from "@/ai/flows/translate-text";
+// Translation is handled server-side via API to avoid bundling AI SDK on client
 import { useToast } from "@/hooks/use-toast";
 import ForwardMessageDialog from "./ForwardMessageDialog";
 import { createOrNavigateToChat } from "@/lib/chatUtils";
@@ -116,7 +116,13 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
     setTranslatingId(messageId);
     try {
-        const result = await translateText({ text: textToTranslate, targetLanguage: 'English' });
+        const res = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: textToTranslate, targetLanguage: 'English' })
+        });
+        if (!res.ok) throw new Error('Translation request failed');
+        const result = await res.json();
         setTranslations(prev => ({...prev, [messageId]: result.translatedText}));
     } catch (error) {
         console.error("Error translating message:", error);
