@@ -10,6 +10,18 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'amik-qr-code.vercel.app',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'amik-ai-agent.vercel.app',
+        port: '',
+        pathname: '/**',
+      },
     ],
     // Ensure static images are properly handled
     unoptimized: false,

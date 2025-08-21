@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { search, type SearchOutput } from '@/ai/flows/search-flow';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -12,6 +11,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, Loader2, Search as SearchIcon, Wand2, Link2, Globe } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+type SearchOutput = {
+  answer: string;
+  sources: { title: string; url: string; snippet: string }[];
+};
 
 const suggestedQueries = [
     'پاکستان کی تاریخ',
@@ -44,7 +48,13 @@ export default function SearchPage() {
     setError(null);
 
     try {
-      const response = await search({ query: searchQuery });
+      const res = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: searchQuery }),
+      });
+      if (!res.ok) throw new Error('Search request failed');
+      const response: SearchOutput = await res.json();
       setResult(response);
     } catch (err) {
       console.error("Error during AI search:", err);

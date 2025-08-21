@@ -125,7 +125,7 @@ export default function DiscoverPage() {
             <ListItem 
                 icon={<Puzzle className="h-6 w-6 text-purple-500" />}
                 label="منی پروگرامز"
-                href="#"
+                href="/miniprograms"
             />
         </div>
       </div>
