@@ -25,6 +25,12 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
   const { user: currentUser } = useAuth();
   const isSentByMe = message.senderId === currentUser?.uid;
 
+  // Check if message is deleted for current user
+  const isDeletedForMe = message.deletedFor?.[currentUser?.uid || ''] || false;
+  
+  // Hide message if it's deleted for current user
+  if (isDeletedForMe) return null;
+
   const hasReactions = message.reactions && Object.values(message.reactions).some(uids => uids.length > 0);
 
   return (
@@ -49,7 +55,7 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
               </div>
             )}
             <p className="text-base" style={{ wordBreak: 'break-word' }}>
-                {message.text}
+                {message.isDeleted ? 'یہ پیغام حذف کر دیا گیا' : message.text}
             </p>
             {hasReactions && (
               <div className={cn("absolute -bottom-3 flex items-center gap-0.5 z-10", isSentByMe ? "right-2" : "left-2")}>

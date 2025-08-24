@@ -31,9 +31,10 @@ export default function ChatMessageActions({
 }: ChatMessageActionsProps) {
   const { user: currentUser } = useAuth();
 
-  if (!message) return null;
+  if (!message || !currentUser) return null;
 
   const isSentByMe = message.senderId === currentUser?.uid;
+  const isDeletedForMe = message.deletedFor?.[currentUser.uid] || false;
 
   const reactions = ["👍", "❤️", "😂", "😯", "😢", "🙏"];
 
@@ -47,32 +48,32 @@ export default function ChatMessageActions({
       label: "کاپی کریں",
       icon: Copy,
       onClick: () => handleActionClick(() => onCopy(message.text)),
-      show: !message.isDeleted,
+      show: !message.isDeleted && !isDeletedForMe,
     },
     {
       label: "فارورڈ کریں",
       icon: Forward,
       onClick: () => handleActionClick(() => onForward(message)),
-      show: !message.isDeleted,
+      show: !message.isDeleted && !isDeletedForMe,
     },
     {
       label: isTranslated ? "ترجمہ منسوخ کریں" : "ترجمہ کریں",
       icon: Languages,
       onClick: () => handleActionClick(() => onTranslate(message.id, message.text)),
-      show: !message.isDeleted,
+      show: !message.isDeleted && !isDeletedForMe,
     },
     {
       label: "میرے لیے حذف کریں",
       icon: Trash,
       onClick: () => handleActionClick(onDeleteForMe),
-      show: true,
+      show: !isDeletedForMe,
       className: "text-destructive hover:text-destructive focus:text-destructive"
     },
     {
       label: "سب کے لیے حذف کریں",
       icon: Trash2,
       onClick: () => handleActionClick(() => onDeleteForEveryone(message.id)),
-      show: isSentByMe && !message.isDeleted,
+      show: isSentByMe && !message.isDeleted && !isDeletedForMe,
       className: "text-destructive hover:text-destructive focus:text-destructive"
     }
   ];

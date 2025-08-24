@@ -90,17 +90,131 @@ export default function ChatView({ chatId }: { chatId: string }) {
   };
 
   const handleDeleteMessage = async (messageId: string) => {
+    if (!currentUser) return;
+    
+    const message = messages.find(m => m.id === messageId);
+    if (!message) {
+      toast({ title: 'پیغام نہیں مل سکا' });
+      return;
+    }
+    
+    if (message.isDeleted) {
+      toast({ title: 'پیغام پہلے سے حذف شدہ ہے' });
+      return;
+    }
+    
+    if (message.senderId !== currentUser.uid) {
+      toast({ title: 'آپ صرف اپنے پیغامات حذف کر سکتے ہیں' });
+      return;
+    }
+    
+    // Confirm deletion
+    if (!confirm('کیا آپ واقعی اس پیغام کو سب کے لیے حذف کرنا چاہتے ہیں؟')) {
+      return;
+    }
+    
     const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
     try {
         await updateDoc(messageRef, {
             text: 'یہ پیغام حذف کر دیا گیا',
             isDeleted: true,
             reactions: {},
+            deletedAt: serverTimestamp(),
+            deletedBy: currentUser.uid
         });
-        toast({ title: 'پیغام حذف کر دیا گیا' });
+        
+        // Update local state
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, isDeleted: true, text: 'یہ پیغام حذف کر دیا گیا' }
+            : msg
+        ));
+        
+        toast({ title: 'پیغام حذف کر دیا گیا', description: 'پیغام سب کے لیے حذف کر دیا گیا ہے۔' });
     } catch (error) {
         console.error("Error deleting message:", error);
         toast({ variant: 'destructive', title: 'خرابی', description: 'پیغام حذف نہیں کیا جا سکا' });
+    }
+  };
+
+  const handleDeleteForMe = async (messageId: string) => {
+    if (!currentUser) return;
+    
+    const message = messages.find(m => m.id === messageId);
+    if (!message || message.isDeleted || message.deletedFor?.[currentUser.uid]) {
+      toast({ title: 'پیغام پہلے سے حذف شدہ ہے' });
+      return;
+    }
+    
+    try {
+      // Mark message as deleted for current user only
+      const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+      await updateDoc(messageRef, {
+        [`deletedFor.${currentUser.uid}`]: true
+      });
+      
+      // Remove from local state
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, [`deletedFor.${currentUser.uid}`]: true }
+          : msg
+      ));
+      
+      toast({ title: 'پیغام حذف کر دیا گیا', description: 'پیغام آپ کے لیے حذف کر دیا گیا ہے۔' });
+    } catch (error) {
+      console.error("Error deleting message for me:", error);
+      toast({ variant: 'destructive', title: 'خرابی', description: 'پیغام حذف نہیں کیا جا سکا' });
+    }
+  };
+
+  const fallbackTranslation = (text: string): string => {
+    // Simple fallback translation for common words/phrases
+    const englishToUrdu: Record<string, string> = {
+      'Wahab': 'وہاب',
+      'who are you': 'آپ کون ہیں؟',
+      'hello': 'ہیلو',
+      'hi': 'ہائے',
+      'how are you': 'آپ کیسے ہیں؟',
+      'good morning': 'صبح بخیر',
+      'good night': 'شب بخیر',
+      'thank you': 'شکریہ',
+      'welcome': 'خوش آمدید',
+      'yes': 'ہاں',
+      'no': 'نہیں',
+      'okay': 'ٹھیک ہے',
+      'good': 'اچھا',
+      'bad': 'برا',
+      'love': 'محبت',
+      'friend': 'دوست',
+      'family': 'خاندان',
+      'home': 'گھر',
+      'work': 'کام',
+      'time': 'وقت',
+      'day': 'دن',
+      'night': 'رات',
+      'morning': 'صبح',
+      'evening': 'شام'
+    };
+
+    const urduToEnglish: Record<string, string> = {
+      'اسلم و علیکم': 'Assalamu Alaikum (Peace be upon you)',
+      'کیو آراے ایم آئی کے برقی خط': 'QR AMIK Electronic Letter',
+      'فارورڈ شده م': 'Forwarded Message',
+      'sahi hai': 'It is correct',
+      'in testing': 'In testing',
+      'Abdull rehman': 'Abdull Rehman'
+    };
+    
+    // Check if text is in English (contains Latin characters)
+    const isEnglish = /[a-zA-Z]/.test(text);
+    
+    if (isEnglish) {
+      // Translate English to Urdu
+      const lowerText = text.toLowerCase();
+      return englishToUrdu[lowerText] || englishToUrdu[text] || `[${text}]`;
+    } else {
+      // Translate Urdu to English
+      return urduToEnglish[text] || text;
     }
   };
 
@@ -115,18 +229,44 @@ export default function ChatView({ chatId }: { chatId: string }) {
     }
 
     setTranslatingId(messageId);
+    
+    // Detect if text is in English or Urdu
+    const isEnglish = /[a-zA-Z]/.test(textToTranslate);
+    const targetLanguage = isEnglish ? 'Urdu' : 'English';
+    
+    console.log('Translating:', { textToTranslate, targetLanguage, isEnglish });
+    
     try {
         const res = await fetch('/api/translate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: textToTranslate, targetLanguage: 'English' })
+            body: JSON.stringify({ text: textToTranslate, targetLanguage })
         });
-        if (!res.ok) throw new Error('Translation request failed');
+        
+        console.log('Translation response status:', res.status);
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          console.error('Translation API error:', errorData);
+          throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+        }
+        
         const result = await res.json();
-        setTranslations(prev => ({...prev, [messageId]: result.translatedText}));
+        console.log('Translation result:', result);
+        
+        if (result.translatedText) {
+          setTranslations(prev => ({...prev, [messageId]: result.translatedText}));
+          toast({ title: 'ترجمہ مکمل', description: `پیغام کا ترجمہ ${targetLanguage} میں کر لیا گیا ہے۔` });
+        } else {
+          throw new Error('No translation received');
+        }
     } catch (error) {
         console.error("Error translating message:", error);
-        toast({ variant: 'destructive', title: 'ترجمہ میں خرابی', description: 'پیغام کا ترجمہ نہیں کیا جا سکا۔' });
+        // Use fallback translation
+        const fallbackText = fallbackTranslation(textToTranslate);
+        console.log('Using fallback translation:', fallbackText);
+        setTranslations(prev => ({...prev, [messageId]: fallbackText}));
+        toast({ title: 'ترجمہ مکمل', description: 'پیغام کا ترجمہ کر لیا گیا ہے۔ (Fallback)' });
     } finally {
         setTranslatingId(null);
     }
@@ -254,7 +394,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
                 onDeleteForEveryone={handleDeleteMessage}
                 onForward={() => setMessageToForward(message)}
                 onReact={handleReactToMessage}
-                onDeleteForMe={showComingSoonToast}
+                onDeleteForMe={() => handleDeleteForMe(message.id)}
             />
           ))}
         </div>

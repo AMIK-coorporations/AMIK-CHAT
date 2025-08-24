@@ -13,6 +13,7 @@ export type Message = {
   senderId: string;
   isRead: boolean;
   isDeleted?: boolean;
+  deletedFor?: Record<string, boolean>; // userId -> boolean for "delete for me"
   reactions?: Record<string, string[]>; // emoji -> user IDs
   isForwarded?: boolean;
 };
