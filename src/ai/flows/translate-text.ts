@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview A flow for translating text from one language to another.
+ * @fileOverview A flow for translating text from any language to Urdu using OpenRouter.
  *
  * - translateText - A function that handles the text translation.
  * - TranslateTextInput - The input type for the translateText function.
@@ -23,58 +23,135 @@ const TranslateTextOutputSchema = z.object({
 });
 export type TranslateTextOutput = z.infer<typeof TranslateTextOutputSchema>;
 
+async function translateViaOpenRouter(text: string, targetLanguage: string): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer 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`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'http://localhost:3000',
+        'X-Title': 'AMIK Chat Translation'
+      },
+      body: JSON.stringify({
+        model: 'anthropic/claude-3-haiku', // Fast and reliable for translation
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional translator. Translate the given text to ${targetLanguage}. 
+            
+IMPORTANT RULES:
+- Only return the translated text, nothing else
+- No explanations, no quotes, no additional text
+- Preserve the original meaning and tone
+- If translating to Urdu, use proper Urdu script and grammar
+- Keep names as close to original as possible
+- For technical terms, use appropriate translations`
+          },
+          {
+            role: 'user',
+            content: `Translate this text to ${targetLanguage}: "${text}"`
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.1
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      console.error('OpenRouter API error:', response.status, response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+    const translatedText = data.choices?.[0]?.message?.content?.trim();
+    
+    if (translatedText && translatedText !== text) {
+      return translatedText;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('OpenRouter translation error:', error);
+    return null;
+  }
+}
+
 export async function translateText(input: TranslateTextInput): Promise<TranslateTextOutput> {
   try {
-    // Check if AI is properly configured
-    if (ai.definePrompt && ai.defineFlow) {
-      return translateTextFlow(input);
-    } else {
-      // Fallback translation using simple dictionary
-      const fallbackTranslations: Record<string, Record<string, string>> = {
-        'English': {
-          'اسلم و علیکم': 'Assalamu Alaikum (Peace be upon you)',
-          'کیو آراے ایم آئی کے برقی خط': 'QR AMIK Electronic Letter',
-          'فارورڈ شده م': 'Forwarded Message',
-          'sahi hai': 'It is correct',
-          'in testing': 'In testing',
-          'Wahab': 'Wahab',
-          'Abdull rehman': 'Abdull Rehman'
-        },
-        'Urdu': {
-          'Wahab': 'وہاب',
-          'who are you': 'آپ کون ہیں؟',
-          'hello': 'ہیلو',
-          'hi': 'ہائے',
-          'how are you': 'آپ کیسے ہیں؟',
-          'good morning': 'صبح بخیر',
-          'good night': 'شب بخیر',
-          'thank you': 'شکریہ',
-          'welcome': 'خوش آمدید',
-          'yes': 'ہاں',
-          'no': 'نہیں',
-          'okay': 'ٹھیک ہے',
-          'good': 'اچھا',
-          'bad': 'برا',
-          'love': 'محبت',
-          'friend': 'دوست',
-          'family': 'خاندان',
-          'home': 'گھر',
-          'work': 'کام',
-          'time': 'وقت',
-          'day': 'دن',
-          'night': 'رات',
-          'morning': 'صبح',
-          'evening': 'شام'
-        }
-      };
-      
-      const translations = fallbackTranslations[input.targetLanguage] || {};
-      const translatedText = translations[input.text] || input.text;
-      return { translatedText };
+    // Always target Urdu for now
+    const targetLanguage = 'Urdu';
+    
+    // If text is already in Urdu/Arabic script, return as-is
+    if (/[\u0600-\u06FF]/.test(input.text)) {
+      return { translatedText: input.text };
     }
+
+    // Try OpenRouter first (most reliable)
+    const openRouterResult = await translateViaOpenRouter(input.text, targetLanguage);
+    if (openRouterResult) {
+      return { translatedText: openRouterResult };
+    }
+
+    // Fallback to AI flow if available
+    if (ai.definePrompt && ai.defineFlow) {
+      try {
+        const aiResult = await translateTextFlow({ text: input.text, targetLanguage });
+        if (aiResult?.translatedText) {
+          return aiResult;
+        }
+      } catch (aiError) {
+        console.error('AI flow error:', aiError);
+      }
+    }
+
+    // Final dictionary fallback for common phrases
+    const fallbackTranslations: Record<string, string> = {
+      'hello': 'ہیلو',
+      'hi': 'ہائے',
+      'how are you': 'آپ کیسے ہیں؟',
+      'good morning': 'صبح بخیر',
+      'good night': 'شب بخیر',
+      'thank you': 'شکریہ',
+      'welcome': 'خوش آمدید',
+      'yes': 'ہاں',
+      'no': 'نہیں',
+      'okay': 'ٹھیک ہے',
+      'good': 'اچھا',
+      'bad': 'برا',
+      'love': 'محبت',
+      'friend': 'دوست',
+      'family': 'خاندان',
+      'home': 'گھر',
+      'work': 'کام',
+      'time': 'وقت',
+      'day': 'دن',
+      'night': 'رات',
+      'morning': 'صبح',
+      'evening': 'شام',
+      'who am i': 'میں کون ہوں؟',
+      'who are you': 'آپ کون ہیں؟',
+      'nihao': 'ہیلو',
+      '你好': 'ہیلو'
+    };
+
+    const lowerText = input.text.toLowerCase();
+    const fallbackResult = fallbackTranslations[lowerText] || fallbackTranslations[input.text];
+    
+    if (fallbackResult) {
+      return { translatedText: fallbackResult };
+    }
+
+    // If all else fails, return original text
+    return { translatedText: input.text };
   } catch (error) {
     console.error('Translation error:', error);
-    // Return original text if translation fails
     return { translatedText: input.text };
   }
 }
@@ -83,17 +160,15 @@ const prompt = ai.definePrompt({
   name: 'translateTextPrompt',
   input: {schema: TranslateTextInputSchema},
   output: {schema: TranslateTextOutputSchema},
-  prompt: `You are a professional translator specializing in English and Urdu languages. Translate the following text to {{targetLanguage}}. 
+  prompt: `You are a professional translator. Translate the following text to {{targetLanguage}}.
 
 Important guidelines:
 - If translating to Urdu, use proper Urdu script and grammar
-- If translating to English, use clear and natural English
-- Maintain the original meaning and context
-- For names, keep them as close to the original as possible
-- For technical terms, use appropriate translations
-- Only return the translated text, no explanations or additional text
+- Keep names as-is where appropriate
+- Preserve meaning and tone
+- Return ONLY the translated text, nothing else
 
-Text to translate:
+Text:
 "{{{text}}}"
 
 Target language: {{targetLanguage}}

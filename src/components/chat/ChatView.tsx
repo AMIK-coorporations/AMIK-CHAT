@@ -36,10 +36,22 @@ export default function ChatView({ chatId }: { chatId: string }) {
       const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       setMessages(msgs);
       setLoading(false);
+      
+      // Auto-translate incoming messages that aren't in Urdu
+      msgs.forEach(async (msg) => {
+        if (msg.senderId !== currentUser?.uid && // Only incoming messages
+            !translations[msg.id] && // Not already translated
+            !isUrduText(msg.text)) { // Not already in Urdu
+          // Auto-translate after a short delay
+          setTimeout(() => {
+            handleAutoTranslate(msg.id, msg.text);
+          }, 1000);
+        }
+      });
     });
 
     return () => unsubscribe();
-  }, [chatId]);
+  }, [chatId, currentUser, translations]);
   
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -168,9 +180,9 @@ export default function ChatView({ chatId }: { chatId: string }) {
   };
 
   const fallbackTranslation = (text: string): string => {
-    // Simple fallback translation for common words/phrases
+    // Simple fallback translation for common words/phrases (to Urdu)
     const englishToUrdu: Record<string, string> = {
-      'Wahab': 'وہاب',
+      'wahab': 'وہاب',
       'who are you': 'آپ کون ہیں؟',
       'hello': 'ہیلو',
       'hi': 'ہائے',
@@ -196,26 +208,8 @@ export default function ChatView({ chatId }: { chatId: string }) {
       'evening': 'شام'
     };
 
-    const urduToEnglish: Record<string, string> = {
-      'اسلم و علیکم': 'Assalamu Alaikum (Peace be upon you)',
-      'کیو آراے ایم آئی کے برقی خط': 'QR AMIK Electronic Letter',
-      'فارورڈ شده م': 'Forwarded Message',
-      'sahi hai': 'It is correct',
-      'in testing': 'In testing',
-      'Abdull rehman': 'Abdull Rehman'
-    };
-    
-    // Check if text is in English (contains Latin characters)
-    const isEnglish = /[a-zA-Z]/.test(text);
-    
-    if (isEnglish) {
-      // Translate English to Urdu
-      const lowerText = text.toLowerCase();
-      return englishToUrdu[lowerText] || englishToUrdu[text] || `[${text}]`;
-    } else {
-      // Translate Urdu to English
-      return urduToEnglish[text] || text;
-    }
+    const lowerText = text.toLowerCase();
+    return englishToUrdu[lowerText] || englishToUrdu[text] || `[${text}]`;
   };
 
   const handleToggleTranslation = async (messageId: string, textToTranslate: string) => {
@@ -229,13 +223,9 @@ export default function ChatView({ chatId }: { chatId: string }) {
     }
 
     setTranslatingId(messageId);
-    
-    // Detect if text is in English or Urdu
-    const isEnglish = /[a-zA-Z]/.test(textToTranslate);
-    const targetLanguage = isEnglish ? 'Urdu' : 'English';
-    
-    console.log('Translating:', { textToTranslate, targetLanguage, isEnglish });
-    
+
+    const targetLanguage = 'Urdu';
+
     try {
         const res = await fetch('/api/translate', {
             method: 'POST',
@@ -243,20 +233,16 @@ export default function ChatView({ chatId }: { chatId: string }) {
             body: JSON.stringify({ text: textToTranslate, targetLanguage })
         });
         
-        console.log('Translation response status:', res.status);
-        
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
-          console.error('Translation API error:', errorData);
           throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
         }
         
         const result = await res.json();
-        console.log('Translation result:', result);
         
         if (result.translatedText) {
           setTranslations(prev => ({...prev, [messageId]: result.translatedText}));
-          toast({ title: 'ترجمہ مکمل', description: `پیغام کا ترجمہ ${targetLanguage} میں کر لیا گیا ہے۔` });
+          toast({ title: 'ترجمہ مکمل', description: `پیغام کا ترجمہ اردو میں کر لیا گیا ہے۔` });
         } else {
           throw new Error('No translation received');
         }
@@ -264,9 +250,8 @@ export default function ChatView({ chatId }: { chatId: string }) {
         console.error("Error translating message:", error);
         // Use fallback translation
         const fallbackText = fallbackTranslation(textToTranslate);
-        console.log('Using fallback translation:', fallbackText);
         setTranslations(prev => ({...prev, [messageId]: fallbackText}));
-        toast({ title: 'ترجمہ مکمل', description: 'پیغام کا ترجمہ کر لیا گیا ہے۔ (Fallback)' });
+        toast({ title: 'ترجمہ مکمل', description: 'پیغام کا ترجمہ اردو میں کر لیا گیا ہے۔ (Fallback)' });
     } finally {
         setTranslatingId(null);
     }
@@ -374,6 +359,47 @@ export default function ChatView({ chatId }: { chatId: string }) {
     });
   };
 
+  // Helper function to check if text is in Urdu/Arabic script
+  const isUrduText = (text: string): boolean => {
+    return /[\u0600-\u06FF]/.test(text);
+  };
+
+  // Auto-translate function for incoming messages
+  const handleAutoTranslate = async (messageId: string, textToTranslate: string) => {
+    if (translatingId === messageId || translations[messageId]) return;
+
+    setTranslatingId(messageId);
+    const targetLanguage = 'Urdu';
+
+    try {
+        const res = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: textToTranslate, targetLanguage })
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+        }
+        
+        const result = await res.json();
+        
+        if (result.translatedText) {
+          setTranslations(prev => ({...prev, [messageId]: result.translatedText}));
+        } else {
+          throw new Error('No translation received');
+        }
+    } catch (error) {
+        console.error("Error auto-translating message:", error);
+        // Use fallback translation
+        const fallbackText = fallbackTranslation(textToTranslate);
+        setTranslations(prev => ({...prev, [messageId]: fallbackText}));
+    } finally {
+        setTranslatingId(null);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <ScrollArea className="flex-1" ref={scrollAreaRef}>
@@ -418,9 +444,9 @@ export default function ChatView({ chatId }: { chatId: string }) {
             autoComplete="off"
             className="text-base"
           />
-          <Button type="submit" size="icon" disabled={!newMessage.trim() || !currentUser}>
+          <Button type="submit" className="shrink-0">
             <SendHorizonal className="h-5 w-5" />
-            <span className="sr-only">بھیجیں</span>
+            <span className="sr-only">پیغام بھیجیں</span>
           </Button>
         </form>
       </div>

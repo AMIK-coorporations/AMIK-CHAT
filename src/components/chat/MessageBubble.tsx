@@ -54,7 +54,7 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
                   <span>فارورڈ شدہ</span>
               </div>
             )}
-            <p className="text-base" style={{ wordBreak: 'break-word' }}>
+            <p className="text-base text-left" style={{ wordBreak: 'break-word', direction: 'ltr' }}>
                 {message.isDeleted ? 'یہ پیغام حذف کر دیا گیا' : message.text}
             </p>
             {hasReactions && (
@@ -90,10 +90,10 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
           <div className={cn(
               "max-w-sm rounded-lg px-3 py-2 lg:max-w-lg",
               isSentByMe
-                  ? "rounded-br-none bg-primary text-primary-foreground"
-                  : "rounded-bl-none bg-card text-card-foreground border"
+                ? "rounded-br-none bg-primary text-primary-foreground"
+                : "rounded-bl-none bg-card text-card-foreground border"
           )}>
-              <p className="text-base" style={{ wordBreak: 'break-word' }}>
+              <p className="text-base text-right" style={{ wordBreak: 'break-word', direction: 'rtl' }}>
                   {translation}
               </p>
               <div className="flex items-center gap-1.5 text-xs opacity-80 pt-1.5 mt-1.5 border-t border-t-black/10 dark:border-t-white/20">
