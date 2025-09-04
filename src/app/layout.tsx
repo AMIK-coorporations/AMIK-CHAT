@@ -3,6 +3,7 @@ import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
+import { CallProvider } from '@/context/CallContext';
 import PrefetchRoutes from '@/components/PrefetchRoutes';
 import { Analytics } from "@vercel/analytics/next";
 
@@ -32,10 +33,12 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased" suppressHydrationWarning={true}>
         <AuthProvider>
-          <PrefetchRoutes />
-          {children}
-          <Toaster />
-          <Analytics />
+          <CallProvider>
+            <PrefetchRoutes />
+            {children}
+            <Toaster />
+            <Analytics />
+          </CallProvider>
         </AuthProvider>
       </body>
     </html>

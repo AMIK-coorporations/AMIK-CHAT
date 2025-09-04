@@ -39,6 +39,7 @@ export default function AddContactPage() {
         return;
       }
       
+      // First, check if the target user exists
       const userDocRef = doc(db, 'users', trimmedId);
       const userDoc = await getDoc(userDocRef);
 
@@ -54,34 +55,52 @@ export default function AddContactPage() {
       
       const contactData = userDoc.data();
 
+      // Check if contact already exists
       const existingContactRef = doc(db, 'users', currentUser.uid, 'contacts', trimmedId);
       const existingContactSnap = await getDoc(existingContactRef);
 
       if (existingContactSnap.exists()) {
           toast({
               title: 'پہلے سے رابطہ ہے',
-              description: `${contactData.name} پہلے ہی آپ کے رابطوں میں ہے۔`,
+              description: `${contactData.name || contactData.displayName || 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے۔`,
           });
           setContactId('');
           setLoading(false);
           return;
       }
 
+      // Add the contact
       const newContactRef = doc(db, 'users', currentUser.uid, 'contacts', trimmedId);
-      await setDoc(newContactRef, { addedAt: serverTimestamp() });
+      await setDoc(newContactRef, { 
+        addedAt: serverTimestamp(),
+        contactName: contactData.name || contactData.displayName || 'Unknown User',
+        contactAvatarUrl: contactData.avatarUrl || contactData.photoURL || ''
+      });
 
       toast({
         title: 'کامیابی!',
-        description: `${contactData.name} آپ کے رابطوں میں شامل کر دیا گیا ہے۔`,
+        description: `${contactData.name || contactData.displayName || 'صارف'} آپ کے رابطوں میں شامل کر دیا گیا ہے۔`,
       });
       router.push('/contacts');
 
     } catch (error: any) {
       console.error("Error adding contact:", error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
+      
+      if (error.code === 'permission-denied') {
+        errorMessage = 'اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firebase سیکیورٹی قوانین کو چیک کریں۔';
+      } else if (error.code === 'unavailable') {
+        errorMessage = 'Firebase سروس دستیاب نہیں ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں۔';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         variant: 'destructive',
         title: 'رابطہ شامل کرنے میں خرابی',
-        description: error.message || 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔',
+        description: errorMessage,
       });
     } finally {
       setLoading(false);

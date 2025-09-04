@@ -97,10 +97,14 @@ export default function NewChatPage() {
               className="flex items-center gap-4 p-4 hover:bg-muted/50 cursor-pointer"
             >
               <Avatar className="h-10 w-10 border">
-                <AvatarImage src={contact.avatarUrl} alt={contact.name} data-ai-hint="person avatar" />
-                <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                <AvatarImage
+                  src={contact.photoURL}
+                  alt={contact.displayName ?? contact.email ?? "Unknown User"}
+                  data-ai-hint="person avatar"
+                />
+                <AvatarFallback>{contact.displayName?.charAt(0) ?? "?"}</AvatarFallback>
               </Avatar>
-              <p className="font-semibold flex-1">{contact.name}</p>
+              <p className="font-semibold flex-1">{contact.displayName ?? contact.email ?? "Unknown User"}</p>
               {creatingChat === contact.id && <Loader2 className="h-5 w-5 animate-spin" />}
             </div>
           ))

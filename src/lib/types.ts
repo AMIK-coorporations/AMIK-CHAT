@@ -1,37 +1,58 @@
 import type { Timestamp, FieldValue } from "firebase/firestore";
 
-export type User = {
+export interface User {
   id: string;
-  name: string;
-  avatarUrl: string;
-};
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  phoneNumber?: string;
+  createdAt: Date;
+  lastSeen: Date;
+  isOnline: boolean;
+  status?: string;
+  bio?: string;
+}
 
-export type Message = {
-  id:string;
+export interface Message {
+  id: string;
   text: string;
-  timestamp: Timestamp | FieldValue;
   senderId: string;
+  timestamp: any;
   isRead: boolean;
   isDeleted?: boolean;
-  deletedFor?: Record<string, boolean>; // userId -> boolean for "delete for me"
-  reactions?: Record<string, string[]>; // emoji -> user IDs
+  deletedFor?: Record<string, boolean>;
+  deletedAt?: any;
+  deletedBy?: string;
   isForwarded?: boolean;
-};
-
-export type Chat = {
-  id: string;
-  participantIds: string[];
-  participantsInfo: {
-    [key: string]: {
-      name: string;
-      avatarUrl: string;
-    }
+  reactions?: Record<string, string[]>;
+  type?: 'text' | 'voice' | 'file' | 'image' | 'location';
+  // Voice message properties
+  audioUrl?: string;
+  duration?: number;
+  // File properties
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  fileType?: string;
+  // Image properties
+  imageUrl?: string;
+  // Location properties
+  location?: {
+    latitude: number;
+    longitude: number;
   };
+}
+
+export interface Chat {
+  id: string;
+  participants: string[];
   lastMessage?: {
     text: string;
     senderId: string;
-    timestamp: Timestamp | FieldValue;
+    timestamp: any;
     isRead: boolean;
-  } | null;
-  createdAt?: Timestamp | FieldValue;
-};
+  };
+  createdAt: any;
+  updatedAt: any;
+  unreadCount?: Record<string, number>;
+}

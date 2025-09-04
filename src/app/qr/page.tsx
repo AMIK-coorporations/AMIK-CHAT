@@ -49,7 +49,8 @@ export default function QrCodePage() {
       const pngFile = canvas.toDataURL("image/png");
       
       const downloadLink = document.createElement("a");
-      downloadLink.download = `amik-chat-qr-${userData?.name || user?.uid}.png`;
+      const displayName = userData?.name ?? (userData as any)?.displayName ?? user?.uid ?? 'amik-user';
+      downloadLink.download = `amik-chat-qr-${displayName}.png`;
       downloadLink.href = pngFile;
       downloadLink.click();
 
@@ -79,11 +80,11 @@ export default function QrCodePage() {
             <>
               <div className="flex items-center gap-4 self-start">
                 <Avatar className="h-16 w-16 border">
-                  <AvatarImage src={userData.avatarUrl} alt={userData.name} data-ai-hint="profile person" />
-                  <AvatarFallback className="text-2xl">{userData.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={userData.avatarUrl ?? (userData as any).photoURL ?? ''} alt={(userData as any).name ?? (userData as any).displayName ?? ''} data-ai-hint="profile person" />
+                  <AvatarFallback className="text-2xl">{((userData as any).name ?? (userData as any).displayName ?? '?').charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-xl font-bold text-left">{userData.name}</p>
+                  <p className="text-xl font-bold text-left">{(userData as any).name ?? (userData as any).displayName ?? 'Unknown'}</p>
                   <p className="text-muted-foreground text-left">پاکستان</p>
                 </div>
               </div>

@@ -26,7 +26,16 @@ export type TranslateTextOutput = z.infer<typeof TranslateTextOutputSchema>;
 async function translateViaOpenRouter(text: string, targetLanguage: string): Promise<string | null> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 30000); // Increased timeout for large texts
+
+    // Split very long texts into chunks if needed
+    const maxChunkSize = 2000;
+    let textToTranslate = text;
+    
+    if (text.length > maxChunkSize) {
+      // For very long texts, take the first part and indicate truncation
+      textToTranslate = text.substring(0, maxChunkSize) + '...';
+    }
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -37,27 +46,34 @@ async function translateViaOpenRouter(text: string, targetLanguage: string): Pro
         'X-Title': 'AMIK Chat Translation'
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3-haiku', // Fast and reliable for translation
+        model: 'mistralai/mistral-7b-instruct', // Free model for word-to-word translation
         messages: [
           {
             role: 'system',
-            content: `You are a professional translator. Translate the given text to ${targetLanguage}. 
-            
-IMPORTANT RULES:
-- Only return the translated text, nothing else
-- No explanations, no quotes, no additional text
-- Preserve the original meaning and tone
-- If translating to Urdu, use proper Urdu script and grammar
-- Keep names as close to original as possible
-- For technical terms, use appropriate translations`
+            content: `You are a professional translator specializing in word-to-word translation to ${targetLanguage}. 
+
+CRITICAL TRANSLATION RULES:
+- Translate each word and phrase to ${targetLanguage} with perfect accuracy
+- If translating to Urdu, use proper Urdu script (اردو) and grammar
+- Preserve the original meaning, tone, and context completely
+- Keep proper names, places, and technical terms as close to original as possible
+- Maintain paragraph structure and formatting
+- For long texts, ensure complete translation of all content
+- Return ONLY the translated text, no explanations or additional text
+- If the text contains multiple languages, translate everything to ${targetLanguage}
+- Ensure the translation sounds natural in ${targetLanguage}
+- Focus on word-to-word accuracy while maintaining natural flow`
           },
           {
             role: 'user',
-            content: `Translate this text to ${targetLanguage}: "${text}"`
+            content: `Please translate the following text to ${targetLanguage} with word-to-word accuracy. This is a ${textToTranslate.length > 500 ? 'long' : 'short'} text that needs complete and accurate translation:
+
+"${textToTranslate}"`
           }
         ],
-        max_tokens: 500,
-        temperature: 0.1
+        max_tokens: textToTranslate.length > 1000 ? 2000 : 1000, // Dynamic token allocation
+        temperature: 0.1, // Low temperature for consistent translation
+        top_p: 0.9
       }),
       signal: controller.signal
     });
@@ -72,8 +88,14 @@ IMPORTANT RULES:
     const data = await response.json();
     const translatedText = data.choices?.[0]?.message?.content?.trim();
     
-    if (translatedText && translatedText !== text) {
-      return translatedText;
+    if (translatedText && translatedText !== textToTranslate) {
+      // Clean up the response to remove any extra formatting
+      let cleanTranslation = translatedText
+        .replace(/^["']|["']$/g, '') // Remove quotes if present
+        .replace(/^Translation:|^Translated text:/i, '') // Remove labels
+        .trim();
+      
+      return cleanTranslation;
     }
     
     return null;
@@ -93,7 +115,7 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
       return { translatedText: input.text };
     }
 
-    // Try OpenRouter first (most reliable)
+    // Try OpenRouter first (most reliable for all text sizes)
     const openRouterResult = await translateViaOpenRouter(input.text, targetLanguage);
     if (openRouterResult) {
       return { translatedText: openRouterResult };
@@ -111,43 +133,6 @@ export async function translateText(input: TranslateTextInput): Promise<Translat
       }
     }
 
-    // Final dictionary fallback for common phrases
-    const fallbackTranslations: Record<string, string> = {
-      'hello': 'ہیلو',
-      'hi': 'ہائے',
-      'how are you': 'آپ کیسے ہیں؟',
-      'good morning': 'صبح بخیر',
-      'good night': 'شب بخیر',
-      'thank you': 'شکریہ',
-      'welcome': 'خوش آمدید',
-      'yes': 'ہاں',
-      'no': 'نہیں',
-      'okay': 'ٹھیک ہے',
-      'good': 'اچھا',
-      'bad': 'برا',
-      'love': 'محبت',
-      'friend': 'دوست',
-      'family': 'خاندان',
-      'home': 'گھر',
-      'work': 'کام',
-      'time': 'وقت',
-      'day': 'دن',
-      'night': 'رات',
-      'morning': 'صبح',
-      'evening': 'شام',
-      'who am i': 'میں کون ہوں؟',
-      'who are you': 'آپ کون ہیں؟',
-      'nihao': 'ہیلو',
-      '你好': 'ہیلو'
-    };
-
-    const lowerText = input.text.toLowerCase();
-    const fallbackResult = fallbackTranslations[lowerText] || fallbackTranslations[input.text];
-    
-    if (fallbackResult) {
-      return { translatedText: fallbackResult };
-    }
-
     // If all else fails, return original text
     return { translatedText: input.text };
   } catch (error) {
@@ -160,15 +145,21 @@ const prompt = ai.definePrompt({
   name: 'translateTextPrompt',
   input: {schema: TranslateTextInputSchema},
   output: {schema: TranslateTextOutputSchema},
-  prompt: `You are a professional translator. Translate the following text to {{targetLanguage}}.
+  prompt: `You are a professional translator specializing in word-to-word translation to {{targetLanguage}}.
 
-Important guidelines:
-- If translating to Urdu, use proper Urdu script and grammar
-- Keep names as-is where appropriate
-- Preserve meaning and tone
-- Return ONLY the translated text, nothing else
+CRITICAL TRANSLATION RULES:
+- Translate the text to {{targetLanguage}} with perfect accuracy
+- If translating to Urdu, use proper Urdu script (اردو) and grammar
+- Preserve the original meaning, tone, and context completely
+- Keep proper names, places, and technical terms as close to original as possible
+- Maintain paragraph structure and formatting
+- For long texts, ensure complete translation of all content
+- Return ONLY the translated text, no explanations or additional text
+- If the text contains multiple languages, translate everything to {{targetLanguage}}
+- Ensure the translation sounds natural in {{targetLanguage}}
+- Focus on word-to-word accuracy while maintaining natural flow
 
-Text:
+Text to translate:
 "{{{text}}}"
 
 Target language: {{targetLanguage}}

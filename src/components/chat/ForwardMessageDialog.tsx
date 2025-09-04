@@ -83,7 +83,7 @@ export default function ForwardMessageDialog({ message, onClose, onForward }: Fo
   }
 
   const filteredContacts = contacts.filter(contact => 
-    contact.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (contact.name ?? (contact as any).displayName ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -123,10 +123,10 @@ export default function ForwardMessageDialog({ message, onClose, onForward }: Fo
                     onCheckedChange={() => handleToggleContact(contact.id)}
                 />
                 <Avatar className="h-10 w-10 border">
-                  <AvatarImage src={contact.avatarUrl} alt={contact.name} data-ai-hint="person avatar" />
-                  <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={(contact as any).avatarUrl ?? (contact as any).photoURL ?? ''} alt={(contact as any).name ?? (contact as any).displayName ?? ''} data-ai-hint="person avatar" />
+                  <AvatarFallback>{((contact as any).name ?? (contact as any).displayName ?? '?').charAt(0)}</AvatarFallback>
                 </Avatar>
-                <Label htmlFor={`contact-${contact.id}`} className="font-semibold flex-1 cursor-pointer">{contact.name}</Label>
+                <Label htmlFor={`contact-${contact.id}`} className="font-semibold flex-1 cursor-pointer">{(contact as any).name ?? (contact as any).displayName ?? 'Unknown'}</Label>
               </div>
             ))
           ) : (

@@ -17,10 +17,10 @@ import { useToast } from "@/hooks/use-toast";
 import ForwardMessageDialog from "./ForwardMessageDialog";
 import { createOrNavigateToChat } from "@/lib/chatUtils";
 import type { User } from '@/lib/types';
+import ChatInput from "./ChatInput";
 
 export default function ChatView({ chatId }: { chatId: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const { user: currentUser, userData } = useAuth();
@@ -29,6 +29,39 @@ export default function ChatView({ chatId }: { chatId: string }) {
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [translatingId, setTranslatingId] = useState<string | null>(null);
   const [messageToForward, setMessageToForward] = useState<Message | null>(null);
+  const [otherParticipant, setOtherParticipant] = useState<User | null>(null);
+
+  // Fetch chat info and other participant
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchChatInfo = async () => {
+      try {
+        const chatDocRef = doc(db, 'chats', chatId);
+        const chatDoc = await getDoc(chatDocRef);
+
+        if (chatDoc.exists()) {
+          const chatData = chatDoc.data();
+          const otherParticipantId = chatData.participantIds.find((participantId: string) => participantId !== currentUser.uid);
+
+          if (otherParticipantId && chatData.participantsInfo) {
+            const otherInfo = chatData.participantsInfo[otherParticipantId];
+            if (otherInfo) {
+              setOtherParticipant({
+                id: otherParticipantId,
+                name: otherInfo.name ?? otherInfo.displayName ?? 'Unknown',
+                avatarUrl: otherInfo.avatarUrl ?? otherInfo.photoURL ?? ''
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching chat info:", error);
+      }
+    };
+
+    fetchChatInfo();
+  }, [chatId, currentUser]);
 
   useEffect(() => {
     const q = query(collection(db, `chats/${chatId}/messages`), orderBy("timestamp", "asc"));
@@ -62,40 +95,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
     }
   }, [messages, translations]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newMessage.trim() === "" || !currentUser) return;
-    
-    const messageText = newMessage;
-    setNewMessage("");
 
-    const chatRef = doc(db, 'chats', chatId);
-    const messagesColRef = collection(chatRef, 'messages');
-    const newMessageRef = doc(messagesColRef);
-
-    const batch = writeBatch(db);
-
-    const timestamp = serverTimestamp();
-
-    const messageData = {
-      text: messageText,
-      senderId: currentUser.uid,
-      timestamp: timestamp,
-      isRead: false,
-    };
-    batch.set(newMessageRef, messageData);
-
-    batch.update(chatRef, {
-      lastMessage: {
-        text: messageText,
-        senderId: currentUser.uid,
-        timestamp: timestamp,
-        isRead: false,
-      }
-    });
-
-    await batch.commit();
-  };
   
   const showComingSoonToast = () => {
     toast({ title: "فیچر جلد آرہا ہے۔" });
@@ -180,36 +180,8 @@ export default function ChatView({ chatId }: { chatId: string }) {
   };
 
   const fallbackTranslation = (text: string): string => {
-    // Simple fallback translation for common words/phrases (to Urdu)
-    const englishToUrdu: Record<string, string> = {
-      'wahab': 'وہاب',
-      'who are you': 'آپ کون ہیں؟',
-      'hello': 'ہیلو',
-      'hi': 'ہائے',
-      'how are you': 'آپ کیسے ہیں؟',
-      'good morning': 'صبح بخیر',
-      'good night': 'شب بخیر',
-      'thank you': 'شکریہ',
-      'welcome': 'خوش آمدید',
-      'yes': 'ہاں',
-      'no': 'نہیں',
-      'okay': 'ٹھیک ہے',
-      'good': 'اچھا',
-      'bad': 'برا',
-      'love': 'محبت',
-      'friend': 'دوست',
-      'family': 'خاندان',
-      'home': 'گھر',
-      'work': 'کام',
-      'time': 'وقت',
-      'day': 'دن',
-      'night': 'رات',
-      'morning': 'صبح',
-      'evening': 'شام'
-    };
-
-    const lowerText = text.toLowerCase();
-    return englishToUrdu[lowerText] || englishToUrdu[text] || `[${text}]`;
+    // Return original text if no AI translation available
+    return text;
   };
 
   const handleToggleTranslation = async (messageId: string, textToTranslate: string) => {
@@ -227,6 +199,14 @@ export default function ChatView({ chatId }: { chatId: string }) {
     const targetLanguage = 'Urdu';
 
     try {
+        // Show translation progress for long messages
+        if (textToTranslate.length > 100) {
+          toast({ 
+            title: 'ترجمہ جاری ہے', 
+            description: 'بڑے پیغام کا ترجمہ ہو رہا ہے، براہ کرم انتظار کریں...' 
+          });
+        }
+
         const res = await fetch('/api/translate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -242,16 +222,33 @@ export default function ChatView({ chatId }: { chatId: string }) {
         
         if (result.translatedText) {
           setTranslations(prev => ({...prev, [messageId]: result.translatedText}));
-          toast({ title: 'ترجمہ مکمل', description: `پیغام کا ترجمہ اردو میں کر لیا گیا ہے۔` });
+          
+          // Show success message with metadata for long translations
+          if (textToTranslate.length > 100) {
+            toast({ 
+              title: 'ترجمہ مکمل', 
+              description: `${result.sourceLanguage} سے اردو میں ترجمہ مکمل ہوا۔ ${result.originalLength} حروف کا ترجمہ ${result.translatedLength} حروف میں۔` 
+            });
+          } else {
+            toast({ 
+              title: 'ترجمہ مکمل', 
+              description: `پیغام کا ترجمہ اردو میں کر لیا گیا ہے۔` 
+            });
+          }
         } else {
           throw new Error('No translation received');
         }
     } catch (error) {
         console.error("Error translating message:", error);
-        // Use fallback translation
-        const fallbackText = fallbackTranslation(textToTranslate);
-        setTranslations(prev => ({...prev, [messageId]: fallbackText}));
-        toast({ title: 'ترجمہ مکمل', description: 'پیغام کا ترجمہ اردو میں کر لیا گیا ہے۔ (Fallback)' });
+        
+        // If AI translation fails, show error and keep original text
+        toast({ 
+          variant: 'destructive',
+          title: 'ترجمہ ناکام', 
+          description: 'AI ترجمہ سسٹم فی الحال دستیاب نہیں ہے۔ براہ کرم بعد میں کوشش کریں۔' 
+        });
+        
+        // Don't set any fallback translation, keep original text
     } finally {
         setTranslatingId(null);
     }
@@ -364,41 +361,37 @@ export default function ChatView({ chatId }: { chatId: string }) {
     return /[\u0600-\u06FF]/.test(text);
   };
 
-  // Auto-translate function for incoming messages
+  // Enhanced auto-translation for incoming messages
   const handleAutoTranslate = async (messageId: string, textToTranslate: string) => {
-    if (translatingId === messageId || translations[messageId]) return;
-
-    setTranslatingId(messageId);
-    const targetLanguage = 'Urdu';
+    // Don't auto-translate if already translated or if it's a short message
+    if (translations[messageId] || textToTranslate.length < 10) return;
+    
+    // Don't auto-translate if it's already in Urdu
+    if (isUrduText(textToTranslate)) return;
 
     try {
-        const res = await fetch('/api/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: textToTranslate, targetLanguage })
-        });
-        
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
-        }
-        
+      const targetLanguage = 'Urdu';
+      
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToTranslate, targetLanguage })
+      });
+      
+      if (res.ok) {
         const result = await res.json();
-        
         if (result.translatedText) {
           setTranslations(prev => ({...prev, [messageId]: result.translatedText}));
-        } else {
-          throw new Error('No translation received');
+          console.log(`Auto-translated message ${messageId}: ${textToTranslate.substring(0, 50)}...`);
         }
+      }
     } catch (error) {
-        console.error("Error auto-translating message:", error);
-        // Use fallback translation
-        const fallbackText = fallbackTranslation(textToTranslate);
-        setTranslations(prev => ({...prev, [messageId]: fallbackText}));
-    } finally {
-        setTranslatingId(null);
+      console.error("Auto-translation error:", error);
+      // Silent fail for auto-translation
     }
   };
+
+
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -430,26 +423,11 @@ export default function ChatView({ chatId }: { chatId: string }) {
         onClose={() => setMessageToForward(null)}
         onForward={handleForwardMessage}
       />
-      <div className="border-t bg-background p-4">
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-          <Label htmlFor="message-input" className="sr-only">
-            ایک پیغام لکھیں
-          </Label>
-          <Input
-            id="message-input"
-            name="message-input"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="ایک پیغام لکھیں..."
-            autoComplete="off"
-            className="text-base"
-          />
-          <Button type="submit" className="shrink-0">
-            <SendHorizonal className="h-5 w-5" />
-            <span className="sr-only">پیغام بھیجیں</span>
-          </Button>
-        </form>
-      </div>
+      <ChatInput 
+        chatId={chatId} 
+        onMessageSent={() => {}} 
+        remoteUserId={otherParticipant?.id}
+      />
     </div>
   );
 }

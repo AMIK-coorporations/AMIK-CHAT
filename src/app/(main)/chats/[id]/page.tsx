@@ -27,12 +27,13 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         const chatDoc = await getDoc(chatDocRef);
 
         if (!chatDoc.exists()) {
-          notFound();
+          console.error("Chat not found:", id);
+          router.push('/chats');
           return;
         }
 
         const chatData = chatDoc.data();
-        if (!chatData.participantIds.includes(currentUser.uid)) {
+        if (!chatData.participantIds || !chatData.participantIds.includes(currentUser.uid)) {
             console.error("Current user not in this chat");
             router.push('/chats');
             return;
@@ -45,8 +46,8 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           if (otherInfo) {
             setOtherParticipant({
                 id: otherParticipantId,
-                name: otherInfo.name,
-                avatarUrl: otherInfo.avatarUrl
+                name: otherInfo.name ?? otherInfo.displayName ?? 'Unknown',
+                avatarUrl: otherInfo.avatarUrl ?? otherInfo.photoURL ?? ''
             });
           }
         } else if (chatData.participantsInfo && chatData.participantsInfo[currentUser.uid]) {
@@ -54,13 +55,21 @@ export default function ChatPage({ params }: { params: { id: string } }) {
             const selfInfo = chatData.participantsInfo[currentUser.uid];
             setOtherParticipant({
                 id: currentUser.uid,
-                name: selfInfo.name,
-                avatarUrl: selfInfo.avatarUrl,
+                name: selfInfo.name ?? selfInfo.displayName ?? 'Unknown',
+                avatarUrl: selfInfo.avatarUrl ?? selfInfo.photoURL ?? '',
             });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching chat info:", error);
-        notFound();
+        
+        // Handle specific error cases
+        if (error.code === 'permission-denied') {
+          console.error("Permission denied accessing chat");
+          router.push('/chats');
+        } else {
+          // For other errors, redirect to chats page instead of calling notFound()
+          router.push('/chats');
+        }
       } finally {
         setLoading(false);
       }
