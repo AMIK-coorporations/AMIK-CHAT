@@ -46,8 +46,17 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           if (otherInfo) {
             setOtherParticipant({
                 id: otherParticipantId,
+                email: otherInfo.email ?? '',
+                displayName: otherInfo.displayName ?? otherInfo.name ?? 'Unknown',
                 name: otherInfo.name ?? otherInfo.displayName ?? 'Unknown',
-                avatarUrl: otherInfo.avatarUrl ?? otherInfo.photoURL ?? ''
+                avatarUrl: otherInfo.avatarUrl ?? otherInfo.photoURL ?? '',
+                photoURL: otherInfo.photoURL ?? otherInfo.avatarUrl ?? '',
+                phoneNumber: otherInfo.phoneNumber ?? '',
+                createdAt: new Date(),
+                lastSeen: new Date(),
+                isOnline: otherInfo.isOnline ?? false,
+                status: otherInfo.status ?? '',
+                bio: otherInfo.bio ?? ''
             });
           }
         } else if (chatData.participantsInfo && chatData.participantsInfo[currentUser.uid]) {
@@ -55,8 +64,17 @@ export default function ChatPage({ params }: { params: { id: string } }) {
             const selfInfo = chatData.participantsInfo[currentUser.uid];
             setOtherParticipant({
                 id: currentUser.uid,
+                email: selfInfo.email ?? '',
+                displayName: selfInfo.displayName ?? selfInfo.name ?? 'Unknown',
                 name: selfInfo.name ?? selfInfo.displayName ?? 'Unknown',
                 avatarUrl: selfInfo.avatarUrl ?? selfInfo.photoURL ?? '',
+                photoURL: selfInfo.photoURL ?? selfInfo.avatarUrl ?? '',
+                phoneNumber: selfInfo.phoneNumber ?? '',
+                createdAt: new Date(),
+                lastSeen: new Date(),
+                isOnline: selfInfo.isOnline ?? false,
+                status: selfInfo.status ?? '',
+                bio: selfInfo.bio ?? ''
             });
         }
       } catch (error: any) {
