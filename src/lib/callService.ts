@@ -48,6 +48,18 @@ export class CallService {
   private onCallEnded: (() => void) | null = null;
 
   constructor() {
+    // Only initialize WebRTC in browser environment
+    if (typeof window !== 'undefined') {
+      this.initializePeerConnection();
+    }
+  }
+
+  private initializePeerConnection() {
+    // Check if we're in browser and WebRTC is available
+    if (typeof window === 'undefined' || !window.RTCPeerConnection) {
+      console.warn('WebRTC not available in this environment');
+      return;
+    }
     this.initializePeerConnection();
   }
 

@@ -36,9 +36,9 @@ export default function CallInterface({
   useEffect(() => {
     // Start call duration timer when connected
     if (callData?.isConnected && !durationIntervalRef.current) {
-      durationIntervalRef.current = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
+    durationIntervalRef.current = setInterval(() => {
+      setCallDuration(prev => prev + 1);
+    }, 1000);
     }
 
     // Update connection status
@@ -73,7 +73,7 @@ export default function CallInterface({
     } catch (error) {
       console.error('Error accepting call:', error);
       toast({ variant: 'destructive', title: 'خرابی', description: 'کال قبول نہیں کر سکے' });
-    }
+      }
   };
 
   const handleRejectCall = async () => {
@@ -155,15 +155,15 @@ export default function CallInterface({
             
             {/* Local Video */}
             {callData?.localStream && (
-              <div className="absolute bottom-2 right-2 w-24 h-16 bg-muted rounded-lg overflow-hidden">
-                <video
-                  ref={localVideoRef}
-                  className="w-full h-full object-cover"
-                  autoPlay
-                  playsInline
-                  muted
-                />
-              </div>
+            <div className="absolute bottom-2 right-2 w-24 h-16 bg-muted rounded-lg overflow-hidden">
+              <video
+                ref={localVideoRef}
+                className="w-full h-full object-cover"
+                autoPlay
+                playsInline
+                muted
+              />
+            </div>
             )}
           </div>
         )}

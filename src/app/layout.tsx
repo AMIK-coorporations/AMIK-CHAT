@@ -34,10 +34,10 @@ export default function RootLayout({
       <body className="font-body antialiased" suppressHydrationWarning={true}>
         <AuthProvider>
           <CallProvider>
-            <PrefetchRoutes />
-            {children}
-            <Toaster />
-            <Analytics />
+          <PrefetchRoutes />
+          {children}
+          <Toaster />
+          <Analytics />
           </CallProvider>
         </AuthProvider>
       </body>

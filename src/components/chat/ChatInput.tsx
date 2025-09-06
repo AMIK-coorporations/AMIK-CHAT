@@ -232,30 +232,30 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         try {
           // Upload file using FileService
           const fileAttachment = await FileService.uploadFile(file, chatId, currentUser.uid);
-          
-          const newMessageRef = doc(messagesColRef);
-          const timestamp = serverTimestamp();
 
-          const messageData: any = {
-            text: file.name,
-            senderId: currentUser.uid,
-            timestamp: timestamp,
-            isRead: false,
+        const newMessageRef = doc(messagesColRef);
+        const timestamp = serverTimestamp();
+
+        const messageData: any = {
+          text: file.name,
+          senderId: currentUser.uid,
+          timestamp: timestamp,
+          isRead: false,
             type: file.type.startsWith('image/') ? 'image' : 'file',
-            fileName: file.name,
-            fileSize: file.size,
+          fileName: file.name,
+          fileSize: file.size,
             fileType: file.type,
             fileId: fileAttachment.id // Reference to RTDB file
-          };
+        };
 
-          // Add type-specific properties
+        // Add type-specific properties
           if (file.type.startsWith('image/')) {
             messageData.imageUrl = `data:${file.type};base64,${fileAttachment.fileData}`;
-          } else {
+        } else {
             messageData.fileUrl = `data:${file.type};base64,${fileAttachment.fileData}`;
-          }
+        }
 
-          batch.set(newMessageRef, messageData);
+        batch.set(newMessageRef, messageData);
         } catch (error: any) {
           console.error(`Error uploading file ${file.name}:`, error);
           toast({
@@ -294,17 +294,17 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
     try {
       setIsRecording(true);
       setRecordingDuration(0);
-      
+
       // Use VoiceService to record
       const voiceMessage = await VoiceService.recordVoiceMessage(
         chatId, 
         currentUser.uid,
         (duration) => setRecordingDuration(duration)
       );
-      
+
       // Send the voice message
       await sendVoiceMessage(voiceMessage);
-      
+
       toast({ title: 'آواز کا پیغام بھیجا گیا' });
     } catch (error: any) {
       console.error("Error recording voice:", error);
@@ -321,8 +321,8 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
   const stopVoiceRecording = useCallback(() => {
     VoiceService.stopRecording();
-    setIsRecording(false);
-    setRecordingDuration(0);
+      setIsRecording(false);
+      setRecordingDuration(0);
   }, []);
 
   // Simple file upload
@@ -470,7 +470,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         title: 'خرابی', 
         description: 'ویڈیو کال شروع نہیں ہو سکی' 
       });
-    }
+      }
   };
 
   const handleVoiceCall = async () => {
@@ -506,7 +506,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
     try {
       setIsUploading(true);
-      
+
       const chatRef = doc(db, 'chats', chatId);
       const messagesColRef = collection(chatRef, 'messages');
       const newMessageRef = doc(messagesColRef);

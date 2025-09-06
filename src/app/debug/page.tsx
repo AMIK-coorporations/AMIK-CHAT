@@ -190,7 +190,7 @@ export default function DebugPage() {
             <p>Please log in to access debug features.</p>
           </CardContent>
         </Card>
-      </div>
+          </div>
     );
   }
 
@@ -201,7 +201,7 @@ export default function DebugPage() {
           <CardTitle>Firebase Debug Tools</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
+        <div>
             <h3 className="font-semibold mb-2">Current User Info:</h3>
             <pre className="bg-muted p-2 rounded text-sm overflow-auto">
               {JSON.stringify({
@@ -210,7 +210,7 @@ export default function DebugPage() {
                 userData: userData
               }, null, 2)}
             </pre>
-          </div>
+        </div>
 
           <div className="flex gap-2">
             <Button onClick={runDebugTests} disabled={loading}>
@@ -222,15 +222,15 @@ export default function DebugPage() {
             <Button onClick={createTestChat} variant="outline">
               Create Test Chat
             </Button>
-          </div>
+        </div>
 
           {Object.keys(debugInfo).length > 0 && (
-            <div>
+        <div>
               <h3 className="font-semibold mb-2">Debug Results:</h3>
               <pre className="bg-muted p-2 rounded text-sm overflow-auto max-h-96">
                 {JSON.stringify(debugInfo, null, 2)}
               </pre>
-            </div>
+          </div>
           )}
         </CardContent>
       </Card>
