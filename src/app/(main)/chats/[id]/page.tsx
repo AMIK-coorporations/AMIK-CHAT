@@ -149,10 +149,10 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         {otherParticipant ? (
           <>
             <Avatar className="h-10 w-10 border">
-              <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} data-ai-hint="person avatar" />
-              <AvatarFallback>{otherParticipant.name.charAt(0)}</AvatarFallback>
+              <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name ?? 'User'} data-ai-hint="person avatar" />
+              <AvatarFallback>{(otherParticipant.name ?? 'U').charAt(0)}</AvatarFallback>
             </Avatar>
-            <h1 className="flex-1 truncate text-lg font-semibold">{otherParticipant.name}</h1>
+            <h1 className="flex-1 truncate text-lg font-semibold">{otherParticipant.name ?? 'Unknown User'}</h1>
           </>
         ) : (
           <div className="flex-1 h-10 bg-muted rounded-md animate-pulse" />
