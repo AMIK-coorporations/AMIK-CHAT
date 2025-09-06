@@ -60,10 +60,7 @@ export class CallService {
       console.warn('WebRTC not available in this environment');
       return;
     }
-    this.initializePeerConnection();
-  }
 
-  private initializePeerConnection() {
     const configuration: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },

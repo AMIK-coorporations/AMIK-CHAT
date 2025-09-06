@@ -65,11 +65,11 @@ export default function MePage() {
         {userData && user ? (
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20 border">
-              <AvatarImage src={userData.avatarUrl} alt={userData.name} data-ai-hint="profile person" />
-              <AvatarFallback className="text-3xl">{userData.name.charAt(0)}</AvatarFallback>
+              <AvatarImage src={userData.avatarUrl} alt={userData.name ?? 'User'} data-ai-hint="profile person" />
+              <AvatarFallback className="text-3xl">{(userData.name ?? 'U').charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="text-xl font-semibold">{userData.name}</p>
+              <p className="text-xl font-semibold">{userData.name ?? 'Unknown User'}</p>
               <p className="text-muted-foreground break-all">اے ایم آئی کے شناخت: {user.uid}</p>
             </div>
             <Link href="/qr" className="p-2 rounded-md hover:bg-muted">

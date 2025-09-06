@@ -194,6 +194,7 @@ export function useCall() {
       title: isMuted ? 'مائیک بند کر دیا گیا' : 'مائیک کھول دیا گیا',
       description: isMuted ? 'آپ کی آواز سنائی نہیں دے رہی' : 'آپ کی آواز سنائی دے رہی ہے',
     });
+    return isMuted;
   }, [toast]);
 
   const toggleVideo = useCallback(() => {
@@ -202,6 +203,7 @@ export function useCall() {
       title: isVideoDisabled ? 'ویڈیو بند کر دی گئی' : 'ویڈیو کھول دی گئی',
       description: isVideoDisabled ? 'آپ کی ویڈیو نظر نہیں آ رہی' : 'آپ کی ویڈیو نظر آ رہی ہے',
     });
+    return isVideoDisabled;
   }, [toast]);
 
   return {

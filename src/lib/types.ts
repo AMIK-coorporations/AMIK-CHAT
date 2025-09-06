@@ -48,6 +48,7 @@ export interface Message {
 export interface Chat {
   id: string;
   participants: string[];
+  participantsInfo?: Record<string, any>; // Add this line
   lastMessage?: {
     text: string;
     senderId: string;

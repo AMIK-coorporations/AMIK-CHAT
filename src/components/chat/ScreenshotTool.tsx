@@ -21,7 +21,7 @@ export default function ScreenshotTool({ onClose, onScreenshotTaken }: Screensho
     try {
       setIsCapturing(true);
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { mediaSource: 'screen' }
+        video: true
       });
 
       if (videoRef.current) {

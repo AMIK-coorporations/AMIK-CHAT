@@ -49,8 +49,17 @@ export default function ChatView({ chatId }: { chatId: string }) {
             if (otherInfo) {
               setOtherParticipant({
                 id: otherParticipantId,
+                email: otherInfo.email ?? '',
+                displayName: otherInfo.displayName ?? otherInfo.name ?? 'Unknown',
                 name: otherInfo.name ?? otherInfo.displayName ?? 'Unknown',
-                avatarUrl: otherInfo.avatarUrl ?? otherInfo.photoURL ?? ''
+                avatarUrl: otherInfo.avatarUrl ?? otherInfo.photoURL ?? '',
+                photoURL: otherInfo.photoURL ?? otherInfo.avatarUrl ?? '',
+                phoneNumber: otherInfo.phoneNumber ?? '',
+                createdAt: new Date(),
+                lastSeen: new Date(),
+                isOnline: otherInfo.isOnline ?? false,
+                status: otherInfo.status ?? '',
+                bio: otherInfo.bio ?? ''
               });
             }
           }

@@ -19,11 +19,11 @@ function ContactRow({ contact, onClick }: { contact: User; onClick: () => void }
   return (
     <div onClick={onClick} className="flex items-center gap-4 p-4 hover:bg-muted/50 cursor-pointer">
       <Avatar className="h-10 w-10 border">
-        <AvatarImage src={contact.avatarUrl} alt={contact.name} data-ai-hint="person avatar" />
-        <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+        <AvatarImage src={contact.avatarUrl} alt={contact.name ?? 'User'} data-ai-hint="person avatar" />
+        <AvatarFallback>{(contact.name ?? 'U').charAt(0)}</AvatarFallback>
       </Avatar>
       <div className="flex-1 overflow-hidden">
-        <p className="font-semibold truncate">{contact.name}</p>
+        <p className="font-semibold truncate">{contact.name ?? 'Unknown User'}</p>
       </div>
     </div>
   );
