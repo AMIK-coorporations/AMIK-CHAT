@@ -8,6 +8,8 @@ const ROUTES_TO_PREFETCH = [
   "/contacts",
   "/discover",
   "/me",
+  "/qr",
+  "/scan",
 ];
 
 export default function PrefetchRoutes() {

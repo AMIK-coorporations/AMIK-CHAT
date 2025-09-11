@@ -126,18 +126,17 @@ export default function MePage() {
               </Avatar>
             </button>
             <div className="flex-1">
-              <p className="text-xl font-semibold">{userData.name ?? 'Unknown User'}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-muted-foreground">اے ایم آئی کے گفتگو شناخت</span>
+              <div className="flex items-center gap-2">
+                <p className="text-xl font-semibold">{userData.name ?? 'Unknown User'}</p>
                 <button
-                  className="h-7 w-7 inline-flex items-center justify-center rounded-full border border-muted-foreground/30 hover:border-accent hover:bg-accent/10 text-accent transition-colors"
+                  className="h-8 w-8 inline-flex items-center justify-center rounded-full border border-muted-foreground/30 hover:border-accent hover:bg-accent/10 text-accent transition-colors"
                   title="اے ایم آئی کے شناخت کاپی کریں"
                   onClick={async () => { await navigator.clipboard.writeText(user.uid); toast({ title: 'کاپی ہوگیا', description: 'شناخت کلپ بورڈ میں کاپی ہو گئی۔' }); }}
                 >
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-4 w-4" />
                 </button>
               </div>
-              {/* ID remains hidden; only label + copy button shown */}
+              {/* AMIK Chat ID hidden from UI to keep it private */}
             </div>
             <Link href="/qr" className="p-2 rounded-md hover:bg-muted">
               <QrCode className="h-6 w-6 text-muted-foreground" />

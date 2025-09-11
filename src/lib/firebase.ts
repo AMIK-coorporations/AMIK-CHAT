@@ -12,7 +12,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyA3G5V2MllF32sgU2F5zWIcOmdL40PhUeU",
   authDomain: "chatsnap-y6m78.firebaseapp.com",
   projectId: "chatsnap-y6m78",
-  storageBucket: "chatsnap-y6m78.firebasestorage.app",
+  storageBucket: "chatsnap-y6m78.appspot.com",
   messagingSenderId: "740798864765",
   appId: "1:740798864765:web:ce7fc33ef3a6bc07bb8014",
   databaseURL: "https://chatsnap-y6m78-default-rtdb.firebaseio.com"

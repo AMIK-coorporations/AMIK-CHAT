@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { ChevronLeft, ChevronRight, Shield, SunMoon } from "lucide-react";
 
 
 export default function SettingsPage() {
@@ -28,6 +28,14 @@ export default function SettingsPage() {
                 <div className="flex-1">
                   <p className="font-medium">کھاتہ اور حفاظت</p>
                   <p className="text-sm text-muted-foreground">پاس ورڈ، اکاؤنٹ کی تفصیلات</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Link>
+              <Link href="/me/settings/theme" className="flex items-center p-4 transition-colors hover:bg-muted/50">
+                <SunMoon className="h-6 w-6 text-accent mr-4" />
+                <div className="flex-1">
+                  <p className="font-medium">پس منظر</p>
+                  <p className="text-sm text-muted-foreground">اندھیرا، روشنی، آلہ کی طے شدہ</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Link>
