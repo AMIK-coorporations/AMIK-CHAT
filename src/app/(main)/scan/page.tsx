@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import LoadingOverlay from '@/components/LoadingOverlay';
 
 export default function ScanPage() {
   const router = useRouter();
@@ -286,10 +287,7 @@ export default function ScanPage() {
         )}
 
         {isProcessing && (
-          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-white">
-            <Loader2 className="h-16 w-16 animate-spin mb-4" />
-            <p>پروسیسنگ...</p>
-          </div>
+          <LoadingOverlay message="پروسیسنگ..." />
         )}
         
         {!isProcessing && <p className="mt-4 text-center text-white">

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import LoadingOverlay from '@/components/LoadingOverlay';
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -55,8 +55,8 @@ export default function LoginPage() {
   
   if (authLoading || user) {
     return (
-        <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        <div className="relative flex min-h-screen w-full items-center justify-center bg-background p-4">
+            <LoadingOverlay />
         </div>
     );
   }
@@ -84,7 +84,7 @@ export default function LoginPage() {
                 <Input id="password" name="password" type="password" required />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {loading && <span className="mr-2 inline-flex"><div className="amik-spinner w-4 h-4"><span className="amik-spinner-dot" /></div></span>}
                 داخل ہوں
               </Button>
             </form>

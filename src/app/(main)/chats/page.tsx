@@ -14,6 +14,7 @@ import { Search, Plus, MessageCircle, UserPlus, ScanLine, Landmark } from 'lucid
 import { db } from '@/lib/firebase';
 import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { createOrNavigateToChat } from '@/lib/chatUtils';
+import LoadingOverlay from '@/components/LoadingOverlay';
 
 function ContactRow({ contact, onClick }: { contact: User; onClick: () => void }) {
   return (
@@ -60,7 +61,7 @@ export default function ChatsPage() {
   };
 
   return (
-    <div>
+    <div className="relative">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background p-4">
         <h1 className="text-xl font-bold">AMIK CHAT</h1>
         <div className="flex items-center gap-2">
@@ -100,7 +101,7 @@ export default function ChatsPage() {
       </div>
       <div className="divide-y">
         {contactsLoading ? (
-          <p className="p-4 text-center text-muted-foreground">رابطے لوڈ ہو رہے ہیں...</p>
+          <LoadingOverlay message="رابطے لوڈ ہو رہے ہیں" />
         ) : filteredContacts.length > 0 ? (
           filteredContacts.map(contact => (
             <ContactRow key={contact.id} contact={contact} onClick={() => startChat(contact)} />

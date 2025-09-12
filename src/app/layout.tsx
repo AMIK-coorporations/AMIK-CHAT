@@ -7,6 +7,7 @@ import { CallProvider } from '@/context/CallContext';
 import PrefetchRoutes from '@/components/PrefetchRoutes';
 import { Analytics } from "@vercel/analytics/next";
 
+
 export const metadata: Metadata = {
   title: 'اے ایم آئی کے چیٹ',
   description: 'ایک جدید چیٹ ایپلیکیشن',
@@ -30,6 +31,23 @@ export default function RootLayout({
   return (
     <html lang="ur" dir="ltr" suppressHydrationWarning={true}>
       <head>
+        <script dangerouslySetInnerHTML={{__html: `
+          (function(){
+            try{
+              var saved = localStorage.getItem('theme') || 'system';
+              if(!localStorage.getItem('theme')) localStorage.setItem('theme','system');
+              var mql = window.matchMedia('(prefers-color-scheme: dark)');
+              var apply = function(mode){
+                var isDark = mode === 'dark' || (mode !== 'light' && mql.matches);
+                document.documentElement.classList[isDark?'add':'remove']('dark');
+              };
+              apply(saved);
+              mql.addEventListener && mql.addEventListener('change', function(){
+                if((localStorage.getItem('theme')||'system')==='system') apply('system');
+              });
+            }catch(e){}
+          })();
+        `}} />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning={true}>
         <AuthProvider>

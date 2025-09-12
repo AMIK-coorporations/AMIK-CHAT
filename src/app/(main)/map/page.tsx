@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import type * as Leaflet from 'leaflet';
+import LoadingOverlay from '@/components/LoadingOverlay';
 
 // Runtime Leaflet namespace, assigned on client only
 let L: typeof Leaflet | null = null;
@@ -238,12 +239,7 @@ export default function MapPage() {
             </div>
         )}
          {loadingRoute && (
-          <div className="absolute inset-0 bg-black/50 z-10 flex items-center justify-center text-white">
-            <div className="flex flex-col items-center gap-4 p-4 bg-background text-foreground rounded-lg shadow-xl">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="font-semibold">راستہ حاصل کیا جا رہا ہے...</p>
-            </div>
-          </div>
+          <LoadingOverlay message="راستہ حاصل کیا جا رہا ہے..." />
         )}
       </div>
     </div>

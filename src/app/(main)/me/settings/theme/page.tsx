@@ -28,6 +28,8 @@ export default function ThemePage() {
 	React.useEffect(() => {
 		const saved = localStorage.getItem('theme') || 'system';
 		setCurrent(saved);
+		// also apply on mount so navigating directly reflects choice
+		applyTheme(saved);
 	}, []);
 
 	const choose = (mode: 'dark'|'light'|'system') => {

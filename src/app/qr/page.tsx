@@ -98,16 +98,13 @@ export default function QrCodePage() {
                   level="H"
                 />
                 <div className="absolute top-1/2 left-1/2 h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2 overflow-hidden border rounded-md border-white/90">
-                    <img
+                    <NextImage
                       src="/logo.png"
                       alt="AMIK Logo"
                       width={72}
                       height={72}
+                      priority
                       className="w-full h-full object-cover"
-                      loading="eager"
-                      decoding="sync"
-                      crossOrigin="anonymous"
-                      data-ai-hint="logo chat bubble"
                     />
                   </div>
               </div>
