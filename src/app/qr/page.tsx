@@ -4,7 +4,7 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
-import StyledQr from '@/components/StyledQr';
+// Revert to inline QR + overlay image for reliability
 import { useAuth } from '@/hooks/useAuth';
 import { ChevronLeft, MoreHorizontal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -91,7 +91,24 @@ export default function QrCodePage() {
               </div>
 
               <div className="bg-white p-4 rounded-lg shadow-md relative">
-                <StyledQr value={qrValue} className="mx-auto" size={256} logoUrl="/logo.png" />
+                <div className="absolute inset-0 rounded-lg" aria-hidden="true" />
+                <QRCode
+                  value={qrValue}
+                  size={256}
+                  fgColor="hsl(var(--primary))"
+                  bgColor="#FFFFFF"
+                  level="H"
+                />
+                <div className="absolute top-1/2 left-1/2 h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2 overflow-hidden border rounded-md border-white/90 z-10">
+                    <NextImage
+                      src="/logo.png"
+                      alt="AMIK Logo"
+                      width={72}
+                      height={72}
+                      priority
+                      className="w-full h-full object-cover"
+                    />
+                </div>
               </div>
 
               <p className="text-muted-foreground">دوست کے طور پر شامل کرنے کے لیے کیو آر کوڈ اسکین کریں</p>
