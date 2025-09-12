@@ -99,9 +99,9 @@ export default function QrCodePage() {
                   bgColor="#FFFFFF"
                   level="H"
                 />
-                <div className="absolute top-1/2 left-1/2 h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2 overflow-hidden border rounded-md border-white/90 z-10">
+                <div className="absolute top-1/2 left-1/2 h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2 overflow-hidden border rounded-md border-white/90 z-10 bg-white">
                     <NextImage
-                      src="/logo.png"
+                      src="/AMIK%20CHAT%20LOGO%20simple%20crop%202.png"
                       alt="AMIK Logo"
                       width={72}
                       height={72}
