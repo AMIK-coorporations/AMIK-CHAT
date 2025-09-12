@@ -21,6 +21,18 @@ export default function QrCodePage() {
   const { toast } = useToast();
 
   const qrValue = user ? `amik-chat-user://${user.uid}` : '';
+  const [overlaySrc, setOverlaySrc] = useState<string>("/AMIK%20CHAT%20LOGO%20simple%20crop%202.png");
+  const overlayCandidates = [
+    "/AMIK%20CHAT%20LOGO%20simple%20crop%202.png",
+    "/AMIK CHAT LOGO simple crop 2.png",
+    "/qr-logo.png",
+    "/logo.png",
+  ];
+  const handleOverlayError = () => {
+    const idx = overlayCandidates.indexOf(overlaySrc);
+    const next = overlayCandidates[idx + 1];
+    if (next) setOverlaySrc(next);
+  };
 
   const handleSaveImage = () => {
     if (!qrCodeRef.current) {
@@ -100,15 +112,16 @@ export default function QrCodePage() {
                   level="H"
                 />
                 <div className="absolute top-1/2 left-1/2 h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2 overflow-hidden border rounded-md border-white/90 z-10 bg-white">
-                    <NextImage
-                      src="/AMIK%20CHAT%20LOGO%20simple%20crop%202.png"
+                    <img
+                      src={overlaySrc}
                       alt="AMIK Logo"
                       width={72}
                       height={72}
-                      priority
                       className="w-full h-full object-cover"
+                      onError={handleOverlayError}
+                      decoding="async"
                     />
-                </div>
+                 </div>
               </div>
 
               <p className="text-muted-foreground">دوست کے طور پر شامل کرنے کے لیے کیو آر کوڈ اسکین کریں</p>
