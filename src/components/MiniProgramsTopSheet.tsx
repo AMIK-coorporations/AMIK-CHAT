@@ -28,10 +28,15 @@ const apps = [
 
 interface MiniProgramsTopSheetProps {
   className?: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function MiniProgramsTopSheet({ className }: MiniProgramsTopSheetProps) {
-  const [open, setOpen] = useState(false);
+export function MiniProgramsTopSheet({
+  className,
+  open,
+  onOpenChange,
+}: MiniProgramsTopSheetProps) {
   const startYRef = useRef<number | null>(null);
   const closeStartYRef = useRef<number | null>(null);
   const [closeDragY, setCloseDragY] = useState(0);
@@ -46,7 +51,7 @@ export function MiniProgramsTopSheet({ className }: MiniProgramsTopSheetProps) {
     if (startYRef.current == null) return;
     const delta = clientY - startYRef.current;
     if (delta > 60) {
-      setOpen(true);
+      onOpenChange(true);
       startYRef.current = null;
     }
   };
@@ -70,7 +75,7 @@ export function MiniProgramsTopSheet({ className }: MiniProgramsTopSheetProps) {
       setCloseDragY(delta);
     }
     if (delta < -80) {
-      setOpen(false);
+      onOpenChange(false);
       closeStartYRef.current = null;
       setIsCloseDragging(false);
       setCloseDragY(0);
@@ -103,7 +108,7 @@ export function MiniProgramsTopSheet({ className }: MiniProgramsTopSheetProps) {
         onTouchEnd={handleEnd}
       />
 
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="top"
           className="inset-x-0 top-0 h-screen max-h-screen overflow-y-auto border-b bg-background p-4 pt-6 shadow-none data-[state=open]:animate-in data-[state=open]:slide-in-from-top data-[state=closed]:animate-out data-[state=closed]:slide-out-to-top [&>button]:hidden"

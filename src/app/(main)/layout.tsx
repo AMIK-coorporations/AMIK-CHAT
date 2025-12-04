@@ -5,6 +5,7 @@ import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useRef, cloneElement } from "react";
+import type React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
@@ -22,10 +23,14 @@ export default function MainAppLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { toast, dismiss } = useToast();
-  const notifiedMessageKeys = useRef(new Set<string>());
+  const notifiedMessageKeys = useRef<Set<string>>(new Set());
 
   const [chats, setChats] = useState<Chat[]>([]);
   const [chatsLoading, setChatsLoading] = useState(true);
+  const [miniOpen, setMiniOpen] = useState(false);
+  const mainRef = useRef<HTMLDivElement | null>(null);
+  const pullStartYRef = useRef<number | null>(null);
+  const [isPulling, setIsPulling] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -155,6 +160,31 @@ export default function MainAppLayout({
     return () => unsubscribe();
   }, [user, pathname, router, toast, dismiss]);
 
+  const handleMainTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const el = mainRef.current;
+    if (!el || miniOpen) return;
+    if (el.scrollTop <= 0) {
+      pullStartYRef.current = e.touches[0]?.clientY ?? 0;
+      setIsPulling(true);
+    }
+  };
+
+  const handleMainTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isPulling || pullStartYRef.current == null || miniOpen) return;
+    const currentY = e.touches[0]?.clientY ?? 0;
+    const delta = currentY - pullStartYRef.current;
+    if (delta > 60) {
+      setMiniOpen(true);
+      pullStartYRef.current = null;
+      setIsPulling(false);
+    }
+  };
+
+  const handleMainTouchEnd = () => {
+    pullStartYRef.current = null;
+    setIsPulling(false);
+  };
+
   if (authLoading || !user) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -174,8 +204,14 @@ export default function MainAppLayout({
 
   return (
     <div className="relative mx-auto flex h-screen max-w-2xl flex-col bg-background">
-      <MiniProgramsTopSheet />
-      <main className="flex-1 overflow-y-auto pb-20">
+      <MiniProgramsTopSheet open={miniOpen} onOpenChange={setMiniOpen} />
+      <main
+        ref={mainRef}
+        className="flex-1 overflow-y-auto pb-20"
+        onTouchStart={handleMainTouchStart}
+        onTouchMove={handleMainTouchMove}
+        onTouchEnd={handleMainTouchEnd}
+      >
         {childrenWithProps}
       </main>
       <BottomNav />
