@@ -62,3 +62,20 @@ export interface Chat {
   updatedAt: any;
   unreadCount?: Record<string, number>;
 }
+
+export type ContactRequestStatus = 'pending' | 'accepted' | 'rejected';
+export type ContactRequestDirection = 'sent' | 'received';
+
+export interface ContactRequest {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  fromName?: string;
+  toName?: string;
+  fromAvatarUrl?: string;
+  toAvatarUrl?: string;
+  direction: ContactRequestDirection;
+  status: ContactRequestStatus;
+  createdAt?: Timestamp | FieldValue;
+  updatedAt?: Timestamp | FieldValue;
+}

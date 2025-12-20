@@ -1,21 +1,22 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Users, UserPlus, Loader2, Plus, MessageCircle, ScanLine, Landmark } from "lucide-react";
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Users, UserPlus, Loader2, Plus, MessageCircle, ScanLine, Landmark, Clock3, CheckCheck, XCircle } from "lucide-react";
 import ContactSuggestions from "@/components/contacts/ContactSuggestions";
 import { Button } from "@/components/ui/button";
 import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
-import type { User } from '@/lib/types';
+import type { ContactRequest, User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
 import { createOrNavigateToChat } from '@/lib/chatUtils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { acceptContactRequest, rejectContactRequest } from '@/lib/contactRequestService';
 
 function ContactItem({ contact, onClick, isCreatingChat }: { contact: User; onClick: () => void; isCreatingChat: boolean; }) {
   return (
@@ -38,10 +39,20 @@ function ContactItem({ contact, onClick, isCreatingChat }: { contact: User; onCl
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [receivedRequests, setReceivedRequests] = useState<ContactRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<ContactRequest[]>([]);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const { user: currentUser, userData } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [creatingChat, setCreatingChat] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const activeTab = useMemo(
+    () => searchParams?.get('tab') === 'requests' ? 'requests' : 'contacts',
+    [searchParams]
+  );
 
   useEffect(() => {
     if (!currentUser) {
@@ -73,6 +84,29 @@ export default function ContactsPage() {
 
     return () => unsubscribe();
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setRequestsLoading(false);
+      return;
+    }
+
+    const requestsColRef = collection(db, 'users', currentUser.uid, 'contactRequests');
+    const unsubscribe = onSnapshot(requestsColRef, (snapshot) => {
+      setRequestsLoading(true);
+      try {
+        const reqs = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ContactRequest));
+        setReceivedRequests(reqs.filter(r => r.direction === 'received'));
+        setSentRequests(reqs.filter(r => r.direction === 'sent'));
+      } catch (error) {
+        console.error("Error fetching requests:", error);
+      } finally {
+        setRequestsLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
   
   const handleStartChat = async (contact: User) => {
     if (!currentUser || !userData || creatingChat) return;
@@ -93,6 +127,69 @@ export default function ContactsPage() {
     } finally {
       setCreatingChat(null);
     }
+  };
+
+  const handleAcceptRequest = async (request: ContactRequest) => {
+    if (!currentUser || !userData) return;
+    setProcessingRequestId(request.id);
+    try {
+      const { chatId } = await acceptContactRequest({
+        currentUserId: currentUser.uid,
+        currentUserProfile: userData,
+        request,
+      });
+      toast({ title: 'درخواست قبول کر لی گئی', description: 'اب آپ بات چیت شروع کر سکتے ہیں۔' });
+      router.push(`/chats/${chatId}`);
+    } catch (error) {
+      console.error("Error accepting request:", error);
+      toast({
+        variant: 'destructive',
+        title: 'درخواست قبول نہ ہو سکی',
+        description: 'براہ کرم دوبارہ کوشش کریں۔',
+      });
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  const handleRejectRequest = async (request: ContactRequest) => {
+    if (!currentUser) return;
+    setProcessingRequestId(request.id);
+    try {
+      await rejectContactRequest({ currentUserId: currentUser.uid, request });
+      toast({ title: 'درخواست مسترد کر دی گئی' });
+    } catch (error) {
+      console.error("Error rejecting request:", error);
+      toast({
+        variant: 'destructive',
+        title: 'مسترد نہ ہو سکی',
+        description: 'براہ کرم دوبارہ کوشش کریں۔',
+      });
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  const renderStatusBadge = (status: ContactRequest['status']) => {
+    if (status === 'accepted') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 px-2 py-1 text-xs">
+          <CheckCheck className="h-3 w-3" /> قبول شدہ
+        </span>
+      );
+    }
+    if (status === 'rejected') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-700 px-2 py-1 text-xs">
+          <XCircle className="h-3 w-3" /> مسترد
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-1 text-xs">
+        <Clock3 className="h-3 w-3" /> زیر التواء
+      </span>
+    );
   };
 
   return (
@@ -129,42 +226,130 @@ export default function ContactsPage() {
         </div>
       </header>
 
-      <div className="p-4">
-        <ContactSuggestions />
-      </div>
+      <Tabs defaultValue={activeTab} className="w-full">
+        <TabsList className="mx-4 mt-4 w-[calc(100%-2rem)]">
+          <TabsTrigger value="contacts">رابطے</TabsTrigger>
+          <TabsTrigger value="requests">درخواستیں</TabsTrigger>
+        </TabsList>
 
-      <div className="border-t">
-        <h2 className="p-4 text-sm font-semibold text-muted-foreground">میرے رابطے</h2>
-        {loading ? (
-          <div className="p-4 space-y-4">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <Skeleton className="h-5 w-32" />
-            </div>
-             <div className="flex items-center gap-4">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <Skeleton className="h-5 w-40" />
-            </div>
+        <TabsContent value="contacts">
+          <div className="p-4">
+            <ContactSuggestions />
           </div>
-        ) : contacts.length > 0 ? (
-          <div className="divide-y">
-            {contacts.map(contact => (
-              <ContactItem 
-                key={contact.id} 
-                contact={contact} 
-                onClick={() => handleStartChat(contact)}
-                isCreatingChat={creatingChat === contact.id}
-              />
-            ))}
+
+          <div className="border-t">
+            <h2 className="p-4 text-sm font-semibold text-muted-foreground">میرے رابطے</h2>
+            {loading ? (
+              <div className="p-4 space-y-4">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className="h-5 w-32" />
+                </div>
+                 <div className="flex items-center gap-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className="h-5 w-40" />
+                </div>
+              </div>
+            ) : contacts.length > 0 ? (
+              <div className="divide-y">
+                {contacts.map(contact => (
+                  <ContactItem 
+                    key={contact.id} 
+                    contact={contact} 
+                    onClick={() => handleStartChat(contact)}
+                    isCreatingChat={creatingChat === contact.id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                <Users className="h-16 w-16 mb-4" />
+                <h3 className="text-lg font-semibold">ابھی تک کوئی رابطہ نہیں</h3>
+                <p className="text-sm">نئے رابطے شامل کرنے کے لیے '+' بٹن کا استعمال کریں۔</p>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
-            <Users className="h-16 w-16 mb-4" />
-            <h3 className="text-lg font-semibold">ابھی تک کوئی رابطہ نہیں</h3>
-            <p className="text-sm">نئے رابطے شامل کرنے کے لیے '+' بٹن کا استعمال کریں۔</p>
+        </TabsContent>
+
+        <TabsContent value="requests">
+          <div className="p-4 space-y-8">
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-semibold text-muted-foreground">موصولہ درخواستیں</h2>
+                {requestsLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              </div>
+              {receivedRequests.filter(r => r.status === 'pending').length === 0 ? (
+                <p className="text-sm text-muted-foreground">کوئی نئی درخواست نہیں۔</p>
+              ) : (
+                <div className="space-y-3">
+                  {receivedRequests.filter(r => r.status === 'pending').map(request => (
+                    <div key={request.id} className="flex items-center gap-3 rounded-lg border p-3">
+                      <Avatar className="h-10 w-10 border">
+                        <AvatarImage src={request.fromAvatarUrl} alt={request.fromName ?? 'User'} />
+                        <AvatarFallback>{(request.fromName ?? 'U').charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{request.fromName ?? 'نامعلوم صارف'}</p>
+                        <p className="text-xs text-muted-foreground">AMIK ID: {request.fromUserId}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleAcceptRequest(request)}
+                          disabled={processingRequestId === request.id}
+                        >
+                          {processingRequestId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'قبول کریں'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRejectRequest(request)}
+                          disabled={processingRequestId === request.id}
+                        >
+                          مسترد کریں
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-semibold text-muted-foreground">بھیجی گئی درخواستیں</h2>
+                {requestsLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              </div>
+              {sentRequests.length === 0 ? (
+                <p className="text-sm text-muted-foreground">ابھی تک کوئی درخواست نہیں بھیجی گئی۔</p>
+              ) : (
+                <div className="space-y-3">
+                  {sentRequests.map(request => (
+                    <div key={request.id} className="flex items-center gap-3 rounded-lg border p-3">
+                      <Avatar className="h-10 w-10 border">
+                        <AvatarImage src={request.toAvatarUrl} alt={request.toName ?? 'User'} />
+                        <AvatarFallback>{(request.toName ?? 'U').charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{request.toName ?? 'نامعلوم صارف'}</p>
+                        <p className="text-xs text-muted-foreground">AMIK ID: {request.toUserId}</p>
+                        <p className="text-xs mt-1 text-muted-foreground">
+                          {request.status === 'accepted'
+                            ? 'آپ کی درخواست قبول کر لی گئی ہے'
+                            : request.status === 'rejected'
+                              ? 'آپ کی درخواست مسترد کر دی گئی ہے'
+                              : 'آپ کی درخواست بھیج دی گئی ہے'}
+                        </p>
+                      </div>
+                      {renderStatusBadge(request.status)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

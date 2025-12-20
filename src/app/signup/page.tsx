@@ -67,7 +67,8 @@ export default function SignupPage() {
     } catch (error: any) {
       let description = "ایک نامعلوم خرابی پیش آگئی۔";
       if (error.code === 'auth/api-key-not-valid') {
-        description = "آپ کی Firebase API کلید درست نہیں ہے۔ براہ کرم اپنی .env فائل کو چیک کریں۔"
+        description =
+          "آپ کی Firebase API کلید درست نہیں ہے۔ براہ کرم Firebase کنسول میں ویب ایپ کی ترتیب اور NEXT_PUBLIC_FIREBASE_* ماحول کی ویریبلز کو چیک کریں۔";
       } else if (error.message) {
         description = error.message;
       }

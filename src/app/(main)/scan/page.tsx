@@ -12,11 +12,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import LoadingOverlay from '@/components/LoadingOverlay';
+import { createOrNavigateToChat } from '@/lib/chatUtils';
+import type { User } from '@/lib/types';
 
 export default function ScanPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, userData } = useAuth();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const readerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +28,10 @@ export default function ScanPage() {
 
   const handleScannedCode = useCallback(async (code: string) => {
     if (isProcessing || !currentUser) return;
+    if (!userData) {
+      toast({ variant: 'destructive', title: 'پروفائل لوڈ ہو رہی ہے', description: 'براہ کرم ایک لمحہ انتظار کریں اور دوبارہ اسکین کریں۔' });
+      return;
+    }
     setIsProcessing(true);
 
     if (scannerRef.current?.isScanning) {
@@ -71,23 +77,28 @@ export default function ScanPage() {
 
         const existingContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
         const existingContactSnap = await getDoc(existingContactRef);
+        const contactProfile = { id: contactId, ...contactData } as User;
+
         if (existingContactSnap.exists()) {
+            const chatId = await createOrNavigateToChat(currentUser.uid, userData, contactProfile);
             toast({
                 title: 'پہلے سے رابطہ ہے',
-                description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے۔`,
+                description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے، چیٹ کھول رہے ہیں۔`,
             });
-            router.push('/contacts');
+            router.push(`/chats/${chatId}`);
             return;
         }
 
         const newContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
         await setDoc(newContactRef, { addedAt: serverTimestamp() });
 
+        const chatId = await createOrNavigateToChat(currentUser.uid, userData, contactProfile);
+
         toast({
-            title: 'رابطہ شامل ہو گیا!',
-            description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'صارف'} کو آپ کے رابطوں میں شامل کر دیا گیا ہے۔`,
+            title: 'چیٹ کے لیے تیار!',
+            description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'صارف'} کے ساتھ چیٹ کھول رہے ہیں۔`,
         });
-        router.push('/contacts');
+        router.push(`/chats/${chatId}`);
 
     } catch (error: any) {
         console.error("Error adding contact from QR code:", error);
@@ -98,7 +109,7 @@ export default function ScanPage() {
         });
         router.back();
     }
-  }, [currentUser, isProcessing, router, toast]);
+  }, [currentUser, isProcessing, router, toast, userData]);
 
   useEffect(() => {
     if (!readerRef.current || scannerRef.current) return;

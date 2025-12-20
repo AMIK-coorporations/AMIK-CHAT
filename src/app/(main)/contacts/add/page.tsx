@@ -10,16 +10,17 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
+import { sendContactRequest, ContactRequestError } from '@/lib/contactRequestService';
 
 export default function AddContactPage() {
   const [contactId, setContactId] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, userData } = useAuth();
 
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +29,21 @@ export default function AddContactPage() {
     setLoading(true);
     const trimmedId = contactId.trim();
 
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        setLoading(false);
+        toast({
+          variant: 'destructive',
+          title: 'وقت ختم',
+          description: 'درخواست بہت دیر لگ رہی ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
+        });
+      }
+    }, 15000); // 15 second timeout
+
     try {
       if (trimmedId === currentUser.uid) {
+        clearTimeout(timeoutId);
         toast({
           variant: 'destructive',
           title: 'خرابی',
@@ -44,6 +58,7 @@ export default function AddContactPage() {
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
+        clearTimeout(timeoutId);
         toast({
           variant: 'destructive',
           title: 'صارف نہیں ملا',
@@ -53,56 +68,68 @@ export default function AddContactPage() {
         return;
       }
       
-      const contactData = userDoc.data();
-
-      // Check if contact already exists
-      const existingContactRef = doc(db, 'users', currentUser.uid, 'contacts', trimmedId);
-      const existingContactSnap = await getDoc(existingContactRef);
-
-      if (existingContactSnap.exists()) {
-          toast({
-              title: 'پہلے سے رابطہ ہے',
-              description: `${contactData.name || contactData.displayName || 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے۔`,
-          });
-          setContactId('');
-          setLoading(false);
-          return;
-      }
-
-      // Add the contact
-      const newContactRef = doc(db, 'users', currentUser.uid, 'contacts', trimmedId);
-      await setDoc(newContactRef, { 
-        addedAt: serverTimestamp(),
-        contactName: contactData.name || contactData.displayName || 'Unknown User',
-        contactAvatarUrl: contactData.avatarUrl || contactData.photoURL || ''
+      await sendContactRequest({
+        senderId: currentUser.uid,
+        senderProfile: userData ?? undefined,
+        targetUserId: trimmedId,
       });
 
+      clearTimeout(timeoutId);
       toast({
-        title: 'کامیابی!',
-        description: `${contactData.name || contactData.displayName || 'صارف'} آپ کے رابطوں میں شامل کر دیا گیا ہے۔`,
+        title: 'آپ کی درخواست بھیج دی گئی ہے',
+        description: 'منظوری کے بعد آپ رابطہ کر سکیں گے۔',
       });
-      router.push('/contacts');
+      setContactId('');
+      router.push('/contacts?tab=requests');
 
     } catch (error: any) {
+      clearTimeout(timeoutId);
       console.error("Error adding contact:", error);
+      console.error("Error code:", error.code);
+      console.error("Error message:", error.message);
       
-      // Provide more specific error messages
-      let errorMessage = 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
-      
-      if (error.code === 'permission-denied') {
-        errorMessage = 'اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firebase سیکیورٹی قوانین کو چیک کریں۔';
-      } else if (error.code === 'unavailable') {
-        errorMessage = 'Firebase سروس دستیاب نہیں ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں۔';
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (error instanceof ContactRequestError) {
+        let message = 'کچھ غلط ہو گیا۔';
+        if (error.code === 'already-contact') {
+          message = 'یہ صارف پہلے ہی آپ کے رابطوں میں ہے۔';
+        } else if (error.code === 'already-pending') {
+          message = 'آپ کی درخواست پہلے سے زیر التواء ہے۔';
+        } else if (error.code === 'incoming-exists') {
+          message = 'سامنے والے نے پہلے ہی درخواست بھیجی ہے، برائے مہربانی درخواستیں دیکھیں۔';
+        } else if (error.code === 'already-accepted') {
+          message = 'یہ رابطہ پہلے ہی منظور ہو چکا ہے۔';
+        } else if (error.code === 'user-not-found') {
+          message = 'صارف نہیں ملا۔';
+        }
+
+        toast({
+          variant: 'destructive',
+          title: 'درخواست میں مسئلہ',
+          description: message,
+        });
+      } else {
+        // Provide more specific error messages
+        let errorMessage = 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
+
+        if (error.code === 'permission-denied') {
+          errorMessage = 'سیکیورٹی قوانین کو چیک کریں۔ Firebase اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو Firebase کنسول میں اپ ڈیٹ کریں۔';
+        } else if (error.code === 'unavailable') {
+          errorMessage = 'Firebase سروس دستیاب نہیں ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں۔';
+        } else if (error.code === 'deadline-exceeded') {
+          errorMessage = 'درخواست کا وقت ختم ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        toast({
+          variant: 'destructive',
+          title: 'رابطہ شامل کرنے میں خرابی',
+          description: errorMessage,
+          duration: 10000, // Show for 10 seconds so user can read it
+        });
       }
-      
-      toast({
-        variant: 'destructive',
-        title: 'رابطہ شامل کرنے میں خرابی',
-        description: errorMessage,
-      });
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };

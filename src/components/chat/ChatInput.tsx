@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCall } from "@/hooks/useCall";
 import { db } from "@/lib/firebase";
-import { collection, serverTimestamp, writeBatch, doc } from "firebase/firestore";
+import { collection, serverTimestamp, writeBatch, doc, getDoc } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import EmojiPicker from "./EmojiPicker";
@@ -48,7 +48,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   const [isDragOver, setIsDragOver] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, userData } = useAuth();
   const { toast } = useToast();
   const { initiateCall } = useCall();
   
@@ -58,6 +58,38 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const dragCounterRef = useRef(0);
+  const ensuredContactsRef = useRef(false);
+
+  const ensureMutualContacts = useCallback(async () => {
+    if (!currentUser || !remoteUserId || !userData || ensuredContactsRef.current) return;
+
+    try {
+      const remoteUserRef = doc(db, 'users', remoteUserId);
+      const remoteUserSnap = await getDoc(remoteUserRef);
+      if (!remoteUserSnap.exists()) return;
+      const remoteData = remoteUserSnap.data() as any;
+
+      const batch = writeBatch(db);
+      const timestamp = serverTimestamp();
+
+      batch.set(doc(db, 'users', currentUser.uid, 'contacts', remoteUserId), {
+        addedAt: timestamp,
+        contactName: remoteData.name ?? remoteData.displayName ?? 'Unknown User',
+        contactAvatarUrl: remoteData.avatarUrl ?? remoteData.photoURL ?? '',
+      }, { merge: true });
+
+      batch.set(doc(db, 'users', remoteUserId, 'contacts', currentUser.uid), {
+        addedAt: timestamp,
+        contactName: userData.name ?? (userData as any).displayName ?? 'Unknown User',
+        contactAvatarUrl: userData.avatarUrl ?? (userData as any).photoURL ?? '',
+      }, { merge: true });
+
+      await batch.commit();
+      ensuredContactsRef.current = true;
+    } catch (error) {
+      console.error("Error ensuring contacts:", error);
+    }
+  }, [currentUser, remoteUserId, userData]);
 
   // Handle sending text messages
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -68,6 +100,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
     setNewMessage("");
 
     try {
+      await ensureMutualContacts();
       const chatRef = doc(db, 'chats', chatId);
       const messagesColRef = collection(chatRef, 'messages');
       const newMessageRef = doc(messagesColRef);
@@ -149,6 +182,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
     if (selectedFiles.length === 0 || !currentUser) return;
 
     try {
+      await ensureMutualContacts();
       setIsUploading(true);
       const batch = writeBatch(db);
       const chatRef = doc(db, 'chats', chatId);
@@ -223,6 +257,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
     if (!currentUser) return;
 
     try {
+      await ensureMutualContacts();
       setIsUploading(true);
       const batch = writeBatch(db);
       const chatRef = doc(db, 'chats', chatId);
@@ -355,6 +390,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   const handleLocationShare = async () => {
     if (navigator.geolocation) {
       try {
+        await ensureMutualContacts();
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
@@ -505,6 +541,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
     if (!currentUser) return;
 
     try {
+      await ensureMutualContacts();
       setIsUploading(true);
 
       const chatRef = doc(db, 'chats', chatId);
