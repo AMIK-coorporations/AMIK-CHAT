@@ -18,12 +18,31 @@ service cloud.firestore {
 
       // Friend / contact requests
       match /contactRequests/{requestId} {
-        allow read, write: if request.auth != null &&
-          (
-            request.auth.uid == userId ||
-            request.resource.data.fromUserId == request.auth.uid ||
-            request.resource.data.toUserId == request.auth.uid
-          );
+        // Allow read if user owns the collection or is involved in the request
+        allow read: if request.auth != null && (
+          request.auth.uid == userId ||
+          (resource != null && (
+            resource.data.fromUserId == request.auth.uid ||
+            resource.data.toUserId == request.auth.uid
+          ))
+        );
+        
+        // Allow create: user owns collection OR user is sender OR user is receiver
+        allow create: if request.auth != null && (
+          request.auth.uid == userId ||
+          (request.resource.data.fromUserId == request.auth.uid) ||
+          (request.resource.data.toUserId == request.auth.uid)
+        );
+        
+        // Allow update: user owns collection OR user is involved in existing request
+        allow update: if request.auth != null && (
+          request.auth.uid == userId ||
+          (resource != null && resource.data.fromUserId == request.auth.uid) ||
+          (resource != null && resource.data.toUserId == request.auth.uid)
+        );
+        
+        // Allow delete: only if user owns the collection
+        allow delete: if request.auth != null && request.auth.uid == userId;
       }
     }
 

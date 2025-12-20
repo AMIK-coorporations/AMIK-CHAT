@@ -5,9 +5,9 @@ import type { Message } from "@/lib/types";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { Loader2, CornerUpRight, CheckCircle2, Play, Pause, Download, MapPin, FileText, ImageIcon } from "lucide-react";
-import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import ChatMessageActions from './ChatMessageActions';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { FileMessageCard } from "./FileCards";
 
@@ -28,7 +28,11 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
   const { user: currentUser } = useAuth();
   const isSentByMe = message.senderId === currentUser?.uid;
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const messageRef = useRef<HTMLDivElement>(null);
+  const LONG_PRESS_DURATION = 1350; // 1.35 seconds
 
   // Check if message is deleted for current user
   const isDeletedForMe = message.deletedFor?.[currentUser?.uid || ''] || false;
@@ -69,6 +73,72 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
       link.click();
     }
   };
+
+  // Long press handlers
+  const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Clear any existing timer
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+
+    // Start timer for long press
+    longPressTimerRef.current = setTimeout(() => {
+      setIsMenuOpen(true);
+      // Haptic feedback on mobile if available
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+    }, LONG_PRESS_DURATION);
+  };
+
+  const handleLongPressEnd = (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Clear timer if released before long press duration
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleLongPressCancel = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (isMenuOpen && messageRef.current && !messageRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   const renderMessageContent = () => {
     if (message.isDeleted) {
@@ -173,18 +243,28 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
 
   return (
     <div className={cn("flex flex-col gap-1.5", isSentByMe ? "items-end" : "items-start")}>
-      <Popover>
+      <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <PopoverTrigger asChild>
           <div
+            ref={messageRef}
             className={cn(
-              "group relative max-w-sm rounded-lg px-3 py-2 lg:max-w-lg cursor-pointer",
+              "group relative max-w-sm rounded-lg px-3 py-2 lg:max-w-lg cursor-pointer select-none",
               isSentByMe
                 ? "rounded-br-none bg-primary text-primary-foreground"
                 : "rounded-bl-none bg-card text-card-foreground border",
               message.isDeleted && "bg-muted text-muted-foreground italic",
               hasReactions && "pb-5"
             )}
-            onContextMenu={(e) => e.preventDefault()}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setIsMenuOpen(true);
+            }}
+            onTouchStart={handleLongPressStart}
+            onTouchEnd={handleLongPressEnd}
+            onTouchCancel={handleLongPressCancel}
+            onMouseDown={handleLongPressStart}
+            onMouseUp={handleLongPressEnd}
+            onMouseLeave={handleLongPressCancel}
           >
             {message.isForwarded && !message.isDeleted && (
               <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
@@ -207,7 +287,19 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
             )}
           </div>
         </PopoverTrigger>
-        <ChatMessageActions message={message} isTranslated={isTranslated} {...handlers} />
+        <PopoverContent 
+          className="w-auto p-1" 
+          side={isSentByMe ? "left" : "right"} 
+          align="center"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <ChatMessageActions 
+            message={message} 
+            isTranslated={isTranslated} 
+            onClose={() => setIsMenuOpen(false)}
+            {...handlers} 
+          />
+        </PopoverContent>
       </Popover>
 
       {isTranslating && (
