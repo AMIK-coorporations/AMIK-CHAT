@@ -34,74 +34,80 @@ export default function ScanPage() {
     }
     setIsProcessing(true);
 
-    if (scannerRef.current?.isScanning) {
-        try {
-            await scannerRef.current.stop();
-        } catch (err) {
-            console.error("Error stopping scanner:", err);
-        }
-    }
-
-    if (!code.startsWith('amik-chat-user://')) {
-        toast({
-            variant: 'destructive',
-            title: 'غلط کیو آر کوڈ',
-            description: 'یہ ایک درست اے ایم آئی کے چیٹ کیو آر کوڈ نہیں ہے۔',
-        });
-        router.back();
-        return;
-    }
-
-    const contactId = code.replace('amik-chat-user://', '');
-
-    if (contactId === currentUser.uid) {
-        toast({
-            title: "یہ آپ ہیں!",
-            description: "آپ خود کو بطور رابطہ شامل نہیں کر سکتے۔",
-        });
-        router.back();
-        return;
-    }
-
     try {
-        const userDocRef = doc(db, 'users', contactId);
-        const userDoc = await getDoc(userDocRef);
+      if (scannerRef.current?.isScanning) {
+          try {
+              await scannerRef.current.stop();
+          } catch (err) {
+              console.error("Error stopping scanner:", err);
+          }
+      }
 
-        if (!userDoc.exists()) {
-            toast({ variant: 'destructive', title: 'صارف نہیں ملا', description: 'یہ کیو آر کوڈ کسی درست صارف سے منسلک نہیں ہے۔' });
-            router.back();
-            return;
-        }
+      if (!code.startsWith('amik-chat-user://')) {
+          toast({
+              variant: 'destructive',
+              title: 'غلط کیو آر کوڈ',
+              description: 'یہ ایک درست اے ایم آئی کے چیٹ کیو آر کوڈ نہیں ہے۔',
+          });
+          setIsProcessing(false);
+          router.back();
+          return;
+      }
 
-        const contactData = userDoc.data();
+      const contactId = code.replace('amik-chat-user://', '');
 
-        const existingContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
-        const existingContactSnap = await getDoc(existingContactRef);
-        const contactProfile = { id: contactId, ...contactData } as User;
+      if (contactId === currentUser.uid) {
+          toast({
+              title: "یہ آپ ہیں!",
+              description: "آپ خود کو بطور رابطہ شامل نہیں کر سکتے۔",
+          });
+          setIsProcessing(false);
+          router.back();
+          return;
+      }
 
-        if (existingContactSnap.exists()) {
-            const chatId = await createOrNavigateToChat(currentUser.uid, userData, contactProfile);
-            toast({
-                title: 'پہلے سے رابطہ ہے',
-                description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے، چیٹ کھول رہے ہیں۔`,
-            });
-            router.push(`/chats/${chatId}`);
-            return;
-        }
+      const userDocRef = doc(db, 'users', contactId);
+      const userDoc = await getDoc(userDocRef);
 
-        const newContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
-        await setDoc(newContactRef, { addedAt: serverTimestamp() });
+      if (!userDoc.exists()) {
+          toast({ variant: 'destructive', title: 'صارف نہیں ملا', description: 'یہ کیو آر کوڈ کسی درست صارف سے منسلک نہیں ہے۔' });
+          setIsProcessing(false);
+          router.back();
+          return;
+      }
 
-        const chatId = await createOrNavigateToChat(currentUser.uid, userData, contactProfile);
+      const contactData = userDoc.data();
 
-        toast({
-            title: 'چیٹ کے لیے تیار!',
-            description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'صارف'} کے ساتھ چیٹ کھول رہے ہیں۔`,
-        });
-        router.push(`/chats/${chatId}`);
+      const existingContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
+      const existingContactSnap = await getDoc(existingContactRef);
+      const contactProfile = { id: contactId, ...contactData } as User;
+
+      if (existingContactSnap.exists()) {
+          const chatId = await createOrNavigateToChat(currentUser.uid, userData, contactProfile);
+          toast({
+              title: 'پہلے سے رابطہ ہے',
+              description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے، چیٹ کھول رہے ہیں۔`,
+          });
+          setIsProcessing(false);
+          router.push(`/chats/${chatId}`);
+          return;
+      }
+
+      const newContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
+      await setDoc(newContactRef, { addedAt: serverTimestamp() });
+
+      const chatId = await createOrNavigateToChat(currentUser.uid, userData, contactProfile);
+
+      toast({
+          title: 'چیٹ کے لیے تیار!',
+          description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'صارف'} کے ساتھ چیٹ کھول رہے ہیں۔`,
+      });
+      setIsProcessing(false);
+      router.push(`/chats/${chatId}`);
 
     } catch (error: any) {
         console.error("Error adding contact from QR code:", error);
+        setIsProcessing(false);
         toast({
             variant: 'destructive',
             title: 'رابطہ شامل کرنے میں خرابی',

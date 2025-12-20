@@ -75,11 +75,11 @@ export const sendContactRequest = async ({
     toName: targetInfo.name,
     fromAvatarUrl: senderInfo.avatarUrl,
     toAvatarUrl: targetInfo.avatarUrl,
-    direction: 'sent',
-    status: 'pending',
+    direction: 'sent' as const,
+    status: 'pending' as const,
     createdAt: timestamp,
     updatedAt: timestamp,
-  } satisfies ContactRequest);
+  });
 
   batch.set(receiverRequestRef, {
     fromUserId: senderId,
@@ -88,11 +88,11 @@ export const sendContactRequest = async ({
     toName: targetInfo.name,
     fromAvatarUrl: senderInfo.avatarUrl,
     toAvatarUrl: targetInfo.avatarUrl,
-    direction: 'received',
-    status: 'pending',
+    direction: 'received' as const,
+    status: 'pending' as const,
     createdAt: timestamp,
     updatedAt: timestamp,
-  } satisfies ContactRequest);
+  });
 
   await batch.commit();
 
@@ -199,4 +199,5 @@ export const rejectContactRequest = async ({
 
   await batch.commit();
 };
+
 

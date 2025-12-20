@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -21,29 +21,38 @@ export default function AddContactPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user: currentUser, userData } = useAuth();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactId.trim() || loading || !currentUser) return;
 
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
     setLoading(true);
     const trimmedId = contactId.trim();
 
     // Add timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
-        toast({
-          variant: 'destructive',
-          title: 'وقت ختم',
-          description: 'درخواست بہت دیر لگ رہی ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
-        });
-      }
-    }, 15000); // 15 second timeout
+    timeoutRef.current = setTimeout(() => {
+      setLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'وقت ختم',
+        description: 'درخواست بہت دیر لگ رہی ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
+      });
+      timeoutRef.current = null;
+    }, 10000); // 10 second timeout
 
     try {
       if (trimmedId === currentUser.uid) {
-        clearTimeout(timeoutId);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         toast({
           variant: 'destructive',
           title: 'خرابی',
@@ -58,7 +67,10 @@ export default function AddContactPage() {
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        clearTimeout(timeoutId);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         toast({
           variant: 'destructive',
           title: 'صارف نہیں ملا',
@@ -74,16 +86,23 @@ export default function AddContactPage() {
         targetUserId: trimmedId,
       });
 
-      clearTimeout(timeoutId);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       toast({
         title: 'آپ کی درخواست بھیج دی گئی ہے',
         description: 'منظوری کے بعد آپ رابطہ کر سکیں گے۔',
       });
       setContactId('');
+      setLoading(false);
       router.push('/contacts?tab=requests');
 
     } catch (error: any) {
-      clearTimeout(timeoutId);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       console.error("Error adding contact:", error);
       console.error("Error code:", error.code);
       console.error("Error message:", error.message);
@@ -128,8 +147,6 @@ export default function AddContactPage() {
           duration: 10000, // Show for 10 seconds so user can read it
         });
       }
-    } finally {
-      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
