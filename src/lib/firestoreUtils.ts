@@ -169,63 +169,82 @@ export function onSnapshotWithRetry<T = any>(
       }
     }, timeout);
 
-    // Setup listener
-    unsubscribe = onSnapshot(
-      queryOrDoc,
-      (snapshot) => {
-        // Clear timeout on successful data
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        retryCount = 0; // Reset retry count on success
+    // Helper function to handle snapshot errors
+    const handleSnapshotError = (error: FirestoreError) => {
+      // Clear timeout on error
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
 
-        if ('docs' in snapshot) {
+      // Check if error is retryable
+      if (
+        (error.code === 'unavailable' || 
+         error.code === 'deadline-exceeded' ||
+         error.code === 'resource-exhausted' ||
+         error.message?.includes('timeout') ||
+         error.message?.includes('network')) &&
+        retryCount < MAX_RETRIES
+      ) {
+        retryCount++;
+        console.warn(`Firestore snapshot error (retry ${retryCount}/${MAX_RETRIES}):`, error);
+        // Retry after delay
+        setTimeout(() => {
+          if (unsubscribe) unsubscribe();
+          setupListener();
+        }, RETRY_DELAY * retryCount);
+      } else {
+        // Non-retryable or max retries reached
+        if (onError) {
+          onError(error);
+        } else {
+          console.error('Firestore snapshot error:', error);
+        }
+      }
+    };
+
+    // Setup listener - handle Query and DocumentReference separately
+    // Use type assertion to help TypeScript understand which overload to use
+    if ('docs' in (queryOrDoc as any) || (queryOrDoc as any).type === 'query') {
+      // Handle Query - use 'as any' to bypass type checking, then cast to Query
+      unsubscribe = onSnapshot(
+        queryOrDoc as any as Query,
+        (snapshot) => {
+          // Clear timeout on successful data
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          retryCount = 0; // Reset retry count on success
+
           // Query snapshot
           const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
           onNext(data as T[]);
-        } else {
+        },
+        handleSnapshotError
+      );
+    } else {
+      // Handle DocumentReference
+      unsubscribe = onSnapshot(
+        queryOrDoc as any as DocumentReference,
+        (snapshot) => {
+          // Clear timeout on successful data
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          retryCount = 0; // Reset retry count on success
+
           // Document snapshot
           if (snapshot.exists()) {
             onNext({ id: snapshot.id, ...snapshot.data() } as T);
           } else {
             onNext(null);
           }
-        }
-      },
-      (error: FirestoreError) => {
-        // Clear timeout on error
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-
-        // Check if error is retryable
-        if (
-          (error.code === 'unavailable' || 
-           error.code === 'deadline-exceeded' ||
-           error.code === 'resource-exhausted' ||
-           error.message?.includes('timeout') ||
-           error.message?.includes('network')) &&
-          retryCount < MAX_RETRIES
-        ) {
-          retryCount++;
-          console.warn(`Firestore snapshot error (retry ${retryCount}/${MAX_RETRIES}):`, error);
-          // Retry after delay
-          setTimeout(() => {
-            if (unsubscribe) unsubscribe();
-            setupListener();
-          }, RETRY_DELAY * retryCount);
-        } else {
-          // Non-retryable or max retries reached
-          if (onError) {
-            onError(error);
-          } else {
-            console.error('Firestore snapshot error:', error);
-          }
-        }
-      }
-    );
+        },
+        handleSnapshotError
+      );
+    }
   };
 
   setupListener();
