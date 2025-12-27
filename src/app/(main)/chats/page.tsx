@@ -38,26 +38,83 @@ export default function ChatsPage() {
   const { user: currentUser, userData } = useAuth();
 
   useEffect(() => {
-    if (!currentUser) { setContactsLoading(false); return; }
+    if (!currentUser) { 
+      setContactsLoading(false); 
+      return; 
+    }
+
+    // Set loading timeout (20 seconds)
+    let loadingTimeout: NodeJS.Timeout | null = null;
+    loadingTimeout = setTimeout(() => {
+      if (contactsLoading) {
+        setContactsLoading(false);
+        console.warn('Contacts loading timeout');
+      }
+    }, 20000);
+
     const contactsColRef = collection(db, 'users', currentUser.uid, 'contacts');
-    const unsub = onSnapshot(contactsColRef, async snapshot => {
-      setContactsLoading(true);
-      try {
-        if (snapshot.empty) { setContacts([]); return; }
-        const contactDocs = await Promise.all(snapshot.docs.map(c => getDoc(doc(db, 'users', c.id))));
-        const contactsData = contactDocs.filter(d => d.exists()).map(d => ({ id: d.id, ...d.data() } as User));
-        setContacts(contactsData);
-      } finally { setContactsLoading(false); }
-    });
-    return () => unsub();
+    const unsub = onSnapshot(
+      contactsColRef, 
+      async snapshot => {
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+          loadingTimeout = null;
+        }
+        setContactsLoading(true);
+        try {
+          if (snapshot.empty) { 
+            setContacts([]); 
+            setContactsLoading(false);
+            return; 
+          }
+          const contactDocs = await Promise.all(
+            snapshot.docs.map(c => getDoc(doc(db, 'users', c.id)))
+          );
+          const contactsData = contactDocs
+            .filter(d => d.exists())
+            .map(d => ({ id: d.id, ...d.data() } as User));
+          setContacts(contactsData);
+        } catch (error) {
+          console.error('Error loading contacts:', error);
+        } finally { 
+          setContactsLoading(false); 
+        }
+      },
+      (error) => {
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+          loadingTimeout = null;
+        }
+        console.error('Error in contacts snapshot:', error);
+        setContactsLoading(false);
+      }
+    );
+    
+    return () => {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+      }
+      unsub();
+    };
   }, [currentUser]);
 
   const filteredContacts = (contacts || []).filter(c => c.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const startChat = async (contact: User) => {
-    if (!currentUser || !userData) return;
-    const chatId = await createOrNavigateToChat(currentUser.uid, userData, contact);
-    router.push(`/chats/${chatId}`);
+    if (!currentUser || !userData) {
+      console.error('Cannot start chat: missing user data');
+      return;
+    }
+    
+    try {
+      const chatId = await createOrNavigateToChat(currentUser.uid, userData, contact);
+      // Use replace to avoid back button issues
+      router.replace(`/chats/${chatId}`);
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      // Fallback: try direct navigation
+      router.push(`/chats/${[currentUser.uid, contact.id].sort().join('_')}`);
+    }
   };
 
   return (

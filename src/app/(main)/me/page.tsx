@@ -20,7 +20,7 @@ import React from "react";
 
 export default function MePage() {
   const router = useRouter();
-  const { userData, user, updateProfile } = useAuth();
+  const { userData, user, updateProfile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [avatarOpen, setAvatarOpen] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -28,19 +28,59 @@ export default function MePage() {
   const [progress, setProgress] = React.useState(0);
   const [tempPreview, setTempPreview] = React.useState<string | null>(null);
   const [currentAvatar, setCurrentAvatar] = React.useState<string | null>(null);
+  const [pageLoading, setPageLoading] = React.useState(true);
 
   React.useEffect(() => {
     if (!tempPreview) {
       setCurrentAvatar(userData?.avatarUrl || null);
     }
   }, [userData?.avatarUrl]);
+
+  // Add loading timeout for profile page
+  React.useEffect(() => {
+    if (!authLoading && (userData || !user)) {
+      setPageLoading(false);
+      return;
+    }
+    
+    // Set timeout for loading (15 seconds)
+    const timeout = setTimeout(() => {
+      setPageLoading(false);
+      console.warn('Profile page loading timeout');
+      if (!userData && user) {
+        toast({
+          variant: 'destructive',
+          title: 'لوڈنگ میں تاخیر',
+          description: 'پروفائل لوڈ ہونے میں زیادہ وقت لگ رہا ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں۔',
+          duration: 5000,
+        });
+      }
+    }, 15000);
+    
+    return () => clearTimeout(timeout);
+  }, [authLoading, userData, user, toast]);
   
   const handleLogout = async () => {
     try {
+      // Clear any local storage or session data
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Sign out from Firebase
       await signOut(auth);
-      router.push('/login');
+      
+      // Wait a moment to ensure signOut completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Force redirect to login page
+      window.location.href = '/login';
     } catch (error) {
       console.error("Error signing out: ", error);
+      toast({ 
+        variant: 'destructive', 
+        title: 'خرابی', 
+        description: 'لاگ آؤٹ کرنے میں مسئلہ پیش آیا۔ براہ کرم دوبارہ کوشش کریں۔' 
+      });
     }
   };
 

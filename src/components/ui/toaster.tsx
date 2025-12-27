@@ -13,12 +13,13 @@ export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider duration={3000}>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+    <ToastProvider>
+      {toasts.map(function ({ id, title, description, action, duration, ...props }) {
         return (
           <Toast
             key={id}
             className="max-w-[90vw] w-auto min-w-[280px] px-4 py-3 rounded-full shadow-lg bg-black/90 text-white border-0 text-center"
+            duration={duration ?? 3000}
             {...props}
           >
             <div className="flex flex-col items-center gap-1 text-center">

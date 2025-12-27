@@ -23,6 +23,16 @@ function ContactItem({ contact, onClick, isCreatingChat }: { contact: User; onCl
     <div
       onClick={onClick}
       className="flex items-center gap-4 p-4 hover:bg-muted/50 cursor-pointer"
+      data-testid={`contact-item-${contact.id}`}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      aria-label={`${contact.name ?? 'Unknown User'} کے ساتھ چیٹ کریں`}
     >
       <Avatar className="h-10 w-10 border">
         <AvatarImage src={contact.avatarUrl} alt={contact.name ?? 'User'} data-ai-hint="person avatar" />
@@ -31,7 +41,7 @@ function ContactItem({ contact, onClick, isCreatingChat }: { contact: User; onCl
       <div className="flex-1 overflow-hidden">
         <p className="font-semibold truncate">{contact.name ?? 'Unknown User'}</p>
       </div>
-       {isCreatingChat && <Loader2 className="h-5 w-5 animate-spin" />}
+       {isCreatingChat && <Loader2 className="h-5 w-5 animate-spin" data-testid="creating-chat-spinner" />}
     </div>
   );
 }
@@ -109,23 +119,51 @@ export default function ContactsPage() {
   }, [currentUser]);
   
   const handleStartChat = async (contact: User) => {
-    if (!currentUser || !userData || creatingChat) return;
+    if (!currentUser || !userData) {
+      toast({
+        variant: 'destructive',
+        title: 'خرابی',
+        description: 'چیٹ شروع کرنے کے لیے لاگ ان ہونا ضروری ہے',
+      });
+      return;
+    }
+    
+    if (creatingChat) {
+      return; // Already creating a chat
+    }
+    
     setCreatingChat(contact.id);
 
     try {
       const chatId = await createOrNavigateToChat(currentUser.uid, userData, contact);
-      router.push(`/chats/${chatId}`);
+      
+      // Clear creating state before navigation
+      setCreatingChat(null);
+      
+      // Use replace to avoid back button issues
+      router.replace(`/chats/${chatId}`);
     } catch (error: any) {
       console.error("Error creating or finding chat: ", error);
+      setCreatingChat(null);
+      
+      const errorMessage = error.code === 'permission-denied' 
+        ? 'اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو چیک کریں۔'
+        : error.message || 'ایک نامعلوم خرابی پیش آگئی۔';
+      
       toast({
         variant: 'destructive',
         title: 'چیٹ شروع کرنے میں خرابی',
-        description: error.code === 'permission-denied' 
-          ? 'اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو چیک کریں۔' 
-          : error.message || 'ایک نامعلوم خرابی پیش آگئی۔',
+        description: errorMessage,
+        duration: 5000,
       });
-    } finally {
-      setCreatingChat(null);
+      
+      // Fallback: try direct navigation with sorted IDs
+      try {
+        const fallbackChatId = [currentUser.uid, contact.id].sort().join('_');
+        router.push(`/chats/${fallbackChatId}`);
+      } catch (fallbackError) {
+        console.error('Fallback navigation also failed:', fallbackError);
+      }
     }
   };
 
@@ -297,6 +335,8 @@ export default function ContactsPage() {
                           size="sm"
                           onClick={() => handleAcceptRequest(request)}
                           disabled={processingRequestId === request.id}
+                          data-testid={`accept-request-${request.id}`}
+                          aria-label="درخواست قبول کریں"
                         >
                           {processingRequestId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'قبول کریں'}
                         </Button>
@@ -305,6 +345,8 @@ export default function ContactsPage() {
                           variant="outline"
                           onClick={() => handleRejectRequest(request)}
                           disabled={processingRequestId === request.id}
+                          data-testid={`reject-request-${request.id}`}
+                          aria-label="درخواست مسترد کریں"
                         >
                           مسترد کریں
                         </Button>

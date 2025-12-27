@@ -38,12 +38,12 @@ export default function AddContactPage() {
 
     // Add timeout to prevent infinite loading
     timeoutRef.current = setTimeout(() => {
-      setLoading(false);
-      toast({
-        variant: 'destructive',
-        title: 'وقت ختم',
-        description: 'درخواست بہت دیر لگ رہی ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
-      });
+        setLoading(false);
+        toast({
+          variant: 'destructive',
+          title: 'وقت ختم',
+          description: 'درخواست بہت دیر لگ رہی ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
+        });
       timeoutRef.current = null;
     }, 10000); // 10 second timeout
 
@@ -127,25 +127,25 @@ export default function AddContactPage() {
           description: message,
         });
       } else {
-        // Provide more specific error messages
-        let errorMessage = 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
-
-        if (error.code === 'permission-denied') {
-          errorMessage = 'سیکیورٹی قوانین کو چیک کریں۔ Firebase اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو Firebase کنسول میں اپ ڈیٹ کریں۔';
-        } else if (error.code === 'unavailable') {
-          errorMessage = 'Firebase سروس دستیاب نہیں ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں۔';
-        } else if (error.code === 'deadline-exceeded') {
-          errorMessage = 'درخواست کا وقت ختم ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-
-        toast({
-          variant: 'destructive',
-          title: 'رابطہ شامل کرنے میں خرابی',
-          description: errorMessage,
-          duration: 10000, // Show for 10 seconds so user can read it
-        });
+      // Provide more specific error messages
+      let errorMessage = 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
+      
+      if (error.code === 'permission-denied') {
+        errorMessage = 'سیکیورٹی قوانین کو چیک کریں۔ Firebase اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو Firebase کنسول میں اپ ڈیٹ کریں۔';
+      } else if (error.code === 'unavailable') {
+        errorMessage = 'Firebase سروس دستیاب نہیں ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں۔';
+      } else if (error.code === 'deadline-exceeded') {
+        errorMessage = 'درخواست کا وقت ختم ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        variant: 'destructive',
+        title: 'رابطہ شامل کرنے میں خرابی',
+        description: errorMessage,
+        duration: 10000, // Show for 10 seconds so user can read it
+      });
       }
       setLoading(false);
     }

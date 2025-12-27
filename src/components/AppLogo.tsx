@@ -31,6 +31,7 @@ export default function AppLogo({ className, width = 64, height = 64, alt = "AMI
 			width={width}
 			height={height}
 			className={className}
+			style={{ width: 'auto', height: 'auto' }}
 			priority
 			unoptimized={true}
 			onError={() => {

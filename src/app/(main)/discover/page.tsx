@@ -94,6 +94,7 @@ export default function DiscoverPage() {
                 icon={<ScanLine className="h-6 w-6 text-sky-500" />}
                 label="کیو آر اسکین"
                 href="/scan"
+                data-testid="qr-scanner-link"
             />
         </div>
         

@@ -59,23 +59,50 @@ export default function SignupPage() {
       // Create a user document in Firestore
       await setDoc(doc(db, "users", user.uid), {
         name: username,
-        avatarUrl: `https://placehold.co/100x100.png?text=${username.charAt(0)}`
+        displayName: username,
+        avatarUrl: `https://placehold.co/100x100.png?text=${username.charAt(0)}`,
+        createdAt: new Date(),
+        lastSeen: new Date(),
+        isOnline: true
       });
 
-      router.push('/chats');
+      // Show success message
+      toast({
+        title: 'کھاتہ بن گیا!',
+        description: 'آپ کا کھاتہ کامیابی سے بن گیا ہے۔',
+      });
+
+      // Wait for auth state to update and Firestore write to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Use window.location for a full page reload to ensure auth state is properly set
+      window.location.href = '/chats';
 
     } catch (error: any) {
       let description = "ایک نامعلوم خرابی پیش آگئی۔";
+      
+      // Handle specific Firebase Auth error codes
       if (error.code === 'auth/api-key-not-valid') {
-        description =
-          "آپ کی Firebase API کلید درست نہیں ہے۔ براہ کرم Firebase کنسول میں ویب ایپ کی ترتیب اور NEXT_PUBLIC_FIREBASE_* ماحول کی ویریبلز کو چیک کریں۔";
+        description = "آپ کی Firebase API کلید درست نہیں ہے۔ براہ کرم Firebase کنسول میں ویب ایپ کی ترتیب اور NEXT_PUBLIC_FIREBASE_* ماحول کی ویریبلز کو چیک کریں۔";
+      } else if (error.code === 'auth/email-already-in-use') {
+        description = "یہ ای میل پہلے سے استعمال ہو رہی ہے۔ براہ کرم دوسری ای میل استعمال کریں یا لاگ ان کریں۔";
+      } else if (error.code === 'auth/invalid-email') {
+        description = "غلط ای میل فارمیٹ۔ براہ کرم درست ای میل درج کریں۔";
+      } else if (error.code === 'auth/weak-password') {
+        description = "خفیہ کوڈ بہت کمزور ہے۔ براہ کرم کم از کم 6 حروف کا مضبوط خفیہ کوڈ استعمال کریں۔";
+      } else if (error.code === 'auth/operation-not-allowed') {
+        description = "یہ آپریشن اجازت نہیں ہے۔ براہ کرم Firebase کنسول میں ای میل/پاس ورڈ سائن اپ کو فعال کریں۔";
+      } else if (error.code === 'auth/network-request-failed') {
+        description = "نیٹ ورک کنکشن نہیں ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں۔";
       } else if (error.message) {
         description = error.message;
       }
+      
       toast({
         variant: "destructive",
         title: "سائن اپ ناکام",
         description: description,
+        duration: 5000,
       });
     } finally {
       setLoading(false);

@@ -49,9 +49,21 @@ export default function MainAppLayout({
       where("participantIds", "array-contains", user.uid)
     );
 
+    // Set loading timeout (20 seconds)
+    let loadingTimeout: NodeJS.Timeout | null = setTimeout(() => {
+      if (chatsLoading) {
+        setChatsLoading(false);
+        console.warn('Chats loading timeout');
+      }
+    }, 20000);
+
     const unsubscribe = onSnapshot(
       chatsQuery,
       (snapshot) => {
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+          loadingTimeout = null;
+        }
         setChatsLoading(true);
         const chatsData = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -143,6 +155,10 @@ export default function MainAppLayout({
         setChatsLoading(false);
       },
       (error) => {
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+          loadingTimeout = null;
+        }
         console.error("Firestore permission error in main layout:", error);
         setChatsLoading(false);
         if (error.code === "permission-denied") {

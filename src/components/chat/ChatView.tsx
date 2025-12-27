@@ -73,27 +73,76 @@ export default function ChatView({ chatId }: { chatId: string }) {
   }, [chatId, currentUser]);
 
   useEffect(() => {
-    const q = query(collection(db, `chats/${chatId}/messages`), orderBy("timestamp", "asc"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-      setMessages(msgs);
+    if (!chatId || !currentUser) {
       setLoading(false);
-      
-      // Auto-translate incoming messages that aren't in Urdu
-      msgs.forEach(async (msg) => {
-        if (msg.senderId !== currentUser?.uid && // Only incoming messages
-            !translations[msg.id] && // Not already translated
-            !isUrduText(msg.text)) { // Not already in Urdu
-          // Auto-translate after a short delay
-          setTimeout(() => {
-            handleAutoTranslate(msg.id, msg.text);
-          }, 1000);
-        }
-      });
-    });
+      return;
+    }
 
-    return () => unsubscribe();
-  }, [chatId, currentUser, translations]);
+    // Set loading timeout (30 seconds)
+    let loadingTimeout: NodeJS.Timeout | null = setTimeout(() => {
+      setLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'لوڈنگ میں مسئلہ',
+        description: 'پیغامات لوڈ نہیں ہو سکے۔ براہ کرم صفحہ ریفریش کریں۔',
+        duration: 5000,
+      });
+    }, 30000);
+
+    const q = query(collection(db, `chats/${chatId}/messages`), orderBy("timestamp", "asc"));
+    const unsubscribe = onSnapshot(
+      q, 
+      (querySnapshot) => {
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+          loadingTimeout = null;
+        }
+        const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+        setMessages(msgs);
+        setLoading(false);
+        
+        // Auto-translate incoming messages that aren't in Urdu
+        msgs.forEach(async (msg) => {
+          if (msg.senderId !== currentUser?.uid && // Only incoming messages
+              !translations[msg.id] && // Not already translated
+              !isUrduText(msg.text)) { // Not already in Urdu
+            // Auto-translate after a short delay
+            setTimeout(() => {
+              handleAutoTranslate(msg.id, msg.text);
+            }, 1000);
+          }
+        });
+      },
+      (error) => {
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+          loadingTimeout = null;
+        }
+        console.error('Error loading messages:', error);
+        setLoading(false);
+        
+        const errorMessage = error.code === 'permission-denied'
+          ? 'پیغامات تک رسائی کی اجازت نہیں ہے۔'
+          : error.code === 'unavailable'
+          ? 'نیٹ ورک کنکشن نہیں ہے۔ براہ کرم اپنا انٹرنیٹ چیک کریں۔'
+          : 'پیغامات لوڈ کرنے میں مسئلہ پیش آیا۔';
+        
+        toast({
+          variant: 'destructive',
+          title: 'خرابی',
+          description: errorMessage,
+          duration: 5000,
+        });
+      }
+    );
+
+    return () => {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+      }
+      unsubscribe();
+    };
+  }, [chatId, currentUser, translations, toast]);
   
   useEffect(() => {
     if (scrollAreaRef.current) {

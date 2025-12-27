@@ -49,19 +49,82 @@ export default function ChatMessageActions({
 
   const handleShare = async () => {
     try {
-      let shareData: ShareData = {
-        text: message.text || '',
-      };
+      // Detect if running in mobile app (WebView)
+      const isMobileApp = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && 
+                         (window as any).Android !== undefined || 
+                         (window as any).webkit?.messageHandlers !== undefined;
+
+      // Prepare share content
+      let shareText = message.text || '';
+      let shareUrl = '';
+      let shareTitle = 'AMIK Chat';
 
       // Handle different message types
       if (message.type === 'image' && message.imageUrl) {
-        // For images, try to fetch and share as File
+        shareUrl = message.imageUrl;
+        shareTitle = message.fileName || 'Image';
+        shareText = message.text ? `${message.text}\n\n${message.imageUrl}` : message.imageUrl;
+      } else if (message.type === 'file' && message.fileUrl) {
+        shareUrl = message.fileUrl;
+        shareTitle = message.fileName || 'File';
+        shareText = message.text ? `${message.text}\n\n${message.fileUrl}` : message.fileUrl;
+      } else if (message.type === 'location' && message.location) {
+        const locationUrl = `https://www.google.com/maps?q=${message.location.latitude},${message.location.longitude}`;
+        shareUrl = locationUrl;
+        shareTitle = 'Location';
+        shareText = message.text ? `${message.text}\n\n${locationUrl}` : locationUrl;
+      }
+
+      // Try Android Intent sharing (for Android apps)
+      if (isMobileApp && (window as any).Android && typeof (window as any).Android.shareText === 'function') {
+        try {
+          (window as any).Android.shareText(shareText, shareTitle);
+          if (onClose) {
+            onClose();
+          }
+          return;
+        } catch (androidError) {
+          console.log('Android Intent sharing failed, trying Web Share API');
+        }
+      }
+
+      // Try iOS sharing (for iOS apps)
+      if (isMobileApp && (window as any).webkit?.messageHandlers?.share) {
+        try {
+          (window as any).webkit.messageHandlers.share.postMessage({
+            text: shareText,
+            url: shareUrl,
+            title: shareTitle
+          });
+          if (onClose) {
+            onClose();
+          }
+          return;
+        } catch (iosError) {
+          console.log('iOS sharing failed, trying Web Share API');
+        }
+      }
+
+      // Prepare ShareData for Web Share API
+      let shareData: ShareData = {
+        text: shareText,
+      };
+
+      if (shareUrl) {
+        shareData.url = shareUrl;
+      }
+      if (shareTitle && shareTitle !== 'AMIK Chat') {
+        shareData.title = shareTitle;
+      }
+
+      // Handle image sharing with File object
+      if (message.type === 'image' && message.imageUrl) {
         try {
           const response = await fetch(message.imageUrl);
           const blob = await response.blob();
           const file = new File([blob], message.fileName || 'image.jpg', { type: blob.type });
           
-          if (navigator.share && navigator.canShare({ files: [file] })) {
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
               files: [file],
               title: message.fileName || 'Image',
@@ -75,45 +138,77 @@ export default function ChatMessageActions({
         } catch (fileError) {
           console.log('File sharing not supported, falling back to URL');
         }
-        
-        // Fallback: share URL
-        shareData.url = message.imageUrl;
-        shareData.title = message.fileName || 'Image';
-      } else if (message.type === 'file' && message.fileUrl) {
-        shareData.url = message.fileUrl;
-        shareData.title = message.fileName || 'File';
-      } else if (message.type === 'location' && message.location) {
-        const locationUrl = `https://www.google.com/maps?q=${message.location.latitude},${message.location.longitude}`;
-        shareData.url = locationUrl;
-        shareData.title = 'Location';
-        shareData.text = message.text || 'Location shared';
       }
 
       // Use Web Share API if available
       if (navigator.share) {
-        // Check if we can share this data
-        if (navigator.canShare && navigator.canShare(shareData)) {
-          await navigator.share(shareData);
-          if (onClose) {
-            onClose();
+        try {
+          // Check if we can share this data
+          if (navigator.canShare) {
+            if (navigator.canShare(shareData)) {
+              await navigator.share(shareData);
+              if (onClose) {
+                onClose();
+              }
+              return;
+            }
+          } else {
+            // Some browsers don't support canShare, try sharing anyway
+            await navigator.share(shareData);
+            if (onClose) {
+              onClose();
+            }
+            return;
           }
-          return;
-        } else if (!navigator.canShare) {
-          // Some browsers don't support canShare, try sharing anyway
-          await navigator.share(shareData);
-          if (onClose) {
-            onClose();
+        } catch (shareError: any) {
+          // If share fails, continue to fallback
+          if (shareError.name !== 'AbortError') {
+            console.log('Web Share API failed:', shareError);
+          } else {
+            // User cancelled
+            return;
           }
-          return;
         }
       }
 
-      // Fallback: copy to clipboard
-      const shareText = message.text || message.fileName || message.imageUrl || message.fileUrl || 'Shared from AMIK Chat';
-      await navigator.clipboard.writeText(shareText);
-      alert('متن کاپی کر لیا گیا ہے۔ اب آپ کسی بھی ایپ میں پیسٹ کر سکتے ہیں۔');
-      if (onClose) {
-        onClose();
+      // Fallback 1: Try to open share via mailto/sms for mobile
+      if (isMobileApp || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        // Create a data URI or use tel: or sms: schemes
+        const encodedText = encodeURIComponent(shareText);
+        const encodedUrl = shareUrl ? encodeURIComponent(shareUrl) : '';
+        
+        // Try opening share via intent URL (Android)
+        if (/Android/i.test(navigator.userAgent)) {
+          const intentUrl = `intent://send?text=${encodedText}${encodedUrl ? `&url=${encodedUrl}` : ''}#Intent;scheme=android.intent;action=android.intent.action.SEND;type=text/plain;end`;
+          try {
+            window.location.href = intentUrl;
+            if (onClose) {
+              onClose();
+            }
+            return;
+          } catch (intentError) {
+            console.log('Intent URL failed, trying clipboard');
+          }
+        }
+      }
+
+      // Fallback 2: Copy to clipboard
+      try {
+        const finalShareText = shareText || message.text || message.fileName || message.imageUrl || message.fileUrl || 'Shared from AMIK Chat';
+        await navigator.clipboard.writeText(finalShareText);
+        
+        // Show success message
+        if (onClose) {
+          onClose();
+        }
+        // Use a better notification method if available
+        if ('vibrate' in navigator) {
+          navigator.vibrate(100);
+        }
+        alert('متن کاپی کر لیا گیا ہے۔ اب آپ کسی بھی ایپ میں پیسٹ کر سکتے ہیں۔');
+      } catch (copyError) {
+        console.error('Error copying to clipboard:', copyError);
+        alert('برآمد کرنے میں خرابی پیش آگئی۔ براہ کرم دوبارہ کوشش کریں۔');
       }
     } catch (error: any) {
       // User cancelled sharing (AbortError) - don't show error
@@ -129,7 +224,7 @@ export default function ChatMessageActions({
         alert('متن کاپی کر لیا گیا ہے۔ اب آپ کسی بھی ایپ میں پیسٹ کر سکتے ہیں۔');
       } catch (copyError) {
         console.error('Error copying to clipboard:', copyError);
-        alert('شیئر کرنے میں خرابی پیش آگئی۔');
+        alert('برآمد کرنے میں خرابی پیش آگئی۔');
       }
     }
   };

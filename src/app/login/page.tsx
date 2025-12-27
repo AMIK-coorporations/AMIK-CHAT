@@ -41,12 +41,38 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/chats');
+      
+      // Show success message
+      toast({
+        title: 'داخلہ کامیاب',
+        description: 'آپ کامیابی سے داخل ہو گئے ہیں۔',
+      });
+      
+      // Wait for auth state to update, then redirect
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Use window.location for a full page reload to ensure auth state is properly set
+      window.location.href = '/chats';
     } catch (error: any) {
+      let errorMessage = 'داخلہ ناکام ہوا۔ براہ کرم اپنے اسناد چیک کریں۔';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'اس ای میل کے ساتھ کوئی کھاتہ موجود نہیں ہے۔';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'غلط خفیہ کوڈ۔ براہ کرم دوبارہ کوشش کریں۔';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'غلط ای میل فارمیٹ۔';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'بہت زیادہ ناکام کوششیں۔ براہ کرم کچھ دیر بعد کوشش کریں۔';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         variant: 'destructive',
         title: 'داخلہ ناکام',
-        description: error.message,
+        description: errorMessage,
+        duration: 5000,
       });
     } finally {
       setLoading(false);

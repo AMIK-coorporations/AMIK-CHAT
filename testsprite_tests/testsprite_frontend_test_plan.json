@@ -1,0 +1,576 @@
+[
+  {
+    "id": "TC001",
+    "title": "User Registration with Valid Data",
+    "description": "Verify that a user can successfully register with valid email, password, and profile information and is redirected to the main app.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the signup page."
+      },
+      {
+        "type": "action",
+        "description": "Enter a valid email address, strong password, and complete required profile details."
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Check the user account is created and email is verified (if applicable)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user is redirected to the main chat interface."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "User Login with Correct Credentials",
+    "description": "Check login functionality with valid email and password results in a successful session and entry into the chat app.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Go to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Input a registered email and corresponding password."
+      },
+      {
+        "type": "action",
+        "description": "Click the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that login is successful and user is redirected to the chat interface."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "User Login Failure with Incorrect Credentials",
+    "description": "Verify error handling and appropriate error messages display when entering invalid email or password during login.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter an unregistered email or incorrect password."
+      },
+      {
+        "type": "action",
+        "description": "Click on login."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that login fails and a relevant error message appears."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Profile Editing and Avatar Upload",
+    "description": "Test that a logged-in user can edit profile information including uploading an avatar image with validation.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login and navigate to the profile edit page."
+      },
+      {
+        "type": "action",
+        "description": "Change profile fields such as display name and upload a valid avatar image file."
+      },
+      {
+        "type": "action",
+        "description": "Save the changes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify updated profile data is persisted and avatar is displayed correctly."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to upload invalid avatar file format (e.g., .exe or too large)."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm proper error handling and rejection of invalid files."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Real-time Text Messaging Between Two Users",
+    "description": "Verify sending and receiving plain text messages in real-time between two different users with less than 1 second latency.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "User A logs in and opens chat with User B."
+      },
+      {
+        "type": "action",
+        "description": "User B logs in on another device or browser and opens chat with User A."
+      },
+      {
+        "type": "action",
+        "description": "User A sends a text message to User B."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm User B receives the message within 1 second."
+      },
+      {
+        "type": "action",
+        "description": "User B replies with a text message."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm User A receives reply instantly."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Sending and Receiving Multimedia Messages",
+    "description": "Test sending images, files, voice messages, locations, and contacts in chat and receiving them correctly with previews where applicable.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open a chat conversation."
+      },
+      {
+        "type": "action",
+        "description": "Send an image file and verify it uploads and preview is shown before sending."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure the recipient receives the image and can view/download it."
+      },
+      {
+        "type": "action",
+        "description": "Send a document file and confirm upload progress is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Recipient can download the document successfully."
+      },
+      {
+        "type": "action",
+        "description": "Send a voice recording and share current location."
+      },
+      {
+        "type": "assertion",
+        "description": "Receiver can play voice message and view shared location on map."
+      },
+      {
+        "type": "action",
+        "description": "Share a contact from user's contact list."
+      },
+      {
+        "type": "assertion",
+        "description": "Recipient can add shared contact easily via provided information."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Peer-to-Peer Voice Call Establishment and Controls",
+    "description": "Verify that two users can initiate a peer-to-peer voice call, connection is established within 3 seconds, and call controls (mute, hang up) function properly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "User A initiates a voice call to User B via the chat interface."
+      },
+      {
+        "type": "action",
+        "description": "User B receives call notification and accepts the call."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm voice connection is established within 3 seconds."
+      },
+      {
+        "type": "action",
+        "description": "User A mutes microphone using call control UI."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify User B cannot hear User A's voice while muted."
+      },
+      {
+        "type": "action",
+        "description": "User A ends the call using the hang-up button."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm call terminates cleanly on both sides."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Peer-to-Peer Video Call Establishment and Controls",
+    "description": "Validate video call connection is established properly, video streams are shown, and call controls such as camera on/off and hang up operate correctly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "User A starts a video call to User B."
+      },
+      {
+        "type": "action",
+        "description": "User B accepts video call request."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify video streams are displayed for both users promptly."
+      },
+      {
+        "type": "action",
+        "description": "User B turns off camera using call controls."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm User A no longer sees User B's video feed but call audio continues."
+      },
+      {
+        "type": "action",
+        "description": "User B turns camera on again."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify User A receives video feed again."
+      },
+      {
+        "type": "action",
+        "description": "Either user ends the video call."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm call disconnects for both users."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Adding a Contact via AMIK ID Search",
+    "description": "Test the ability to search for a user by AMIK ID, send a contact request, and receive proper notifications.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "User A navigates to contacts add/search page."
+      },
+      {
+        "type": "action",
+        "description": "Search for User B by entering their AMIK ID."
+      },
+      {
+        "type": "assertion",
+        "description": "User B's profile is found and displayed."
+      },
+      {
+        "type": "action",
+        "description": "User A sends a contact request to User B."
+      },
+      {
+        "type": "assertion",
+        "description": "User B receives a notification for the contact request."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Accepting and Rejecting Contact Requests",
+    "description": "Verify that contact requests can be accepted or rejected, updating contact lists mutually and sending appropriate notifications.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "User B views received contact requests."
+      },
+      {
+        "type": "action",
+        "description": "User B accepts a contact request from User A."
+      },
+      {
+        "type": "assertion",
+        "description": "User A and User B are added mutually to each other's contacts."
+      },
+      {
+        "type": "action",
+        "description": "User B rejects another contact request."
+      },
+      {
+        "type": "assertion",
+        "description": "Requester is notified of rejection and no mutual contact is created."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Adding Contact via QR Code Scanner",
+    "description": "Ensure the QR code scanner correctly scans a valid AMIK QR code, allowing users to add contacts efficiently.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "User opens the QR code scanner mini-program within the app."
+      },
+      {
+        "type": "action",
+        "description": "Scan a valid contact QR code containing another user’s AMIK ID."
+      },
+      {
+        "type": "assertion",
+        "description": "Display contact info extracted from QR code and option to send contact request."
+      },
+      {
+        "type": "action",
+        "description": "Send contact request from the scanned QR code contact."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm contact request is sent and notification received."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Automatic English to Urdu Message Translation",
+    "description": "Validate AI-powered message translation feature performs automatic translation from English to Urdu with fallback dictionary usage upon failure.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send a message in English to a bilingual-enabled chat."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the message is automatically translated to Urdu for the recipient."
+      },
+      {
+        "type": "action",
+        "description": "Simulate translation API failure or unrecognized phrases."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify fallback dictionary translations are used and displayed appropriately."
+      },
+      {
+        "type": "action",
+        "description": "Send a message originally in Urdu."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm translation direction and accuracy from Urdu to English if applicable."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "File Upload and Progress Display",
+    "description": "Test uploading various supported file types in chat with upload progress bar and preview, ensuring successful sending and receiving.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open chat and select 'attach file'."
+      },
+      {
+        "type": "action",
+        "description": "Upload image, document, audio, and video files individually."
+      },
+      {
+        "type": "assertion",
+        "description": "Upload progress is displayed accurately for each file."
+      },
+      {
+        "type": "assertion",
+        "description": "Preview is available prior to sending for image and video files."
+      },
+      {
+        "type": "action",
+        "description": "Send each file successfully."
+      },
+      {
+        "type": "assertion",
+        "description": "Recipient receives files and can preview or download them without errors."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Drag-and-Drop File Upload Functionality",
+    "description": "Verify drag-and-drop file input works correctly within chat, supporting multiple files and showing previews before sending.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Drag one or more valid files into the chat input area."
+      },
+      {
+        "type": "assertion",
+        "description": "Files appear in the preview pane with thumbnails where applicable."
+      },
+      {
+        "type": "action",
+        "description": "Send files to recipient."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm recipient receives all files correctly and can access them."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "QR Code Generation and Styling",
+    "description": "Test correct generation of styled QR codes representing user AMIK IDs and validate scanning by others adds contact correctly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to user profile to generate personal AMIK QR code."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify generated QR code includes accurate AMIK ID data and visual styling matches design."
+      },
+      {
+        "type": "action",
+        "description": "Use different devices or apps to scan the QR code."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm scanned QR code data is valid and allows adding user as contact."
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Mini-Programs Launch and Operation",
+    "description": "Verify mini-programs such as AI agents and QR code scanner launch correctly within the app environment and function as intended.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the mini-programs section within the app."
+      },
+      {
+        "type": "action",
+        "description": "Launch AI agent mini-program and interact with it."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm AI agent responds correctly and integration is stable."
+      },
+      {
+        "type": "action",
+        "description": "Open QR code scanner mini-program and scan multiple sample codes."
+      },
+      {
+        "type": "assertion",
+        "description": "Check scanning results are accurate and consistent."
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Message Deletion and Privacy Controls",
+    "description": "Validate users can delete messages with correct options (single message, conversation) and that privacy settings are enforced across sessions.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send multiple messages in a chat."
+      },
+      {
+        "type": "action",
+        "description": "Delete a single message and observe effects on sender's and receiver's chat."
+      },
+      {
+        "type": "assertion",
+        "description": "Deleted message is removed correctly and replaced with deletion indicator or removed completely."
+      },
+      {
+        "type": "action",
+        "description": "Delete an entire conversation history."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm conversation is cleared locally as per privacy controls without affecting the other user’s chat data."
+      },
+      {
+        "type": "action",
+        "description": "Change privacy settings for profile visibility and session management."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify settings persist and enforce rules such as blocking users or session expiry."
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Cross-browser and Device Responsive UI Testing",
+    "description": "Ensure the web application UI renders and functions consistently across major desktop and mobile browsers with responsive layout.",
+    "category": "ui",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open AMIK CHAT on latest Chrome, Firefox, Safari, Edge on desktop."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI layout, components, and interactions work without major issues."
+      },
+      {
+        "type": "action",
+        "description": "Access the app on iOS Safari and Android Chrome mobile browsers."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm responsive design adjusts UI properly and functionality is intact."
+      },
+      {
+        "type": "action",
+        "description": "Resize browser windows to test responsive breakpoints."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate no overlapping, missing components, or usability problems occur."
+      }
+    ]
+  }
+]

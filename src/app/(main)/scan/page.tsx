@@ -27,81 +27,103 @@ export default function ScanPage() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleScannedCode = useCallback(async (code: string) => {
-    if (isProcessing || !currentUser) return;
-    if (!userData) {
-      toast({ variant: 'destructive', title: 'پروفائل لوڈ ہو رہی ہے', description: 'براہ کرم ایک لمحہ انتظار کریں اور دوبارہ اسکین کریں۔' });
+    if (isProcessing || !currentUser) {
+      if (!currentUser) {
+        toast({ 
+          variant: 'destructive', 
+          title: 'لاگ ان نہیں', 
+          description: 'کیو آر کوڈ اسکین کرنے کے لیے لاگ ان ہونا ضروری ہے۔' 
+        });
+      }
       return;
     }
+    
+    if (!userData) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'پروفائل لوڈ ہو رہی ہے', 
+        description: 'براہ کرم ایک لمحہ انتظار کریں اور دوبارہ اسکین کریں۔',
+        duration: 3000,
+      });
+      return;
+    }
+    
     setIsProcessing(true);
+    
+    // Show processing message
+    toast({
+      title: 'پروسیسنگ...',
+      description: 'کیو آر کوڈ کو پروسیس کیا جا رہا ہے۔',
+    });
 
     try {
-      if (scannerRef.current?.isScanning) {
-          try {
-              await scannerRef.current.stop();
-          } catch (err) {
-              console.error("Error stopping scanner:", err);
-          }
-      }
+    if (scannerRef.current?.isScanning) {
+        try {
+            await scannerRef.current.stop();
+        } catch (err) {
+            console.error("Error stopping scanner:", err);
+        }
+    }
 
-      if (!code.startsWith('amik-chat-user://')) {
-          toast({
-              variant: 'destructive',
-              title: 'غلط کیو آر کوڈ',
-              description: 'یہ ایک درست اے ایم آئی کے چیٹ کیو آر کوڈ نہیں ہے۔',
-          });
+    if (!code.startsWith('amik-chat-user://')) {
+        toast({
+            variant: 'destructive',
+            title: 'غلط کیو آر کوڈ',
+            description: 'یہ ایک درست اے ایم آئی کے چیٹ کیو آر کوڈ نہیں ہے۔',
+        });
           setIsProcessing(false);
-          router.back();
-          return;
-      }
+        router.back();
+        return;
+    }
 
-      const contactId = code.replace('amik-chat-user://', '');
+    const contactId = code.replace('amik-chat-user://', '');
 
-      if (contactId === currentUser.uid) {
-          toast({
-              title: "یہ آپ ہیں!",
-              description: "آپ خود کو بطور رابطہ شامل نہیں کر سکتے۔",
-          });
+    if (contactId === currentUser.uid) {
+        toast({
+            title: "یہ آپ ہیں!",
+            description: "آپ خود کو بطور رابطہ شامل نہیں کر سکتے۔",
+        });
           setIsProcessing(false);
-          router.back();
-          return;
-      }
+        router.back();
+        return;
+    }
 
-      const userDocRef = doc(db, 'users', contactId);
-      const userDoc = await getDoc(userDocRef);
+        const userDocRef = doc(db, 'users', contactId);
+        const userDoc = await getDoc(userDocRef);
 
-      if (!userDoc.exists()) {
-          toast({ variant: 'destructive', title: 'صارف نہیں ملا', description: 'یہ کیو آر کوڈ کسی درست صارف سے منسلک نہیں ہے۔' });
+        if (!userDoc.exists()) {
+            toast({ variant: 'destructive', title: 'صارف نہیں ملا', description: 'یہ کیو آر کوڈ کسی درست صارف سے منسلک نہیں ہے۔' });
           setIsProcessing(false);
-          router.back();
-          return;
-      }
+            router.back();
+            return;
+        }
 
-      const contactData = userDoc.data();
+        const contactData = userDoc.data();
 
-      const existingContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
-      const existingContactSnap = await getDoc(existingContactRef);
+        const existingContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
+        const existingContactSnap = await getDoc(existingContactRef);
       const contactProfile = { id: contactId, ...contactData } as User;
 
-      if (existingContactSnap.exists()) {
+        if (existingContactSnap.exists()) {
           const chatId = await createOrNavigateToChat(currentUser.uid, userData, contactProfile);
-          toast({
-              title: 'پہلے سے رابطہ ہے',
+            toast({
+                title: 'پہلے سے رابطہ ہے',
               description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے، چیٹ کھول رہے ہیں۔`,
-          });
+            });
           setIsProcessing(false);
           router.push(`/chats/${chatId}`);
-          return;
-      }
+            return;
+        }
 
-      const newContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
-      await setDoc(newContactRef, { addedAt: serverTimestamp() });
+        const newContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
+        await setDoc(newContactRef, { addedAt: serverTimestamp() });
 
       const chatId = await createOrNavigateToChat(currentUser.uid, userData, contactProfile);
 
-      toast({
+        toast({
           title: 'چیٹ کے لیے تیار!',
           description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'صارف'} کے ساتھ چیٹ کھول رہے ہیں۔`,
-      });
+        });
       setIsProcessing(false);
       router.push(`/chats/${chatId}`);
 
@@ -147,9 +169,17 @@ export default function ScanPage() {
         )
         setIsScanning(true);
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error accessing camera:', error);
         setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'کیمرے تک رسائی نہیں',
+          description: error.message?.includes('Permission denied') || error.name === 'NotAllowedError'
+            ? 'براہ کرم براؤزر کی ترتیبات میں کیمرے کی اجازت دیں۔'
+            : 'کیمرے تک رسائی حاصل نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔',
+          duration: 5000,
+        });
       }
     };
     

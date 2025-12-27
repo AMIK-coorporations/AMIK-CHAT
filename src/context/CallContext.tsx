@@ -37,7 +37,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
   // Handle call state changes
   useEffect(() => {
-    if (callData) {
+    if (callData && (callData.isIncoming || callData.isOutgoing)) {
       setShowCallInterface(true);
       setCallType(callData.isVideo ? 'video' : 'voice');
       setIsIncomingCall(callData.isIncoming);
@@ -51,7 +51,12 @@ export function CallProvider({ children }: { children: ReactNode }) {
     }
   }, [callData]);
 
-  const handleEndCall = () => {
+  const handleEndCall = async () => {
+    // Call the endCall from useCall hook if available
+    if (callData) {
+      // The useCall hook will handle the actual call ending
+      // This just updates the UI state
+    }
     setShowCallInterface(false);
     setIsIncomingCall(false);
     setCallerName(undefined);

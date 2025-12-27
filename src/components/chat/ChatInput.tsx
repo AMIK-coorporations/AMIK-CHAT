@@ -127,6 +127,27 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       });
 
       await batch.commit();
+      
+      // Send to Pipedream webhook
+      try {
+        const senderName = currentUser.displayName || currentUser.email || userData?.name || (userData as any)?.displayName || "User";
+        await fetch('https://eoox141is1wk6oc.m.pipedream.net', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: messageText,
+            senderId: currentUser.uid,
+            senderName: senderName,
+            recipientId: remoteUserId || '',
+            chatId: chatId
+          }),
+        });
+      } catch (webhookError) {
+        console.log('Pipedream webhook error:', webhookError);
+      }
+      
       onMessageSent?.();
       toast({ title: 'پیغام بھیجا گیا', description: 'آپ کا پیغام کامیابی سے بھیجا گیا' });
     } catch (error) {
@@ -497,16 +518,29 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       return;
     }
 
+    if (!currentUser) {
+      toast({ 
+        variant: 'destructive',
+        title: 'خرابی', 
+        description: 'آپ لاگ ان نہیں ہیں' 
+      });
+      return;
+    }
+
     try {
       await initiateCall(remoteUserId, true); // true for video call
-    } catch (error) {
+      toast({
+        title: 'ویڈیو کال شروع ہو رہی ہے',
+        description: 'کال شروع کی جا رہی ہے...'
+      });
+    } catch (error: any) {
       console.error('Error initiating video call:', error);
       toast({ 
         variant: 'destructive',
         title: 'خرابی', 
-        description: 'ویڈیو کال شروع نہیں ہو سکی' 
+        description: error.message || 'ویڈیو کال شروع نہیں ہو سکی' 
       });
-      }
+    }
   };
 
   const handleVoiceCall = async () => {
@@ -519,14 +553,27 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       return;
     }
 
+    if (!currentUser) {
+      toast({ 
+        variant: 'destructive',
+        title: 'خرابی', 
+        description: 'آپ لاگ ان نہیں ہیں' 
+      });
+      return;
+    }
+
     try {
       await initiateCall(remoteUserId, false); // false for voice call
-    } catch (error) {
+      toast({
+        title: 'وائس کال شروع ہو رہی ہے',
+        description: 'کال شروع کی جا رہی ہے...'
+      });
+    } catch (error: any) {
       console.error('Error initiating voice call:', error);
       toast({ 
         variant: 'destructive',
         title: 'خرابی', 
-        description: 'وائس کال شروع نہیں ہو سکی' 
+        description: error.message || 'وائس کال شروع نہیں ہو سکی' 
       });
     }
   };
@@ -782,6 +829,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
               className="h-10 w-10 shrink-0"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
+              title="فائل اٹیچ کریں"
             >
               <Paperclip className="h-5 w-5" />
             </Button>
@@ -792,6 +840,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
               size="icon"
               className="h-10 w-10 shrink-0"
               onClick={handleScreenshot}
+              title="اسکرین شاٹ"
             >
               <Scissors className="h-5 w-5" />
             </Button>
@@ -803,29 +852,38 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
               className="h-10 w-10 shrink-0"
               onClick={startVoiceRecording}
               disabled={isRecording || isUploading}
+              title="آواز ریکارڈ کریں"
             >
               <Mic className="h-5 w-5" />
             </Button>
             
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 shrink-0"
-              onClick={handleVoiceCall}
-            >
-              <Phone className="h-5 w-5" />
-            </Button>
-            
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 shrink-0"
-              onClick={handleVideoCall}
-            >
-              <Video className="h-5 w-5" />
-            </Button>
+            {remoteUserId && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                  onClick={handleVoiceCall}
+                  title="وائس کال"
+                  data-testid="voice-call-button"
+                >
+                  <Phone className="h-5 w-5" />
+                </Button>
+                
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                  onClick={handleVideoCall}
+                  title="ویڈیو کال"
+                  data-testid="video-call-button"
+                >
+                  <Video className="h-5 w-5" />
+                </Button>
+              </>
+            )}
           </>
         )}
 
