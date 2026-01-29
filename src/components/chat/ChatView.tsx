@@ -42,7 +42,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
         if (chatDoc.exists()) {
           const chatData = chatDoc.data();
-          const otherParticipantId = chatData.participantIds.find((participantId: string) => participantId !== currentUser.uid);
+          const otherParticipantId = chatData.participantIds?.find((participantId: string) => participantId !== currentUser.uid);
 
           if (otherParticipantId && chatData.participantsInfo) {
             const otherInfo = chatData.participantsInfo[otherParticipantId];
@@ -91,7 +91,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
     const q = query(collection(db, `chats/${chatId}/messages`), orderBy("timestamp", "asc"));
     const unsubscribe = onSnapshot(
-      q, 
+      q,
       (querySnapshot) => {
         if (loadingTimeout) {
           clearTimeout(loadingTimeout);
@@ -100,12 +100,12 @@ export default function ChatView({ chatId }: { chatId: string }) {
         const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
         setMessages(msgs);
         setLoading(false);
-        
+
         // Auto-translate incoming messages that aren't in Urdu
         msgs.forEach(async (msg) => {
           if (msg.senderId !== currentUser?.uid && // Only incoming messages
-              !translations[msg.id] && // Not already translated
-              !isUrduText(msg.text)) { // Not already in Urdu
+            !translations[msg.id] && // Not already translated
+            !isUrduText(msg.text)) { // Not already in Urdu
             // Auto-translate after a short delay
             setTimeout(() => {
               handleAutoTranslate(msg.id, msg.text);
@@ -120,13 +120,13 @@ export default function ChatView({ chatId }: { chatId: string }) {
         }
         console.error('Error loading messages:', error);
         setLoading(false);
-        
+
         const errorMessage = error.code === 'permission-denied'
           ? 'پیغامات تک رسائی کی اجازت نہیں ہے۔'
           : error.code === 'unavailable'
-          ? 'نیٹ ورک کنکشن نہیں ہے۔ براہ کرم اپنا انٹرنیٹ چیک کریں۔'
-          : 'پیغامات لوڈ کرنے میں مسئلہ پیش آیا۔';
-        
+            ? 'نیٹ ورک کنکشن نہیں ہے۔ براہ کرم اپنا انٹرنیٹ چیک کریں۔'
+            : 'پیغامات لوڈ کرنے میں مسئلہ پیش آیا۔';
+
         toast({
           variant: 'destructive',
           title: 'خرابی',
@@ -143,7 +143,6 @@ export default function ChatView({ chatId }: { chatId: string }) {
       unsubscribe();
     };
   }, [chatId, currentUser, translations, toast]);
-  
   useEffect(() => {
     if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
@@ -154,82 +153,82 @@ export default function ChatView({ chatId }: { chatId: string }) {
   }, [messages, translations]);
 
 
-  
+
   const showComingSoonToast = () => {
     toast({ title: "فیچر جلد آرہا ہے۔" });
   };
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!currentUser) return;
-    
+
     const message = messages.find(m => m.id === messageId);
     if (!message) {
       toast({ title: 'پیغام نہیں مل سکا' });
       return;
     }
-    
+
     if (message.isDeleted) {
       toast({ title: 'پیغام پہلے سے حذف شدہ ہے' });
       return;
     }
-    
+
     if (message.senderId !== currentUser.uid) {
       toast({ title: 'آپ صرف اپنے پیغامات حذف کر سکتے ہیں' });
       return;
     }
-    
+
     // Confirm deletion
     if (!confirm('کیا آپ واقعی اس پیغام کو سب کے لیے حذف کرنا چاہتے ہیں؟')) {
       return;
     }
-    
+
     const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
     try {
-        await updateDoc(messageRef, {
-            text: 'یہ پیغام حذف کر دیا گیا',
-            isDeleted: true,
-            reactions: {},
-            deletedAt: serverTimestamp(),
-            deletedBy: currentUser.uid
-        });
-        
-        // Update local state
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageId 
-            ? { ...msg, isDeleted: true, text: 'یہ پیغام حذف کر دیا گیا' }
-            : msg
-        ));
-        
-        toast({ title: 'پیغام حذف کر دیا گیا', description: 'پیغام سب کے لیے حذف کر دیا گیا ہے۔' });
+      await updateDoc(messageRef, {
+        text: 'یہ پیغام حذف کر دیا گیا',
+        isDeleted: true,
+        reactions: {},
+        deletedAt: serverTimestamp(),
+        deletedBy: currentUser.uid
+      });
+
+      // Update local state
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, isDeleted: true, text: 'یہ پیغام حذف کر دیا گیا' }
+          : msg
+      ));
+
+      toast({ title: 'پیغام حذف کر دیا گیا', description: 'پیغام سب کے لیے حذف کر دیا گیا ہے۔' });
     } catch (error) {
-        console.error("Error deleting message:", error);
-        toast({ variant: 'destructive', title: 'خرابی', description: 'پیغام حذف نہیں کیا جا سکا' });
+      console.error("Error deleting message:", error);
+      toast({ variant: 'destructive', title: 'خرابی', description: 'پیغام حذف نہیں کیا جا سکا' });
     }
   };
 
   const handleDeleteForMe = async (messageId: string) => {
     if (!currentUser) return;
-    
+
     const message = messages.find(m => m.id === messageId);
     if (!message || message.isDeleted || message.deletedFor?.[currentUser.uid]) {
       toast({ title: 'پیغام پہلے سے حذف شدہ ہے' });
       return;
     }
-    
+
     try {
       // Mark message as deleted for current user only
       const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
       await updateDoc(messageRef, {
         [`deletedFor.${currentUser.uid}`]: true
       });
-      
+
       // Remove from local state
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
           ? { ...msg, [`deletedFor.${currentUser.uid}`]: true }
           : msg
       ));
-      
+
       toast({ title: 'پیغام حذف کر دیا گیا', description: 'پیغام آپ کے لیے حذف کر دیا گیا ہے۔' });
     } catch (error) {
       console.error("Error deleting message for me:", error);
@@ -257,98 +256,98 @@ export default function ChatView({ chatId }: { chatId: string }) {
     const targetLanguage = 'Urdu';
 
     try {
-        // Show translation progress for long messages
+      // Show translation progress for long messages
+      if (textToTranslate.length > 100) {
+        toast({
+          title: 'ترجمہ جاری ہے',
+          description: 'بڑے پیغام کا ترجمہ ہو رہا ہے، براہ کرم انتظار کریں...'
+        });
+      }
+
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textToTranslate, targetLanguage })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const result = await res.json();
+
+      if (result.translatedText) {
+        setTranslations(prev => ({ ...prev, [messageId]: result.translatedText }));
+
+        // Show success message with metadata for long translations
         if (textToTranslate.length > 100) {
-          toast({ 
-            title: 'ترجمہ جاری ہے', 
-            description: 'بڑے پیغام کا ترجمہ ہو رہا ہے، براہ کرم انتظار کریں...' 
+          toast({
+            title: 'ترجمہ مکمل',
+            description: `${result.sourceLanguage} سے اردو میں ترجمہ مکمل ہوا۔ ${result.originalLength} حروف کا ترجمہ ${result.translatedLength} حروف میں۔`
+          });
+        } else {
+          toast({
+            title: 'ترجمہ مکمل',
+            description: `پیغام کا ترجمہ اردو میں کر لیا گیا ہے۔`
           });
         }
-
-        const res = await fetch('/api/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: textToTranslate, targetLanguage })
-        });
-        
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
-        }
-        
-        const result = await res.json();
-        
-        if (result.translatedText) {
-          setTranslations(prev => ({...prev, [messageId]: result.translatedText}));
-          
-          // Show success message with metadata for long translations
-          if (textToTranslate.length > 100) {
-            toast({ 
-              title: 'ترجمہ مکمل', 
-              description: `${result.sourceLanguage} سے اردو میں ترجمہ مکمل ہوا۔ ${result.originalLength} حروف کا ترجمہ ${result.translatedLength} حروف میں۔` 
-            });
-          } else {
-            toast({ 
-              title: 'ترجمہ مکمل', 
-              description: `پیغام کا ترجمہ اردو میں کر لیا گیا ہے۔` 
-            });
-          }
-        } else {
-          throw new Error('No translation received');
-        }
+      } else {
+        throw new Error('No translation received');
+      }
     } catch (error) {
-        console.error("Error translating message:", error);
-        
-        // If AI translation fails, show error and keep original text
-        toast({ 
-          variant: 'destructive',
-          title: 'ترجمہ ناکام', 
-          description: 'AI ترجمہ سسٹم فی الحال دستیاب نہیں ہے۔ براہ کرم بعد میں کوشش کریں۔' 
-        });
-        
-        // Don't set any fallback translation, keep original text
+      console.error("Error translating message:", error);
+
+      // If AI translation fails, show error and keep original text
+      toast({
+        variant: 'destructive',
+        title: 'ترجمہ ناکام',
+        description: 'AI ترجمہ سسٹم فی الحال دستیاب نہیں ہے۔ براہ کرم بعد میں کوشش کریں۔'
+      });
+
+      // Don't set any fallback translation, keep original text
     } finally {
-        setTranslatingId(null);
+      setTranslatingId(null);
     }
   };
 
   const handleReactToMessage = async (messageId: string, emoji: string) => {
     if (!currentUser) return;
-    
-    const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
-    
-    try {
-        const messageDoc = await getDoc(messageRef);
-        if (!messageDoc.exists()) return;
-        
-        const messageData = messageDoc.data() as Message;
-        const reactions = messageData.reactions || {};
-        
-        const uidsWithThisReaction = reactions[emoji] || [];
 
-        Object.keys(reactions).forEach(key => {
-            if (key !== emoji) {
-                reactions[key] = reactions[key]?.filter(uid => uid !== currentUser.uid);
-                if(reactions[key]?.length === 0) {
-                    delete reactions[key];
-                }
-            }
-        });
-        
-        if (uidsWithThisReaction.includes(currentUser.uid)) {
-            reactions[emoji] = uidsWithThisReaction.filter(uid => uid !== currentUser.uid);
-            if (reactions[emoji].length === 0) {
-                delete reactions[emoji];
-            }
-        } else {
-            reactions[emoji] = [...uidsWithThisReaction, currentUser.uid];
+    const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+
+    try {
+      const messageDoc = await getDoc(messageRef);
+      if (!messageDoc.exists()) return;
+
+      const messageData = messageDoc.data() as Message;
+      const reactions = messageData.reactions || {};
+
+      const uidsWithThisReaction = reactions[emoji] || [];
+
+      Object.keys(reactions).forEach(key => {
+        if (key !== emoji) {
+          reactions[key] = reactions[key]?.filter(uid => uid !== currentUser.uid);
+          if (reactions[key]?.length === 0) {
+            delete reactions[key];
+          }
         }
-        
-        await updateDoc(messageRef, { reactions });
-        
+      });
+
+      if (uidsWithThisReaction.includes(currentUser.uid)) {
+        reactions[emoji] = uidsWithThisReaction.filter(uid => uid !== currentUser.uid);
+        if (reactions[emoji].length === 0) {
+          delete reactions[emoji];
+        }
+      } else {
+        reactions[emoji] = [...uidsWithThisReaction, currentUser.uid];
+      }
+
+      await updateDoc(messageRef, { reactions });
+
     } catch (error) {
-        console.error("Error reacting to message:", error);
-        toast({ variant: 'destructive', title: 'خرابی', description: 'ردعمل نہیں دے سکے' });
+      console.error("Error reacting to message:", error);
+      toast({ variant: 'destructive', title: 'خرابی', description: 'ردعمل نہیں دے سکے' });
     }
   };
 
@@ -358,59 +357,59 @@ export default function ChatView({ chatId }: { chatId: string }) {
     const toastRef = toast({ description: "فارورڈ کیا جا رہا ہے..." });
 
     try {
-        const batch = writeBatch(db);
-        
-        const contactDocs = await Promise.all(
-            selectedContactIds.map(id => getDoc(doc(db, 'users', id)))
-        );
+      const batch = writeBatch(db);
 
-        for (const contactDoc of contactDocs) {
-            if (!contactDoc.exists()) continue;
-            const contact = { id: contactDoc.id, ...contactDoc.data() } as User;
+      const contactDocs = await Promise.all(
+        selectedContactIds.map(id => getDoc(doc(db, 'users', id)))
+      );
 
-            const chatId = await createOrNavigateToChat(currentUser.uid, userData, contact);
-            const chatRef = doc(db, 'chats', chatId);
-            const messagesColRef = collection(chatRef, 'messages');
-            const newMessageRef = doc(messagesColRef);
+      for (const contactDoc of contactDocs) {
+        if (!contactDoc.exists()) continue;
+        const contact = { id: contactDoc.id, ...contactDoc.data() } as User;
 
-            const timestamp = serverTimestamp();
-            
-            const forwardedMessageData: Partial<Message> = {
-                text: messageToForward.text,
-                senderId: currentUser.uid,
-                timestamp: timestamp,
-                isRead: false,
-                isForwarded: true,
-            };
+        const chatId = await createOrNavigateToChat(currentUser.uid, userData, contact);
+        const chatRef = doc(db, 'chats', chatId);
+        const messagesColRef = collection(chatRef, 'messages');
+        const newMessageRef = doc(messagesColRef);
 
-            batch.set(newMessageRef, forwardedMessageData);
-            batch.update(chatRef, {
-                lastMessage: {
-                    text: forwardedMessageData.text,
-                    senderId: currentUser.uid,
-                    timestamp: timestamp,
-                    isRead: false,
-                }
-            });
-        }
-        
-        await batch.commit();
-        toast({ title: "کامیابی", description: `پیغام ${selectedContactIds.length} رابطوں کو فارورڈ کر دیا گیا ہے۔` });
-        setMessageToForward(null);
+        const timestamp = serverTimestamp();
+
+        const forwardedMessageData: Partial<Message> = {
+          text: messageToForward.text,
+          senderId: currentUser.uid,
+          timestamp: timestamp,
+          isRead: false,
+          isForwarded: true,
+        };
+
+        batch.set(newMessageRef, forwardedMessageData);
+        batch.update(chatRef, {
+          lastMessage: {
+            text: forwardedMessageData.text,
+            senderId: currentUser.uid,
+            timestamp: timestamp,
+            isRead: false,
+          }
+        });
+      }
+
+      await batch.commit();
+      toast({ title: "کامیابی", description: `پیغام ${selectedContactIds.length} رابطوں کو فارورڈ کر دیا گیا ہے۔` });
+      setMessageToForward(null);
 
     } catch (error) {
-        console.error("Error forwarding message:", error);
-        toast({ variant: 'destructive', title: 'خرابی', description: 'پیغام فارورڈ نہیں کیا جا سکا' });
+      console.error("Error forwarding message:", error);
+      toast({ variant: 'destructive', title: 'خرابی', description: 'پیغام فارورڈ نہیں کیا جا سکا' });
     } finally {
-        toastRef.dismiss();
+      toastRef.dismiss();
     }
   }
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
-        title: 'کاپی ہو گیا',
-        description: 'پیغام کلپ بورڈ پر کاپی کر لیا گیا ہے۔',
+      title: 'کاپی ہو گیا',
+      description: 'پیغام کلپ بورڈ پر کاپی کر لیا گیا ہے۔',
     });
   };
 
@@ -423,23 +422,23 @@ export default function ChatView({ chatId }: { chatId: string }) {
   const handleAutoTranslate = async (messageId: string, textToTranslate: string) => {
     // Don't auto-translate if already translated or if it's a short message
     if (translations[messageId] || textToTranslate.length < 10) return;
-    
+
     // Don't auto-translate if it's already in Urdu
     if (isUrduText(textToTranslate)) return;
 
     try {
       const targetLanguage = 'Urdu';
-      
+
       const res = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: textToTranslate, targetLanguage })
       });
-      
+
       if (res.ok) {
         const result = await res.json();
         if (result.translatedText) {
-          setTranslations(prev => ({...prev, [messageId]: result.translatedText}));
+          setTranslations(prev => ({ ...prev, [messageId]: result.translatedText }));
           console.log(`Auto-translated message ${messageId}: ${textToTranslate.substring(0, 50)}...`);
         }
       }
@@ -456,22 +455,22 @@ export default function ChatView({ chatId }: { chatId: string }) {
       <ScrollArea className="flex-1" ref={scrollAreaRef}>
         <div className="space-y-4 p-4">
           {loading ? (
-             <p className="text-center text-muted-foreground">پیغامات لوڈ ہو رہے ہیں...</p>
+            <p className="text-center text-muted-foreground">پیغامات لوڈ ہو رہے ہیں...</p>
           ) : messages.length === 0 ? (
             <p className="text-center text-muted-foreground">ابھی تک کوئی پیغام نہیں۔ گفتگو شروع کریں!</p>
           ) : messages.map((message) => (
-            <MessageBubble 
-                key={message.id} 
-                message={message}
-                translation={translations[message.id]}
-                isTranslated={!!translations[message.id]}
-                isTranslating={translatingId === message.id}
-                onCopy={handleCopy}
-                onTranslate={handleToggleTranslation}
-                onDeleteForEveryone={handleDeleteMessage}
-                onForward={() => setMessageToForward(message)}
-                onReact={handleReactToMessage}
-                onDeleteForMe={() => handleDeleteForMe(message.id)}
+            <MessageBubble
+              key={message.id}
+              message={message}
+              translation={translations[message.id]}
+              isTranslated={!!translations[message.id]}
+              isTranslating={translatingId === message.id}
+              onCopy={handleCopy}
+              onTranslate={handleToggleTranslation}
+              onDeleteForEveryone={handleDeleteMessage}
+              onForward={() => setMessageToForward(message)}
+              onReact={handleReactToMessage}
+              onDeleteForMe={() => handleDeleteForMe(message.id)}
             />
           ))}
         </div>
@@ -481,9 +480,9 @@ export default function ChatView({ chatId }: { chatId: string }) {
         onClose={() => setMessageToForward(null)}
         onForward={handleForwardMessage}
       />
-      <ChatInput 
-        chatId={chatId} 
-        onMessageSent={() => {}} 
+      <ChatInput
+        chatId={chatId}
+        onMessageSent={() => { }}
         remoteUserId={otherParticipant?.id}
       />
     </div>

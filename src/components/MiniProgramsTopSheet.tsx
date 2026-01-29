@@ -116,6 +116,24 @@ export function MiniProgramsTopSheet({
             transform: `translateY(${closeDragY}px)`,
             transition: isCloseDragging ? "none" : "transform 0.2s ease-out",
           }}
+          onMouseDown={(e) => {
+            // Only start dragging if not clicking a link
+            if ((e.target as HTMLElement).closest('a')) return;
+            handleCloseStart(e.clientY);
+          }}
+          onMouseMove={(e) => {
+            if (closeStartYRef.current != null) handleCloseMove(e.clientY);
+          }}
+          onMouseUp={handleCloseEnd}
+          onMouseLeave={handleCloseEnd}
+          onTouchStart={(e) => {
+            if ((e.target as HTMLElement).closest('a')) return;
+            handleCloseStart(e.touches[0]?.clientY ?? 0);
+          }}
+          onTouchMove={(e) => {
+            if (closeStartYRef.current != null) handleCloseMove(e.touches[0]?.clientY ?? 0);
+          }}
+          onTouchEnd={handleCloseEnd}
         >
           <SheetHeader className="mb-3">
             <SheetTitle className="text-base font-semibold" dir="rtl">

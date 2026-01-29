@@ -1,124 +1,43 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { User } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, MessageCircle, UserPlus, ScanLine, Landmark } from 'lucide-react';
-import { db } from '@/lib/firebase';
-import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { createOrNavigateToChat } from '@/lib/chatUtils';
+import { Search, Plus, MessageCircle, UserPlus, ScanLine, Landmark, ChevronRight } from 'lucide-react';
 import LoadingOverlay from '@/components/LoadingOverlay';
+import type { Chat } from '@/lib/types';
+import ChatRow from '@/components/chat/ChatRow';
 
-function ContactRow({ contact, onClick }: { contact: User; onClick: () => void }) {
-  return (
-    <div onClick={onClick} className="flex items-center gap-4 p-4 hover:bg-muted/50 cursor-pointer">
-      <Avatar className="h-10 w-10 border">
-        <AvatarImage src={contact.avatarUrl} alt={contact.name ?? 'User'} data-ai-hint="person avatar" />
-        <AvatarFallback>{(contact.name ?? 'U').charAt(0)}</AvatarFallback>
-      </Avatar>
-      <div className="flex-1 overflow-hidden">
-        <p className="font-semibold truncate">{contact.name ?? 'Unknown User'}</p>
-      </div>
-    </div>
-  );
-}
+import { useChatContext } from '@/context/ChatContext';
 
 export default function ChatsPage() {
+  const { chats, loading } = useChatContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [contacts, setContacts] = useState<User[]>([]);
-  const [contactsLoading, setContactsLoading] = useState(true);
   const router = useRouter();
-  const { user: currentUser, userData } = useAuth();
+  const { user: currentUser } = useAuth();
 
-  useEffect(() => {
-    if (!currentUser) { 
-      setContactsLoading(false); 
-      return; 
-    }
+  // Filter chats based on search term
+  const filteredChats = chats.filter(chat => {
+    if (!currentUser) return false;
+    const otherParticipantId = chat.participantIds?.find(id => id !== currentUser.uid);
+    // If self chat
+    const targetId = otherParticipantId || currentUser.uid;
 
-    // Set loading timeout (20 seconds)
-    let loadingTimeout: NodeJS.Timeout | null = null;
-    loadingTimeout = setTimeout(() => {
-      if (contactsLoading) {
-        setContactsLoading(false);
-        console.warn('Contacts loading timeout');
-      }
-    }, 20000);
+    const participantInfo = chat.participantsInfo?.[targetId];
+    if (!participantInfo) return false;
 
-    const contactsColRef = collection(db, 'users', currentUser.uid, 'contacts');
-    const unsub = onSnapshot(
-      contactsColRef, 
-      async snapshot => {
-        if (loadingTimeout) {
-          clearTimeout(loadingTimeout);
-          loadingTimeout = null;
-        }
-        setContactsLoading(true);
-        try {
-          if (snapshot.empty) { 
-            setContacts([]); 
-            setContactsLoading(false);
-            return; 
-          }
-          const contactDocs = await Promise.all(
-            snapshot.docs.map(c => getDoc(doc(db, 'users', c.id)))
-          );
-          const contactsData = contactDocs
-            .filter(d => d.exists())
-            .map(d => ({ id: d.id, ...d.data() } as User));
-          setContacts(contactsData);
-        } catch (error) {
-          console.error('Error loading contacts:', error);
-        } finally { 
-          setContactsLoading(false); 
-        }
-      },
-      (error) => {
-        if (loadingTimeout) {
-          clearTimeout(loadingTimeout);
-          loadingTimeout = null;
-        }
-        console.error('Error in contacts snapshot:', error);
-        setContactsLoading(false);
-      }
-    );
-    
-    return () => {
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-      }
-      unsub();
-    };
-  }, [currentUser]);
-
-  const filteredContacts = (contacts || []).filter(c => c.name?.toLowerCase().includes(searchTerm.toLowerCase()));
-
-  const startChat = async (contact: User) => {
-    if (!currentUser || !userData) {
-      console.error('Cannot start chat: missing user data');
-      return;
-    }
-    
-    try {
-      const chatId = await createOrNavigateToChat(currentUser.uid, userData, contact);
-      // Use replace to avoid back button issues
-      router.replace(`/chats/${chatId}`);
-    } catch (error) {
-      console.error('Error starting chat:', error);
-      // Fallback: try direct navigation
-      router.push(`/chats/${[currentUser.uid, contact.id].sort().join('_')}`);
-    }
-  };
+    // Check name
+    const name = participantInfo.name || participantInfo.displayName || '';
+    return name.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   return (
-    <div className="relative">
+    <div className="relative h-full flex flex-col">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background p-4">
         <h1 className="text-xl font-bold">AMIK CHAT</h1>
         <div className="flex items-center gap-2">
@@ -143,28 +62,44 @@ export default function ChatsPage() {
                 <span>کیو آر اسکین</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => router.push('/money')}>
-                <Landmark className="h-4 و-4 mr-2" />
+                <Landmark className="h-4 w-4 mr-2" />
                 <span>پیسے</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
+
       <div className="p-4 border-b">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input dir="rtl" placeholder="تلاش کریں" className="pr-10 text-right" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <Input
+            dir="rtl"
+            placeholder="تلاش کریں"
+            className="pr-10 text-right"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
         </div>
       </div>
-      <div className="divide-y">
-        {contactsLoading ? (
-          <LoadingOverlay message="رابطے لوڈ ہو رہے ہیں" />
-        ) : filteredContacts.length > 0 ? (
-          filteredContacts.map(contact => (
-            <ContactRow key={contact.id} contact={contact} onClick={() => startChat(contact)} />
+
+      <div className="flex-1 overflow-y-auto divide-y">
+        {loading ? (
+          <LoadingOverlay message="چیٹ لوڈ ہو رہی ہے..." />
+        ) : filteredChats.length > 0 ? (
+          filteredChats.map(chat => (
+            currentUser && <ChatRow key={chat.id} chat={chat} currentUserId={currentUser.uid} />
           ))
         ) : (
-          <p className="p-4 text-center text-muted-foreground">کوئی رابطہ نہیں ملا۔ <Link href="/contacts/add" className="text-primary underline">ایک شامل کریں</Link></p>
+          <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground h-full space-y-4">
+            <div className="bg-muted p-4 rounded-full">
+              <MessageCircle className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p>ابھی تک کوئی چیٹ نہیں ہے۔</p>
+            <Button onClick={() => router.push('/chats/new')}>
+              نئی گفتگو شروع کریں
+            </Button>
+          </div>
         )}
       </div>
     </div>

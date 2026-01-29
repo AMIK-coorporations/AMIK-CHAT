@@ -21,8 +21,9 @@ export default function QrCodePage() {
   const { toast } = useToast();
 
   const qrValue = user ? `amik-chat-user://${user.uid}` : '';
-  const [overlaySrc, setOverlaySrc] = useState<string>("/AMIK%20CHAT%20LOGO%20simple%20crop%202.png");
+  const [overlaySrc, setOverlaySrc] = useState<string>("https://iili.io/fU7NHil.png");
   const overlayCandidates = [
+    "https://iili.io/fU7NHil.png",
     "/AMIK%20CHAT%20LOGO%20simple%20crop%202.png",
     "/AMIK CHAT LOGO simple crop 2.png",
     "/qr-logo.png",
@@ -36,31 +37,31 @@ export default function QrCodePage() {
 
   const handleSaveImage = () => {
     if (!qrCodeRef.current) {
-        toast({ variant: 'destructive', title: 'خرابی', description: 'کیو آر کوڈ محفوظ نہیں ہو سکا۔' });
-        return;
+      toast({ variant: 'destructive', title: 'خرابی', description: 'کیو آر کوڈ محفوظ نہیں ہو سکا۔' });
+      return;
     };
 
     const svgElement = qrCodeRef.current.querySelector('svg');
     if (!svgElement) {
-        toast({ variant: 'destructive', title: 'خرابی', description: 'کیو آر کوڈ عنصر نہیں مل سکا۔' });
-        return;
+      toast({ variant: 'destructive', title: 'خرابی', description: 'کیو آر کوڈ عنصر نہیں مل سکا۔' });
+      return;
     }
-    
+
     const svgData = new XMLSerializer().serializeToString(svgElement);
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) {
-        toast({ variant: 'destructive', title: 'خرابی', description: 'تصویر نہیں بن سکی۔' });
-        return;
+      toast({ variant: 'destructive', title: 'خرابی', description: 'تصویر نہیں بن سکی۔' });
+      return;
     }
-    
+
     const img = new window.Image();
     img.onload = () => {
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
       const pngFile = canvas.toDataURL("image/png");
-      
+
       const downloadLink = document.createElement("a");
       const displayName = userData?.name ?? (userData as any)?.displayName ?? user?.uid ?? 'amik-user';
       downloadLink.download = `amik-chat-qr-${displayName}.png`;
@@ -70,7 +71,7 @@ export default function QrCodePage() {
       toast({ title: 'کامیابی', description: 'کیو آر کوڈ ڈاؤن لوڈ میں محفوظ ہو گیا۔' });
     };
     img.onerror = () => {
-       toast({ variant: 'destructive', title: 'خرابی', description: 'محفوظ کرنے کے لیے کیو آر کوڈ لوڈ نہیں ہو سکا۔' });
+      toast({ variant: 'destructive', title: 'خرابی', description: 'محفوظ کرنے کے لیے کیو آر کوڈ لوڈ نہیں ہو سکا۔' });
     }
     img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
   };
@@ -112,31 +113,31 @@ export default function QrCodePage() {
                   level="H"
                 />
                 <div className="absolute top-1/2 left-1/2 h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2 overflow-hidden border rounded-md border-white/90 z-10 bg-white">
-                    <img
-                      src={overlaySrc}
-                      alt="AMIK Logo"
-                      width={72}
-                      height={72}
-                      className="w-full h-full object-cover"
-                      onError={handleOverlayError}
-                      decoding="async"
-                    />
-                 </div>
+                  <img
+                    src={overlaySrc}
+                    alt="AMIK Logo"
+                    width={72}
+                    height={72}
+                    className="w-full h-full object-cover"
+                    onError={handleOverlayError}
+                    decoding="async"
+                  />
+                </div>
               </div>
 
               <p className="text-muted-foreground">دوست کے طور پر شامل کرنے کے لیے کیو آر کوڈ اسکین کریں</p>
             </>
           ) : (
             <div className="space-y-6 flex flex-col items-center">
-                <div className="flex items-center gap-4 self-start w-full">
-                    <Skeleton className="h-16 w-16 rounded-full" />
-                    <div className="space-y-2">
-                        <Skeleton className="h-6 w-32" />
-                        <Skeleton className="h-4 w-24" />
-                    </div>
+              <div className="flex items-center gap-4 self-start w-full">
+                <Skeleton className="h-16 w-16 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-4 w-24" />
                 </div>
-                <Skeleton className="h-64 w-64 rounded-lg" />
-                <Skeleton className="h-4 w-64" />
+              </div>
+              <Skeleton className="h-64 w-64 rounded-lg" />
+              <Skeleton className="h-4 w-64" />
             </div>
           )}
         </div>

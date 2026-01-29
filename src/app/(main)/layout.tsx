@@ -13,6 +13,7 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import type { Chat } from "@/lib/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { MiniProgramsTopSheet } from "@/components/MiniProgramsTopSheet";
+import { ChatProvider } from "@/context/ChatContext";
 
 export default function MainAppLayout({
   children,
@@ -32,11 +33,12 @@ export default function MainAppLayout({
   const pullStartYRef = useRef<number | null>(null);
   const [isPulling, setIsPulling] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/login");
-    }
-  }, [user, authLoading, router]);
+  // Redirect removed for public access
+  // useEffect(() => {
+  //   if (!authLoading && !user) {
+  //     router.replace("/login");
+  //   }
+  // }, [user, authLoading, router]);
 
   useEffect(() => {
     if (!user) {
@@ -79,14 +81,14 @@ export default function MainAppLayout({
             typeof t1?.toDate === "function"
               ? t1.toDate().getTime()
               : typeof c1?.toDate === "function"
-              ? c1.toDate().getTime()
-              : 0;
+                ? c1.toDate().getTime()
+                : 0;
           const timeB =
             typeof t2?.toDate === "function"
               ? t2.toDate().getTime()
               : typeof c2?.toDate === "function"
-              ? c2.toDate().getTime()
-              : 0;
+                ? c2.toDate().getTime()
+                : 0;
           return timeB - timeA;
         });
 
@@ -178,7 +180,7 @@ export default function MainAppLayout({
 
   const handleMainTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const el = mainRef.current;
-    if (!el || miniOpen) return;
+    if (!el || miniOpen || pathname !== '/chats') return;
     if (el.scrollTop <= 0) {
       pullStartYRef.current = e.touches[0]?.clientY ?? 0;
       setIsPulling(true);
@@ -213,23 +215,20 @@ export default function MainAppLayout({
     );
   }
 
-  // Inject props into the child component if it's the ChatsPage
-  const childrenWithProps = cloneElement(children as React.ReactElement, {
-    ...(pathname === "/chats" ? { chats: chats, loading: chatsLoading } : {}),
-  });
-
   return (
     <div className="relative mx-auto flex h-screen max-w-2xl flex-col bg-background">
-      <MiniProgramsTopSheet open={miniOpen} onOpenChange={setMiniOpen} />
-      <main
-        ref={mainRef}
-        className="flex-1 overflow-y-auto pb-20"
-        onTouchStart={handleMainTouchStart}
-        onTouchMove={handleMainTouchMove}
-        onTouchEnd={handleMainTouchEnd}
-      >
-        {childrenWithProps}
-      </main>
+      <ChatProvider value={{ chats, loading: chatsLoading }}>
+        <MiniProgramsTopSheet open={miniOpen} onOpenChange={setMiniOpen} />
+        <main
+          ref={mainRef}
+          className="flex-1 overflow-y-auto pb-20"
+          onTouchStart={handleMainTouchStart}
+          onTouchMove={handleMainTouchMove}
+          onTouchEnd={handleMainTouchEnd}
+        >
+          {children}
+        </main>
+      </ChatProvider>
       <BottomNav />
     </div>
   );

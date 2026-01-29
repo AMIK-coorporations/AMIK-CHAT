@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Users, UserPlus, Loader2, Plus, MessageCircle, ScanLine, Landmark, Clock3, CheckCheck, XCircle } from "lucide-react";
-import ContactSuggestions from "@/components/contacts/ContactSuggestions";
+
 import { Button } from "@/components/ui/button";
 import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -41,7 +41,7 @@ function ContactItem({ contact, onClick, isCreatingChat }: { contact: User; onCl
       <div className="flex-1 overflow-hidden">
         <p className="font-semibold truncate">{contact.name ?? 'Unknown User'}</p>
       </div>
-       {isCreatingChat && <Loader2 className="h-5 w-5 animate-spin" data-testid="creating-chat-spinner" />}
+      {isCreatingChat && <Loader2 className="h-5 w-5 animate-spin" data-testid="creating-chat-spinner" />}
     </div>
   );
 }
@@ -69,15 +69,15 @@ export default function ContactsPage() {
       setLoading(false);
       return;
     };
-    
+
     const contactsColRef = collection(db, 'users', currentUser.uid, 'contacts');
-    
+
     const unsubscribe = onSnapshot(contactsColRef, async (snapshot) => {
       setLoading(true);
       try {
         if (snapshot.empty) {
-            setContacts([]);
-            return;
+          setContacts([]);
+          return;
         }
         const contactPromises = snapshot.docs.map(contactDoc => getDoc(doc(db, 'users', contactDoc.id)));
         const contactDocs = await Promise.all(contactPromises);
@@ -117,7 +117,7 @@ export default function ContactsPage() {
 
     return () => unsubscribe();
   }, [currentUser]);
-  
+
   const handleStartChat = async (contact: User) => {
     if (!currentUser || !userData) {
       toast({
@@ -127,36 +127,36 @@ export default function ContactsPage() {
       });
       return;
     }
-    
+
     if (creatingChat) {
       return; // Already creating a chat
     }
-    
+
     setCreatingChat(contact.id);
 
     try {
       const chatId = await createOrNavigateToChat(currentUser.uid, userData, contact);
-      
+
       // Clear creating state before navigation
       setCreatingChat(null);
-      
+
       // Use replace to avoid back button issues
       router.replace(`/chats/${chatId}`);
     } catch (error: any) {
       console.error("Error creating or finding chat: ", error);
       setCreatingChat(null);
-      
-      const errorMessage = error.code === 'permission-denied' 
+
+      const errorMessage = error.code === 'permission-denied'
         ? 'اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو چیک کریں۔'
         : error.message || 'ایک نامعلوم خرابی پیش آگئی۔';
-      
+
       toast({
         variant: 'destructive',
         title: 'چیٹ شروع کرنے میں خرابی',
         description: errorMessage,
         duration: 5000,
       });
-      
+
       // Fallback: try direct navigation with sorted IDs
       try {
         const fallbackChatId = [currentUser.uid, contact.id].sort().join('_');
@@ -271,9 +271,7 @@ export default function ContactsPage() {
         </TabsList>
 
         <TabsContent value="contacts">
-          <div className="p-4">
-            <ContactSuggestions />
-          </div>
+
 
           <div className="border-t">
             <h2 className="p-4 text-sm font-semibold text-muted-foreground">میرے رابطے</h2>
@@ -283,7 +281,7 @@ export default function ContactsPage() {
                   <Skeleton className="h-10 w-10 rounded-full" />
                   <Skeleton className="h-5 w-32" />
                 </div>
-                 <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4">
                   <Skeleton className="h-10 w-10 rounded-full" />
                   <Skeleton className="h-5 w-40" />
                 </div>
@@ -291,9 +289,9 @@ export default function ContactsPage() {
             ) : contacts.length > 0 ? (
               <div className="divide-y">
                 {contacts.map(contact => (
-                  <ContactItem 
-                    key={contact.id} 
-                    contact={contact} 
+                  <ContactItem
+                    key={contact.id}
+                    contact={contact}
                     onClick={() => handleStartChat(contact)}
                     isCreatingChat={creatingChat === contact.id}
                   />

@@ -16,6 +16,7 @@ export interface User {
   isOnline: boolean;
   status?: string;
   bio?: string;
+  securityPin?: string;
 }
 
 export interface Message {
@@ -50,7 +51,7 @@ export interface Message {
 
 export interface Chat {
   id: string;
-  participants: string[];
+  participantIds: string[];
   participantsInfo?: Record<string, any>; // Add this line
   lastMessage?: {
     text: string;

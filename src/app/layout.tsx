@@ -1,5 +1,5 @@
 
-import type {Metadata, Viewport} from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
-    apple: '/logo.png',
+    apple: "https://iili.io/fU7NHil.png",
   },
 };
 
@@ -33,7 +33,8 @@ export default function RootLayout({
   return (
     <html lang="ur" dir="ltr" suppressHydrationWarning={true}>
       <head>
-        <script dangerouslySetInnerHTML={{__html: `
+        <script dangerouslySetInnerHTML={{
+          __html: `
           (function(){
             try{
               var saved = localStorage.getItem('theme') || 'system';

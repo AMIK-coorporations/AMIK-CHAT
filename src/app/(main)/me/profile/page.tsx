@@ -66,13 +66,13 @@ export default function ProfileDetailsPage() {
 				<Card>
 					<CardContent className="p-0">
 						<div className="divide-y">
-                            <button className="w-full flex items-center p-4 transition-colors hover:bg-muted/50" onClick={() => setAvatarOpen(true)}>
-                                <span className="flex-1 font-medium">پروفائل تصویر</span>
-                                <span className="text-muted-foreground flex items-center gap-2">
-                                    {currentAvatar ? <span>دیکھیں / تبدیل</span> : <span>شامل کریں</span>}
-                                </span>
-                                <ChevronRight className="h-5 w-5 text-muted-foreground ml-2" />
-                            </button>
+							<button className="w-full flex items-center p-4 transition-colors hover:bg-muted/50" onClick={() => setAvatarOpen(true)}>
+								<span className="flex-1 font-medium">پروفائل تصویر</span>
+								<span className="text-muted-foreground flex items-center gap-2">
+									{currentAvatar ? <span>دیکھیں / تبدیل</span> : <span>شامل کریں</span>}
+								</span>
+								<ChevronRight className="h-5 w-5 text-muted-foreground ml-2" />
+							</button>
 							<Link href="/me/profile/name" className="flex items-center p-4 transition-colors hover:bg-muted/50">
 								<span className="flex-1 font-medium">نام</span>
 								<span className="text-muted-foreground">{userData?.name || '—'}</span>
@@ -94,17 +94,17 @@ export default function ProfileDetailsPage() {
 								<ChevronRight className="h-5 w-5 text-muted-foreground ml-2" />
 							</Link>
 							<div className="flex items-center p-4 gap-2">
-                                <span className="flex-1 font-medium">اے ایم آئی کے گفتگو شناخت</span>
-                                <span className="text-muted-foreground break-all">{user?.uid}</span>
-                                <button
-                                    className="h-8 w-8 inline-flex items-center justify-center rounded-full border border-muted-foreground/30 hover:border-accent hover:bg-accent/10 text-accent transition-colors"
-                                    title="شناخت کاپی کریں"
-                                    onClick={async () => { if (!user?.uid) return; await navigator.clipboard.writeText(user.uid); toast({ title: 'کاپی ہوگیا', description: 'شناخت کلپ بورڈ میں کاپی ہو گئی۔' }); }}
-                                >
-                                    {/* using unicode copy icon for simplicity */}
-                                    <span className="text-sm">⧉</span>
-                                </button>
-                            </div>
+								<span className="flex-1 font-medium">اے ایم آئی کے گفتگو شناخت</span>
+								<span className="text-muted-foreground break-all">{user?.uid}</span>
+								<button
+									className="h-8 w-8 inline-flex items-center justify-center rounded-full border border-muted-foreground/30 hover:border-accent hover:bg-accent/10 text-accent transition-colors"
+									title="شناخت کاپی کریں"
+									onClick={async () => { if (!user?.uid) return; await navigator.clipboard.writeText(user.uid); toast({ title: 'کاپی ہوگیا', description: 'شناخت کلپ بورڈ میں کاپی ہو گئی۔' }); }}
+								>
+									{/* using unicode copy icon for simplicity */}
+									<span className="text-sm">⧉</span>
+								</button>
+							</div>
 							<Link href="/qr" className="flex items-center p-4 transition-colors hover:bg-muted/50">
 								<QrCode className="h-5 w-5 text-accent mr-4" />
 								<span className="flex-1 font-medium">میرا کیو آر کوڈ</span>
@@ -121,7 +121,7 @@ export default function ProfileDetailsPage() {
 						<DialogTitle>پروفائل تصویر</DialogTitle>
 					</DialogHeader>
 					<div className="flex flex-col items-center gap-4">
-						<img src={currentAvatar || "/logo.png"} alt="avatar" className="w-40 h-40 rounded-full object-cover border" />
+						<img src={currentAvatar || "https://iili.io/fU7NHil.png"} alt="avatar" className="w-40 h-40 rounded-full object-cover border" />
 						<div className="grid grid-cols-1 gap-2 w-full">
 							<Button variant="secondary" onClick={handlePickFile} disabled={isUploading}>{isUploading ? `اپ لوڈ ہو رہا ہے... ${progress}%` : "نئی تصویر منتخب کریں"}</Button>
 							<Button variant="outline" onClick={() => currentAvatar && downloadImage(currentAvatar, 'profile.jpg')}>گیلری میں محفوظ کریں</Button>

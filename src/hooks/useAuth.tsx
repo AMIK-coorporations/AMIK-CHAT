@@ -14,12 +14,12 @@ interface AuthContextType {
   changePassword: (password: string) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({ 
-  user: null, 
-  userData: null, 
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  userData: null,
   loading: true,
-  updateProfile: async () => {},
-  changePassword: async () => {},
+  updateProfile: async () => { },
+  changePassword: async () => { },
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    let unsubscribeDoc: () => void = () => {};
+    let unsubscribeDoc: () => void = () => { };
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       unsubscribeDoc();
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (firebaseUser) {
         setLoading(true);
         const userDocRef = doc(db, 'users', firebaseUser.uid);
-        
+
         const userDocSnap = await getDoc(userDocRef);
         if (!userDocSnap.exists()) {
           const nameFromEmail = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'New User';
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error("Failed to create user document for existing auth user:", error);
           }
         }
-        
+
         unsubscribeDoc = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
             setUserData({ id: doc.id, ...doc.data() } as User);
@@ -79,8 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-        unsubscribeAuth();
-        unsubscribeDoc();
+      unsubscribeAuth();
+      unsubscribeDoc();
     };
   }, []);
 

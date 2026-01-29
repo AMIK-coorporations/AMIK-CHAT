@@ -10,7 +10,7 @@ export type StyledQrProps = {
 	onError?: () => void;
 };
 
-export default function StyledQr({ value, className, logoUrl = "/logo.png", size = 312, onError }: StyledQrProps) {
+export default function StyledQr({ value, className, logoUrl = "https://iili.io/fU7NHil.png", size = 312, onError }: StyledQrProps) {
 	const ref = useRef<HTMLDivElement>(null);
 	const qrRef = useRef<any>(null);
 	const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +31,7 @@ export default function StyledQr({ value, className, logoUrl = "/logo.png", size
 				}
 
 				const QRCodeStyling = (await import("qr-code-styling")).default;
-				
+
 				// Create QR code instance with simpler options
 				qrRef.current = new QRCodeStyling({
 					width: size,

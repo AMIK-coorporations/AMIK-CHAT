@@ -15,7 +15,7 @@ export default function AppLogo({ className, width = 64, height = 64, alt = "AMI
 
 	if (imageError) {
 		return (
-			<div 
+			<div
 				className={`${className} bg-primary text-primary-foreground rounded-lg flex items-center justify-center font-bold text-sm`}
 				style={{ width, height }}
 			>
@@ -26,7 +26,7 @@ export default function AppLogo({ className, width = 64, height = 64, alt = "AMI
 
 	return (
 		<Image
-			src="/logo.png"
+			src="https://iili.io/fU7NHil.png"
 			alt={alt}
 			width={width}
 			height={height}

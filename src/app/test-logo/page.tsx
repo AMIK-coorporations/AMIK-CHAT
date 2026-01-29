@@ -5,7 +5,7 @@ export default function TestLogoPage() {
   return (
     <div className="min-h-screen bg-background p-8">
       <h1 className="text-2xl font-bold mb-8">Logo Test Page</h1>
-      
+
       <div className="space-y-8">
         <div>
           <h2 className="text-lg font-semibold mb-4">AppLogo Component</h2>
@@ -19,18 +19,18 @@ export default function TestLogoPage() {
         <div>
           <h2 className="text-lg font-semibold mb-4">Direct Image Component</h2>
           <div className="flex gap-4">
-            <Image 
-              src="/logo.png" 
-              alt="Direct Logo" 
-              width={64} 
-              height={64} 
+            <Image
+              src="https://iili.io/fU7NHil.png"
+              alt="Direct Logo"
+              width={64}
+              height={64}
               className="border"
             />
-            <Image 
-              src="/logo.png" 
-              alt="Direct Logo" 
-              width={128} 
-              height={128} 
+            <Image
+              src="https://iili.io/fU7NHil.png"
+              alt="Direct Logo"
+              width={128}
+              height={128}
               className="border"
             />
           </div>
@@ -39,7 +39,7 @@ export default function TestLogoPage() {
         <div>
           <h2 className="text-lg font-semibold mb-4">Image URLs</h2>
           <div className="space-y-2 text-sm">
-            <p>Logo path: /logo.png</p>
+            <p>Logo path: https://iili.io/fU7NHil.png</p>
             <p>Favicon path: /favicon.ico</p>
             <p>Manifest path: /manifest.json</p>
           </div>
