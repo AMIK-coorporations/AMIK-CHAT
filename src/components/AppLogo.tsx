@@ -10,13 +10,13 @@ export type AppLogoProps = {
 	alt?: string;
 };
 
-export default function AppLogo({ className, width = 64, height = 64, alt = "AMIK Chat" }: AppLogoProps) {
+export default function AppLogo({ className, width = 48, height = 48, alt = "AMIK Chat" }: AppLogoProps) {
 	const [imageError, setImageError] = useState(false);
 
 	if (imageError) {
 		return (
 			<div
-				className={`${className} bg-primary text-primary-foreground rounded-lg flex items-center justify-center font-bold text-sm`}
+				className={`${className} bg-primary text-primary-foreground rounded-xl flex items-center justify-center font-bold text-xs`}
 				style={{ width, height }}
 			>
 				AMIK
@@ -31,16 +31,12 @@ export default function AppLogo({ className, width = 64, height = 64, alt = "AMI
 			width={width}
 			height={height}
 			className={className}
-			style={{ width: 'auto', height: 'auto' }}
 			priority
 			unoptimized={true}
 			onError={() => {
 				console.error('Failed to load logo image');
 				setImageError(true);
 			}}
-			onLoad={() => {
-				console.log('Logo loaded successfully');
-			}}
 		/>
 	);
-} 
+}

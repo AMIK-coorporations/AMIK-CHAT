@@ -91,7 +91,7 @@ export default function LoginPage() {
         <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
             <div className="w-full max-w-sm">
                 <div className="text-center mb-8">
-                    <AppLogo width={64} height={64} className="mx-auto" alt="AMIK CHAT Logo" />
+                    <AppLogo width={48} height={48} className="mx-auto" alt="AMIK CHAT Logo" />
                     <h1 className="text-4xl font-bold mt-4">AMIK CHAT</h1>
                 </div>
                 <Card>
