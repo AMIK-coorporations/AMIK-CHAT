@@ -48,8 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         const userDocRef = doc(db, 'users', firebaseUser.uid);
 
-        const userDocSnap = await getDoc(userDocRef);
-        if (!userDocSnap.exists()) {
+        let userDocSnap;
+        try {
+          userDocSnap = await getDoc(userDocRef);
+        } catch (error) {
+          console.error("Firestore getDoc failed (possibly offline):", error);
+          // If we fail to get the doc, we'll still proceed to set up the listener 
+          // which will recover once online.
+        }
+
+        if (userDocSnap && !userDocSnap.exists()) {
           const nameFromEmail = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'New User';
           try {
             await setDoc(userDocRef, {
