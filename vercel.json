@@ -4,7 +4,9 @@
   "framework": "nextjs",
   "installCommand": "npm install",
   "devCommand": "npm run dev",
-  "regions": ["iad1"],
+  "regions": [
+    "iad1"
+  ],
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 30
@@ -40,8 +42,18 @@
   ],
   "rewrites": [
     {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "docs.amikchat.site"
+        }
+      ],
+      "destination": "/docs/:path*"
+    },
+    {
       "source": "/manifest.json",
       "destination": "/manifest.json"
     }
   ]
-} 
+}

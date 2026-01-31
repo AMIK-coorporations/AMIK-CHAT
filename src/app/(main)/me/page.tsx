@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, LogOut, Settings, UserCircle, QrCode, Plus, MessageCircle, UserPlus, ScanLine, Landmark, Copy } from "lucide-react";
+import { ChevronRight, LogOut, Settings, UserCircle, QrCode, Plus, MessageCircle, UserPlus, ScanLine, Landmark, Copy, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { auth } from "@/lib/firebase";
@@ -42,7 +42,7 @@ export default function MePage() {
       setPageLoading(false);
       return;
     }
-    
+
     // Set timeout for loading (15 seconds)
     const timeout = setTimeout(() => {
       setPageLoading(false);
@@ -56,30 +56,30 @@ export default function MePage() {
         });
       }
     }, 15000);
-    
+
     return () => clearTimeout(timeout);
   }, [authLoading, userData, user, toast]);
-  
+
   const handleLogout = async () => {
     try {
       // Clear any local storage or session data
       localStorage.clear();
       sessionStorage.clear();
-      
+
       // Sign out from Firebase
       await signOut(auth);
-      
+
       // Wait a moment to ensure signOut completes
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Force redirect to login page
       window.location.href = '/login';
     } catch (error) {
       console.error("Error signing out: ", error);
-      toast({ 
-        variant: 'destructive', 
-        title: 'خرابی', 
-        description: 'لاگ آؤٹ کرنے میں مسئلہ پیش آیا۔ براہ کرم دوبارہ کوشش کریں۔' 
+      toast({
+        variant: 'destructive',
+        title: 'خرابی',
+        description: 'لاگ آؤٹ کرنے میں مسئلہ پیش آیا۔ براہ کرم دوبارہ کوشش کریں۔'
       });
     }
   };
@@ -208,10 +208,15 @@ export default function MePage() {
                 <span className="flex-1 font-medium">ترتیبات</span>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Link>
+              <Link href="/docs" className="flex items-center p-4 transition-colors hover:bg-muted/50">
+                <FileText className="h-6 w-6 text-accent mr-4" />
+                <span className="flex-1 font-medium">دستاویزات</span>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Link>
             </div>
           </CardContent>
         </Card>
-        
+
         <Button variant="destructive" className="w-full" onClick={handleLogout}>
           <LogOut className="h-4 w-4 mr-2" />
           کھاتہ خروج
