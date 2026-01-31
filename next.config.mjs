@@ -56,7 +56,7 @@ const nextConfig = {
         querystring: false,
       };
     }
-    
+
     // Production optimizations
     if (!dev) {
       config.optimization = {
@@ -73,7 +73,7 @@ const nextConfig = {
         },
       };
     }
-    
+
     return config;
   },
   // Enable compression
@@ -84,6 +84,24 @@ const nextConfig = {
   staticPageGenerationTimeout: 120,
   // Ensure static assets are properly copied
   trailingSlash: false,
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/',
+          has: [{ type: 'host', value: 'docs.amikchat.site' }],
+          destination: '/docs',
+        },
+      ],
+      afterFiles: [
+        {
+          source: '/:path*',
+          has: [{ type: 'host', value: 'docs.amikchat.site' }],
+          destination: '/docs/:path*',
+        },
+      ],
+    };
+  },
 };
 
 export default withPWA({
