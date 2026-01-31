@@ -208,7 +208,7 @@ export default function MePage() {
                 <span className="flex-1 font-medium">ترتیبات</span>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Link>
-              <Link href="/docs" className="flex items-center p-4 transition-colors hover:bg-muted/50">
+              <Link href="https://docs.amikchat.site" className="flex items-center p-4 transition-colors hover:bg-muted/50">
                 <FileText className="h-6 w-6 text-accent mr-4" />
                 <span className="flex-1 font-medium">دستاویزات</span>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
