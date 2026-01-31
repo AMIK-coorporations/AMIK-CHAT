@@ -88,18 +88,12 @@ const nextConfig = {
     return {
       beforeFiles: [
         {
-          source: '/',
-          has: [{ type: 'host', value: 'docs.amikchat.site' }],
-          destination: '/docs',
-        },
-      ],
-      afterFiles: [
-        {
           source: '/:path*',
           has: [{ type: 'host', value: 'docs.amikchat.site' }],
           destination: '/docs/:path*',
         },
       ],
+      afterFiles: [],
     };
   },
 };
