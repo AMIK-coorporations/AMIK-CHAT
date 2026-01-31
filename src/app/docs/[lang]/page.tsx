@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useLanguage } from "../../components/LanguageContext";
+import { useLanguage } from "@/app/docs/components/LanguageContext";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 

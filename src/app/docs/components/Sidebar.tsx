@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useLanguage } from "./LanguageContext";
+import { useLanguage } from "@/app/docs/components/LanguageContext";
 import { cn } from "@/lib/utils";
 import {
     BookOpen,

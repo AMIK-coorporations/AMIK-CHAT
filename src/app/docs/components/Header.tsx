@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Search, Globe, Menu } from "lucide-react";
-import { useLanguage } from "./LanguageContext";
+import { useLanguage } from "@/app/docs/components/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
