@@ -129,8 +129,10 @@ export default function Sidebar() {
     React.useEffect(() => {
         if (typeof window !== "undefined") {
             const host = window.location.hostname;
-            if (host.startsWith("docs.")) {
-                setBasePath("/pages");
+            if (host === "docs.amikchat.site") {
+                setBasePath("");
+            } else {
+                setBasePath("https://docs.amikchat.site");
             }
         }
     }, []);
@@ -150,7 +152,16 @@ export default function Sidebar() {
                             <div className="space-y-1">
                                 {section.items.map((item, itemIdx) => {
                                     const href = `${basePath}/${lang}/${section.slug}/${item.slug}`;
-                                    const active = pathname === href || pathname === href.replace("/docs", "");
+                                    // Normalize href for active check if it's absolute
+                                    const normalizedHref = href.startsWith("http")
+                                        ? new URL(href).pathname
+                                        : href;
+
+                                    // Final check: also handle /docs prefix in pathname correctly
+                                    const active = pathname === normalizedHref ||
+                                        pathname === normalizedHref.replace("/docs", "") ||
+                                        (pathname.startsWith("/docs") && pathname === normalizedHref);
+
                                     return (
                                         <Link
                                             key={itemIdx}

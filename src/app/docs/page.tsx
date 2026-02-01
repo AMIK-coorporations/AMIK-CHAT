@@ -26,8 +26,10 @@ export default function DocsPage() {
     React.useEffect(() => {
         if (typeof window !== "undefined") {
             const host = window.location.hostname;
-            if (host.startsWith("docs.")) {
-                setBasePath("/pages");
+            if (host === "docs.amikchat.site") {
+                setBasePath("");
+            } else {
+                setBasePath("https://docs.amikchat.site");
             }
         }
     }, []);
