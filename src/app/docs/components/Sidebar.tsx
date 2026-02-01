@@ -151,7 +151,13 @@ export default function Sidebar() {
                             </h4>
                             <div className="space-y-1">
                                 {section.items.map((item, itemIdx) => {
-                                    const href = `${basePath}/${lang}/${section.slug}/${item.slug}`;
+                                    // Generate clean URL for subdomain: docs.amikchat.site/category/slug
+                                    // But keep /docs/lang/category/slug for the main domain
+                                    const onSubdomain = basePath === "" || basePath.includes("docs.amikchat.site");
+                                    const href = onSubdomain
+                                        ? `${basePath}/${section.slug}/${item.slug}`
+                                        : `${basePath}/${lang}/${section.slug}/${item.slug}`;
+
                                     // Normalize href for active check if it's absolute
                                     const normalizedHref = href.startsWith("http")
                                         ? new URL(href).pathname

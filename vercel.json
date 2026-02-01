@@ -42,16 +42,6 @@
     ],
     "rewrites": [
         {
-            "source": "/:path*",
-            "has": [
-                {
-                    "type": "host",
-                    "value": "docs.amikchat.site"
-                }
-            ],
-            "destination": "/docs/:path*"
-        },
-        {
             "source": "/manifest.json",
             "destination": "/manifest.json"
         }
