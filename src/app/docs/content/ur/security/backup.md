@@ -10,7 +10,8 @@ _جلد آ رہا ہے..._
 
 ترتیبات > **ڈیٹا** > **چیٹس ایکسپورٹ کریں**
 
-- Plain text file (.txt)
+- Plمصنوعی ذہانتn text file (.txt)
 - یا JSON format
 
 [ڈیٹا](/docs/ur/settings/data)
+

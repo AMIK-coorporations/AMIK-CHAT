@@ -22,3 +22,4 @@
 - اپنی تصویر اپ لوڈ کریں
 
 [انٹرفیس گائیڈ](/docs/ur/getting-started/interface)
+

@@ -34,3 +34,4 @@
 AMIK آپ کا ڈیٹا کبھی نہیں بیچتا! 
 
 [انکرپشن](/docs/ur/security/encryption)
+

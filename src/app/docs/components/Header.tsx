@@ -22,7 +22,7 @@ export default function Header() {
                     <Menu className="h-5 w-5" />
                 </Button>
                 <div className="flex items-center gap-2 font-bold text-xl">
-                    <span className="text-primary italic">AMIK</span>
+                    <span className="text-primary italic">اے ایم آئی کے</span>
                     <span>دستاویزات</span>
                 </div>
             </div>

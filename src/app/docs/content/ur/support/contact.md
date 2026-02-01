@@ -13,7 +13,7 @@
 ## سوشل میڈیا
 
 - **Twitter**: @AMIKChat
-- **Facebook**: AMIK CHAT Official
+- **Facebook**: اے ایم آئی کے چیٹ Official
 
 ## فیڈ بیک
 
@@ -29,3 +29,4 @@
 - کیا توقع تھی
 
 [FAQ](/docs/ur/faq/general)
+

@@ -124,6 +124,17 @@ const getNavItems = (t: any) => [
 export default function Sidebar() {
     const { lang, t } = useLanguage();
     const pathname = usePathname();
+    const [basePath, setBasePath] = React.useState("/docs");
+
+    React.useEffect(() => {
+        if (typeof window !== "undefined") {
+            const host = window.location.hostname;
+            if (host.startsWith("docs.")) {
+                setBasePath("");
+            }
+        }
+    }, []);
+
     const navItems = getNavItems(t);
 
     return (
@@ -138,8 +149,8 @@ export default function Sidebar() {
                             </h4>
                             <div className="space-y-1">
                                 {section.items.map((item, itemIdx) => {
-                                    const href = `/docs/${lang}/${section.slug}/${item.slug}`;
-                                    const active = pathname === href;
+                                    const href = `${basePath}/${lang}/${section.slug}/${item.slug}`;
+                                    const active = pathname === href || pathname === href.replace("/docs", "");
                                     return (
                                         <Link
                                             key={itemIdx}

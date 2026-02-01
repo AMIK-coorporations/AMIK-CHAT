@@ -19,3 +19,4 @@
 - کالز 
 
 [پرائیویسی ترتیبات](/docs/ur/settings/privacy)
+
