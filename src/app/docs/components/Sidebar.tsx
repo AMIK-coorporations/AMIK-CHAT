@@ -129,10 +129,8 @@ export default function Sidebar() {
     React.useEffect(() => {
         if (typeof window !== "undefined") {
             const host = window.location.hostname;
-            if (host === "docs.amikchat.site") {
-                setBasePath("");
-            } else {
-                setBasePath("https://docs.amikchat.site");
+            if (host.startsWith("docs.")) {
+                setBasePath("/pages");
             }
         }
     }, []);
@@ -151,23 +149,8 @@ export default function Sidebar() {
                             </h4>
                             <div className="space-y-1">
                                 {section.items.map((item, itemIdx) => {
-                                    // Generate clean URL for subdomain: docs.amikchat.site/category/slug
-                                    // But keep /docs/lang/category/slug for the main domain
-                                    const onSubdomain = basePath === "" || basePath.includes("docs.amikchat.site");
-                                    const href = onSubdomain
-                                        ? `${basePath}/${section.slug}/${item.slug}`
-                                        : `${basePath}/${lang}/${section.slug}/${item.slug}`;
-
-                                    // Normalize href for active check if it's absolute
-                                    const normalizedHref = href.startsWith("http")
-                                        ? new URL(href).pathname
-                                        : href;
-
-                                    // Final check: also handle /docs prefix in pathname correctly
-                                    const active = pathname === normalizedHref ||
-                                        pathname === normalizedHref.replace("/docs", "") ||
-                                        (pathname.startsWith("/docs") && pathname === normalizedHref);
-
+                                    const href = `${basePath}/${lang}/${section.slug}/${item.slug}`;
+                                    const active = pathname === href || pathname === href.replace("/docs", "");
                                     return (
                                         <Link
                                             key={itemIdx}

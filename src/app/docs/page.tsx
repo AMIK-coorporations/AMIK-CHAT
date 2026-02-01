@@ -26,10 +26,8 @@ export default function DocsPage() {
     React.useEffect(() => {
         if (typeof window !== "undefined") {
             const host = window.location.hostname;
-            if (host === "docs.amikchat.site") {
-                setBasePath("");
-            } else {
-                setBasePath("https://docs.amikchat.site");
+            if (host.startsWith("docs.")) {
+                setBasePath("/pages");
             }
         }
     }, []);
@@ -76,9 +74,7 @@ export default function DocsPage() {
                 {categories.map((cat, idx) => (
                     <Link
                         key={idx}
-                        href={basePath === "" || basePath.includes("docs.amikchat.site")
-                            ? `${basePath}/${cat.slug}`
-                            : `${basePath}/${lang}/${cat.slug}`}
+                        href={`${basePath}/${lang}/${cat.slug}`}
                         className="group relative flex flex-col items-center p-8 border rounded-2xl bg-card hover:bg-accent/40 transition-all hover:shadow-xl hover:-translate-y-1"
                     >
                         <div className={`p-4 rounded-full ${cat.bg} ${cat.color} mb-6 transition-transform group-hover:scale-110`}>
@@ -101,9 +97,7 @@ export default function DocsPage() {
                 <p className="text-muted-foreground mb-8">
                     وہ سوالات جن کے جوابات اکثر صارفین تلاش کرتے ہیں۔
                 </p>
-                <Link href={basePath === "" || basePath.includes("docs.amikchat.site")
-                    ? `${basePath}/faq/general`
-                    : `${basePath}/${lang}/faq/general`}>
+                <Link href={`${basePath}/${lang}/faq/general`}>
                     <Button size="lg" className="rounded-full px-8">
                         تمام سوالات دیکھیں
                     </Button>

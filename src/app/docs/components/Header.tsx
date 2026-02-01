@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { Search, Globe, Menu } from "lucide-react";
 import { useLanguage } from "@/app/docs/components/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -15,18 +14,6 @@ import {
 
 export default function Header() {
     const { lang, setLang, t } = useLanguage();
-    const [basePath, setBasePath] = React.useState("/docs");
-
-    React.useEffect(() => {
-        if (typeof window !== "undefined") {
-            const host = window.location.hostname;
-            if (host === "docs.amikchat.site") {
-                setBasePath("");
-            } else {
-                setBasePath("https://docs.amikchat.site");
-            }
-        }
-    }, []);
 
     return (
         <header className="sticky top-0 z-50 flex h-16 w-full items-center justify-between border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -34,10 +21,10 @@ export default function Header() {
                 <Button variant="ghost" size="icon" className="md:hidden">
                     <Menu className="h-5 w-5" />
                 </Button>
-                <Link href={basePath || "/docs"} className="flex items-center gap-2 font-bold text-xl hover:opacity-80 transition-opacity">
+                <div className="flex items-center gap-2 font-bold text-xl">
                     <span className="text-primary italic">اے ایم آئی کے</span>
                     <span>دستاویزات</span>
-                </Link>
+                </div>
             </div>
 
             <div className="flex flex-1 items-center justify-center max-w-md px-4">

@@ -13,7 +13,7 @@ export default function DocContentPage({ params }: { params: { lang: string, cat
     useEffect(() => {
         async function fetchDoc() {
             try {
-                const response = await fetch(`/api/docs?lang=${contextLang}&category=${params.category}&slug=${params.slug}`);
+                const response = await fetch(`/api/docs?lang=${params.lang}&category=${params.category}&slug=${params.slug}`);
                 const data = await response.json();
                 if (data.content) {
                     setContent(data.content);
@@ -27,7 +27,7 @@ export default function DocContentPage({ params }: { params: { lang: string, cat
             }
         }
         fetchDoc();
-    }, [contextLang, params.category, params.slug]);
+    }, [params.lang, params.category, params.slug]);
 
     if (loading) return (
         <div className="flex flex-col gap-4 animate-pulse">
