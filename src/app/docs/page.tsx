@@ -27,7 +27,7 @@ export default function DocsPage() {
         if (typeof window !== "undefined") {
             const host = window.location.hostname;
             if (host.startsWith("docs.")) {
-                setBasePath("");
+                setBasePath("/pages");
             }
         }
     }, []);
@@ -93,7 +93,7 @@ export default function DocsPage() {
             </div>
 
             <section className="bg-muted/40 rounded-3xl p-10 mt-16 border border-dashed text-center">
-                <h2 className="text-2xl font-bold mb-4">عام سوالات (FAQ)</h2>
+                <h2 className="text-2xl font-bold mb-4">عام سوالات</h2>
                 <p className="text-muted-foreground mb-8">
                     وہ سوالات جن کے جوابات اکثر صارفین تلاش کرتے ہیں۔
                 </p>

@@ -130,7 +130,7 @@ export default function Sidebar() {
         if (typeof window !== "undefined") {
             const host = window.location.hostname;
             if (host.startsWith("docs.")) {
-                setBasePath("");
+                setBasePath("/pages");
             }
         }
     }, []);

@@ -28,5 +28,7 @@
 - کیسے ہوا
 - کیا توقع تھی
 
-[FAQ](/docs/ur/faq/general)
+[عام سوالات](/docs/ur/عام سوالات/general)
+
+
 

@@ -26,3 +26,5 @@
 
 ڈیوائس Settings > Apps > اے ایم آئی کے چیٹ > Permissions
 
+
+

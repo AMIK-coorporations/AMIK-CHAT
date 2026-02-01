@@ -19,9 +19,11 @@
 
 ## سرور مسائل
 
-اگر AMIK کے سرورز down ہیں:
+اگر اے ایم آئی کے کے سرورز down ہیں:
 - کچھ دیر انتظار کریں
 - [حیثیت چیک کریں](https://status.amikchat.site)
 
 [مزید مدد](/docs/ur/support/contact)
+
+
 
