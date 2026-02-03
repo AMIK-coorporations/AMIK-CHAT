@@ -40,10 +40,38 @@ export default function ChatsPage() {
     <div className="relative h-full flex flex-col">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background p-4">
         <h1 className="text-xl font-bold">AMIK CHAT</h1>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Plus className="h-5 w-5" />
+                <span className="sr-only">شامل کریں</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => router.push('/chats/new')}>
+                <MessageCircle className="h-4 w-4 mr-2" />
+                <span>نئی چیٹ</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => router.push('/contacts/add')}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                <span>رابطے شامل کریں</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => router.push('/scan')}>
+                <ScanLine className="h-4 w-4 mr-2" />
+                <span>کیو آر اسکین</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => router.push('/money')}>
+                <Landmark className="h-4 w-4 mr-2" />
+                <span>پیسے</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </header>
 
-      <div className="p-4 border-b flex items-center gap-2">
-        <div className="relative flex-1">
+      <div className="p-4 border-b">
+        <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             dir="rtl"
@@ -53,32 +81,6 @@ export default function ChatsPage() {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10 border shrink-0">
-              <Plus className="h-5 w-5" />
-              <span className="sr-only">شامل کریں</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => router.push('/chats/new')}>
-              <MessageCircle className="h-4 w-4 mr-2" />
-              <span>نئی چیٹ</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => router.push('/contacts/add')}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              <span>رابطے شامل کریں</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => router.push('/scan')}>
-              <ScanLine className="h-4 w-4 mr-2" />
-              <span>کیو آر اسکین</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => router.push('/money')}>
-              <Landmark className="h-4 w-4 mr-2" />
-              <span>پیسے</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <div className="flex-1 overflow-y-auto divide-y">
