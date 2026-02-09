@@ -24,7 +24,7 @@ export default function DebugPage() {
 
     try {
       // Test 1: Check if user document exists
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db, 'users', user.id);
       const userDoc = await getDoc(userDocRef);
       results.userDocumentExists = userDoc.exists();
       results.userDocumentData = userDoc.exists() ? userDoc.data() : null;
@@ -51,7 +51,7 @@ export default function DebugPage() {
       }
 
       // Test 4: Check contacts collection
-      const contactsColRef = collection(db, 'users', user.uid, 'contacts');
+      const contactsColRef = collection(db, 'users', user.id, 'contacts');
       try {
         const contactsSnapshot = await getDocs(contactsColRef);
         results.canReadContacts = true;
@@ -63,7 +63,7 @@ export default function DebugPage() {
 
       // Test 5: Try to write to contacts collection
       try {
-        const testContactRef = doc(db, 'users', user.uid, 'contacts', 'test-contact');
+        const testContactRef = doc(db, 'users', user.id, 'contacts', 'test-contact');
         await setDoc(testContactRef, {
           addedAt: new Date(),
           test: true
@@ -143,13 +143,13 @@ export default function DebugPage() {
       });
 
       // Create a chat between current user and test user
-      const chatId = [user.uid, testUserId].sort().join('_');
+      const chatId = [user.id, testUserId].sort().join('_');
       const chatRef = doc(db, 'chats', chatId);
 
       await setDoc(chatRef, {
-        participantIds: [user.uid, testUserId],
+        participantIds: [user.id, testUserId],
         participantsInfo: {
-          [user.uid]: {
+          [user.id]: {
             name: userData?.name || 'Current User',
             avatarUrl: userData?.avatarUrl || 'https://placehold.co/100x100.png?text=C'
           },
@@ -205,7 +205,7 @@ export default function DebugPage() {
             <h3 className="font-semibold mb-2">Current User Info:</h3>
             <pre className="bg-muted p-2 rounded text-sm overflow-auto">
               {JSON.stringify({
-                uid: user.uid,
+                id: user.id,
                 email: user.email,
                 userData: userData
               }, null, 2)}

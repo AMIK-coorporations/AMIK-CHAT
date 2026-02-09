@@ -31,7 +31,7 @@ export default function InsForgeDebugPage() {
         try {
             // Test 1: Set Doc
             newResults.setDoc = "Testing...";
-            await setDocInInsforge('users', user.uid, {
+            await setDocInInsforge('users', user.id, {
                 ...userData,
                 lastDebugAt: new Date().toISOString()
             });
@@ -39,12 +39,12 @@ export default function InsForgeDebugPage() {
 
             // Test 2: Get Doc
             newResults.getDoc = "Testing...";
-            const data = await getDocFromInsforge('users', user.uid);
+            const data = await getDocFromInsforge('users', user.id);
             newResults.getDoc = data ? "Success: " + JSON.stringify(data) : "Failed (Not found)";
 
             // Test 3: Update Doc
             newResults.updateDoc = "Testing...";
-            await updateDocInInsforge('users', user.uid, {
+            await updateDocInInsforge('users', user.id, {
                 debugStatus: 'updated'
             });
             newResults.updateDoc = "Success";
