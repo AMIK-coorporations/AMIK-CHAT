@@ -10,9 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getDocWithRetry } from '@/lib/firestoreUtils';
-import { doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getDocFromInsforge } from '@/lib/insforgeUtils';
 import { useAuth } from '@/hooks/useAuth';
 import type { User } from '@/lib/types';
 import { sendContactRequest, ContactRequestError } from '@/lib/contactRequestService';
@@ -65,7 +63,7 @@ export default function AddContactPage() {
       }
 
       // First, check if the target user exists
-      const userDoc = await getDocWithRetry<User>(doc(db, 'users', trimmedId));
+      const userDoc = await getDocFromInsforge<User>('users', trimmedId);
 
       if (!userDoc) {
         if (timeoutRef.current) {

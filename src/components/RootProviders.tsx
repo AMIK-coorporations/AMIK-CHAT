@@ -8,16 +8,19 @@ import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/next";
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import PrefetchRoutes from '@/components/PrefetchRoutes';
+import { ThemeProvider } from './ThemeProvider';
 
 export default function RootProviders({ children }: { children: React.ReactNode }) {
     return (
         <ErrorBoundary>
             <AuthProvider>
                 <CallProvider>
-                    <PrefetchRoutes />
-                    {children}
-                    <Toaster />
-                    <Analytics />
+                    <ThemeProvider>
+                        <PrefetchRoutes />
+                        {children}
+                        <Toaster />
+                        <Analytics />
+                    </ThemeProvider>
                 </CallProvider>
             </AuthProvider>
         </ErrorBoundary>

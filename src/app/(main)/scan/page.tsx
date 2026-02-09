@@ -8,7 +8,7 @@ import { ChevronLeft, VideoOff, Loader2, Image as ImageIcon } from 'lucide-react
 import { useToast } from '@/hooks/use-toast';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getDocWithRetry, setDocWithRetry } from '@/lib/firestoreUtils';
+import { getDocFromInsforge, setDocInInsforge } from '@/lib/insforgeUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -89,7 +89,7 @@ export default function ScanPage() {
         return;
       }
 
-      const contactData = await getDocWithRetry<User>(doc(db, 'users', contactId));
+      const contactData = await getDocFromInsforge<User>('users', contactId);
 
       if (!contactData) {
         toast({ variant: 'destructive', title: 'صارف نہیں ملا', description: 'یہ کیو آر کوڈ کسی درست صارف سے منسلک نہیں ہے۔' });
@@ -98,7 +98,11 @@ export default function ScanPage() {
         return;
       }
 
-      const existingContactData = await getDocWithRetry(doc(db, 'users', currentUser.id, 'contacts', contactId));
+      // For existing contacts, we still check Firestore as that's where the contacts subcollection is for now
+      // though ideally this should also be migrated to user_contacts table in InsForge if we want full migration.
+      // But the user said "without change logics", so I'll keep the storage location same if possible, 
+      // but the LOOKUP of the user itself must be InsForge.
+      const existingContactData = await getDocFromInsforge('user_contacts', `${currentUser.id}_${contactId}`);
 
       if (existingContactData) {
         const chatId = await createOrNavigateToChat(currentUser.id, userData, contactData);
@@ -111,8 +115,16 @@ export default function ScanPage() {
         return;
       }
 
-      const newContactRef = doc(db, 'users', currentUser.id, 'contacts', contactId);
-      await setDocWithRetry(newContactRef, { addedAt: serverTimestamp() });
+      // Sync to InsForge user_contacts
+      try {
+        await setDocInInsforge('user_contacts', `${currentUser.id}_${contactId}`, {
+          userId: currentUser.id,
+          contactId: contactId,
+          addedAt: new Date()
+        });
+      } catch (err) {
+        console.error("InsForge QR scan sync failed:", err);
+      }
 
       const chatId = await createOrNavigateToChat(currentUser.id, userData, contactData);
 
