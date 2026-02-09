@@ -1,0 +1,192 @@
+﻿
+> nextn@0.1.0 build
+> next build
+
+  Γû▓ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+node.exe :  ΓÜá Compiled 
+with warnings
+At D:\npm.ps1:29 char:3
++   & $NODE_EXE $NPM_CLI_JS 
+$args
++   ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          
+    : NotSpe    cified: ( 
+ΓÜá Co    mpiled with warn  
+  ings:String) [],     
+RemoteException
+    + FullyQualified    
+ErrorId : Native    
+CommandError
+ 
+
+./node_modules/handlebars/li
+b/index.js
+require.extensions is not 
+supported by webpack. Use a 
+loader instead.
+
+Import trace for requested 
+module:
+./node_modules/handlebars/li
+b/index.js
+./node_modules/dotprompt/dis
+t/index.js
+./node_modules/@genkit-ai/co
+re/lib/registry.js
+./node_modules/genkit/lib/re
+gistry.js
+./node_modules/genkit/lib/ge
+nkit.js
+./node_modules/genkit/lib/in
+dex.mjs
+./src/ai/genkit.ts
+./src/app/api/test-genkit/ro
+ute.ts
+
+./node_modules/handlebars/li
+b/index.js
+require.extensions is not 
+supported by webpack. Use a 
+loader instead.
+
+Import trace for requested 
+module:
+./node_modules/handlebars/li
+b/index.js
+./node_modules/dotprompt/dis
+t/index.js
+./node_modules/@genkit-ai/co
+re/lib/registry.js
+./node_modules/genkit/lib/re
+gistry.js
+./node_modules/genkit/lib/ge
+nkit.js
+./node_modules/genkit/lib/in
+dex.mjs
+./src/ai/genkit.ts
+./src/app/api/test-genkit/ro
+ute.ts
+
+./node_modules/handlebars/li
+b/index.js
+require.extensions is not 
+supported by webpack. Use a 
+loader instead.
+
+Import trace for requested 
+module:
+./node_modules/handlebars/li
+b/index.js
+./node_modules/dotprompt/dis
+t/index.js
+./node_modules/@genkit-ai/co
+re/lib/registry.js
+./node_modules/genkit/lib/re
+gistry.js
+./node_modules/genkit/lib/ge
+nkit.js
+./node_modules/genkit/lib/in
+dex.mjs
+./src/ai/genkit.ts
+./src/app/api/test-genkit/ro
+ute.ts
+
+./node_modules/require-in-th
+e-middle/index.js
+Critical dependency: 
+require function is used in 
+a way in which dependencies 
+cannot be statically 
+extracted
+
+Import trace for requested 
+module:
+./node_modules/require-in-th
+e-middle/index.js
+./node_modules/@opentelemetr
+y/instrumentation/build/esm/
+platform/node/instrumentatio
+n.js
+./node_modules/@opentelemetr
+y/instrumentation/build/esm/
+platform/node/index.js
+./node_modules/@opentelemetr
+y/instrumentation/build/esm/
+platform/index.js
+./node_modules/@opentelemetr
+y/instrumentation/build/esm/
+index.js
+./node_modules/@opentelemetr
+y/sdk-node/build/src/sdk.js
+./node_modules/@opentelemetr
+y/sdk-node/build/src/index.j
+s
+./node_modules/@genkit-ai/co
+re/lib/tracing.js
+./node_modules/genkit/lib/tr
+acing.js
+./node_modules/genkit/lib/ge
+nkit.js
+./node_modules/genkit/lib/in
+dex.mjs
+./src/ai/genkit.ts
+./src/app/api/test-genkit/ro
+ute.ts
+
+   Linting and checking validity of types ...
+Failed to compile.
+
+./src/components/chat/ChatIn
+put.tsx:572:52
+Type error: Property 
+'displayName' does not 
+exist on type '{ id: 
+string; createdAt: string; 
+metadata: Record<string, 
+unknown> | null; email: 
+string; emailVerified: 
+boolean; updatedAt: string; 
+profile: objectOutputType<{ 
+name: 
+ZodOptional<ZodString>; 
+avatar_url: 
+ZodOptional<...>; }, 
+ZodTypeAny, "passthrough"> 
+| null; providers?: 
+string[] | undefined; }'.
+
+[0m [90m 570 |[39m[0m
+[0m [90m 571 |[39m     
+[36mtry[39m {[0m
+[0m[31m[1m>[22m[39m[90
+m 572 |[39m       
+[36mconst[39m contactText 
+[33m=[39m [32m`≡ƒæñ 
+╪▒╪º╪¿╪╖█ü: 
+${currentUser.displayName 
+|| '┘å╪º┘à╪╣┘ä┘ê┘à'}\n≡ƒôº 
+╪º█î ┘à█î┘ä: 
+${currentUser.email || '┘å╪º
+┘à╪╣┘ä┘ê┘à'}`[39m[33m;[39
+m[0m
+[0m [90m     |[39m       
+                            
+                 
+[31m[1m^[22m[39m[0m
+[0m [90m 573 |[39m[0m
+[0m [90m 574 |[39m       
+[36mconst[39m chatRef 
+[33m=[39m 
+doc(db[33m,[39m [32m'chat
+s'[39m[33m,[39m 
+chatId)[33m;[39m[0m
+[0m [90m 575 |[39m       
+[36mconst[39m 
+messagesColRef [33m=[39m c
+ollection(chatRef[33m,[39m
+ [32m'messages'[39m)[33m;
+[39m[0m

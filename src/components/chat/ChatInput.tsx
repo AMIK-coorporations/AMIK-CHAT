@@ -153,7 +153,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
       // Send to Pipedream webhook
       try {
-        const senderName = currentUser.displayName || currentUser.email || userData?.name || (userData as any)?.displayName || "User";
+        const senderName = userData?.name || userData?.displayName || currentUser.email || "User";
         await fetch('https://eoox141is1wk6oc.m.pipedream.net', {
           method: 'POST',
           headers: {
@@ -569,7 +569,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
     if (!currentUser) return;
 
     try {
-      const contactText = `👤 رابطہ: ${currentUser.displayName || 'نامعلوم'}\n📧 ای میل: ${currentUser.email || 'نامعلوم'}`;
+      const contactText = `👤 رابطہ: ${userData?.name || userData?.displayName || 'نامعلوم'}\n📧 ای میل: ${currentUser.email || 'نامعلوم'}`;
 
       const chatRef = doc(db, 'chats', chatId);
       const messagesColRef = collection(chatRef, 'messages');
