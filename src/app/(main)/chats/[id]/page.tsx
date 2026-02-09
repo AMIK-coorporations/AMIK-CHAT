@@ -6,8 +6,9 @@ import { ChevronLeft, MoreHorizontal, Phone, Video } from 'lucide-react';
 import ChatView from '@/components/chat/ChatView';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { notFound, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getDocWithRetry, getQueryWithRetry, updateDocWithRetry } from '@/lib/firestoreUtils';
 import type { User } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useCall } from '@/hooks/useCall';
@@ -27,22 +28,21 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     const fetchChatInfo = async () => {
       try {
         const chatDocRef = doc(db, 'chats', id);
-        const chatDoc = await getDoc(chatDocRef);
+        const chatData = await getDocWithRetry(chatDocRef);
 
-        if (!chatDoc.exists()) {
+        if (!chatData) {
           console.error("Chat not found:", id);
           router.push('/chats');
           return;
         }
 
-        const chatData = chatDoc.data();
-        if (!chatData.participantIds || !chatData.participantIds.includes(currentUser.uid)) {
+        if (!chatData.participantIds || !chatData.participantIds.includes(currentUser.id)) {
           console.error("Current user not in this chat");
           router.push('/chats');
           return;
         }
 
-        const otherParticipantId = chatData.participantIds.find((participantId: string) => participantId !== currentUser.uid);
+        const otherParticipantId = chatData.participantIds.find((participantId: string) => participantId !== currentUser.id);
 
         if (otherParticipantId && chatData.participantsInfo) {
           const otherInfo = chatData.participantsInfo[otherParticipantId];
@@ -62,11 +62,11 @@ export default function ChatPage({ params }: { params: { id: string } }) {
               bio: otherInfo.bio ?? ''
             });
           }
-        } else if (chatData.participantsInfo && chatData.participantsInfo[currentUser.uid]) {
+        } else if (chatData.participantsInfo && chatData.participantsInfo[currentUser.id]) {
           // Handle self-chat case by loading current user's info
-          const selfInfo = chatData.participantsInfo[currentUser.uid];
+          const selfInfo = chatData.participantsInfo[currentUser.id];
           setOtherParticipant({
-            id: currentUser.uid,
+            id: currentUser.id,
             email: selfInfo.email ?? '',
             displayName: selfInfo.displayName ?? selfInfo.name ?? 'Unknown',
             name: selfInfo.name ?? selfInfo.displayName ?? 'Unknown',
@@ -112,7 +112,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
       const batch = writeBatch(db);
       let needsCommit = false;
       querySnapshot.docs.forEach(doc => {
-        if (doc.data().senderId !== currentUser.uid) {
+        if (doc.data().senderId !== currentUser.id) {
           batch.update(doc.ref, { isRead: true });
           needsCommit = true;
         }
@@ -121,15 +121,25 @@ export default function ChatPage({ params }: { params: { id: string } }) {
       if (!needsCommit) return;
 
       const chatRef = doc(db, 'chats', id);
-      const chatSnap = await getDoc(chatRef);
-      if (chatSnap.exists()) {
-        const chatData = chatSnap.data();
-        if (chatData.lastMessage && chatData.lastMessage.senderId !== currentUser.uid) {
+      const chatData = await getDocWithRetry(chatRef);
+      if (chatData) {
+        if (chatData.lastMessage && chatData.lastMessage.senderId !== currentUser.id) {
           batch.update(chatRef, { 'lastMessage.isRead': true });
+          // Note: updateDocWithRetry isn't batch-compatible, 
+          // but we'll trigger a separate sync for the chat object if it's the last message
+          updateDocWithRetry(chatRef, { 'lastMessage.isRead': true }).catch(console.error);
         }
       }
 
       await batch.commit();
+
+      // InsForge Sync (Mark Messages as Read)
+      // Ideally we'd iterate and update each in InsForge too
+      for (const doc of querySnapshot.docs) {
+        if (doc.data().senderId !== currentUser.id) {
+          updateDocWithRetry(doc.ref, { isRead: true }).catch(console.error);
+        }
+      }
     };
 
     markMessagesAsRead().catch(console.error);

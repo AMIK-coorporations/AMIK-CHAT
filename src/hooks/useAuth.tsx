@@ -1,17 +1,18 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User as FirebaseUser, updatePassword } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { insforge } from '@/lib/insforge';
+import { getDocFromInsforge, updateDocInInsforge, setDocInInsforge } from '@/lib/insforgeUtils';
 import type { User } from '@/lib/types';
+import type { UserSchema } from '@insforge/sdk';
 
 interface AuthContextType {
-  user: FirebaseUser | null;
+  user: UserSchema | null;
   userData: User | null;
   loading: boolean;
   updateProfile: (data: Partial<Omit<User, 'id'>>) => Promise<void>;
   changePassword: (password: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,80 +21,122 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   updateProfile: async () => { },
   changePassword: async () => { },
+  signOut: async () => { },
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<UserSchema | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const updateProfile = async (data: Partial<Omit<User, 'id'>>) => {
     if (!user) throw new Error("No user logged in");
-    const userDocRef = doc(db, 'users', user.uid);
-    await updateDoc(userDocRef, data);
+
+    // Update InsForge Database
+    try {
+      await updateDocInInsforge('users', user.id, data);
+
+      // Update local state if the update was successful
+      setUserData(prev => prev ? { ...prev, ...data } : null);
+
+      // Update setProfile in Auth (for identity/JWT metadata if applicable)
+      await insforge.auth.setProfile(data);
+    } catch (error) {
+      console.error("InsForge updateProfile failed:", error);
+      throw error;
+    }
   };
 
   const changePassword = async (newPassword: string) => {
     if (!user) throw new Error("No user logged in");
-    await updatePassword(user, newPassword);
+    // InsForge password reset usually requires an OTP or old password
+    // For now, we use the resetPassword method if applicable, 
+    // but the SDK doesn't expose a direct 'updatePassword' without verification for security.
+    console.warn("Change password requested - using reset flow is recommended");
+    throw new Error("براہ کرم اپنا پاس ورڈ تبدیل کرنے کے لیے ری سیٹ ای میل کا استعمال کریں۔");
   };
 
-  useEffect(() => {
-    let unsubscribeDoc: () => void = () => { };
+  const signOut = async () => {
+    try {
+      await insforge.auth.signOut();
+      setUser(null);
+      setUserData(null);
+      window.location.href = '/login';
+    } catch (error) {
+      console.error("Sign out failed:", error);
+    }
+  };
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      unsubscribeDoc();
+  const checkAuth = async () => {
+    try {
+      const { data, error } = await insforge.auth.getCurrentUser();
+      if (error) throw error;
 
-      if (firebaseUser) {
-        setLoading(true);
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
+      if (data?.user) {
+        const u = data.user;
+        setUser(u);
 
-        let userDocSnap;
-        try {
-          userDocSnap = await getDoc(userDocRef);
-        } catch (error) {
-          console.error("Firestore getDoc failed (possibly offline):", error);
-          // If we fail to get the doc, we'll still proceed to set up the listener 
-          // which will recover once online.
-        }
+        // Fetch detailed user profile from database
+        const dbUser = await getDocFromInsforge<User>('users', u.id);
+        if (dbUser) {
+          setUserData(dbUser);
+        } else {
+          // If no profile in DB yet, create one from Auth metadata
+          const meta = (u as any).user_metadata || u.metadata || {};
+          // Try to get name from various sources
+          const displayName = meta.full_name || meta.name || meta.displayName || u.email?.split('@')[0] || 'User';
+          // Try to get avatar
+          const avatarUrl = meta.avatar_url || meta.picture || meta.avatar || '';
 
-        if (userDocSnap && !userDocSnap.exists()) {
-          const nameFromEmail = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'New User';
+          const newUser: User = {
+            // ... (rest of object creation)
+            id: u.id,
+            email: u.email || '',
+            displayName: displayName,
+            name: displayName,
+            avatarUrl: avatarUrl,
+            photoURL: avatarUrl, // for compatibility
+            createdAt: new Date(),
+            lastSeen: new Date(),
+            isOnline: true
+          };
+
+          // Save to InsForge Database
           try {
-            await setDoc(userDocRef, {
-              name: nameFromEmail,
-              avatarUrl: `https://placehold.co/100x100.png?text=${nameFromEmail.charAt(0).toUpperCase()}`
-            });
-          } catch (error) {
-            console.error("Failed to create user document for existing auth user:", error);
+            await setDocInInsforge('users', u.id, newUser);
+            setUserData(newUser);
+          } catch (err) {
+            console.error("Failed to create user profile in DB:", err);
+            // Fallback to local state
+            setUserData(newUser);
           }
         }
-
-        unsubscribeDoc = onSnapshot(userDocRef, (doc) => {
-          if (doc.exists()) {
-            setUserData({ id: doc.id, ...doc.data() } as User);
-          } else {
-            setUserData(null);
-          }
-          setLoading(false);
-        });
-
-        setUser(firebaseUser);
       } else {
         setUser(null);
         setUserData(null);
-        setLoading(false);
       }
-    });
+    } catch (error) {
+      console.error("InsForge auth check failed:", error);
+      setUser(null);
+      setUserData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return () => {
-      unsubscribeAuth();
-      unsubscribeDoc();
-    };
+  useEffect(() => {
+    checkAuth();
+
+    // Safety timeout
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 8000);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, userData, loading, updateProfile, changePassword }}>
+    <AuthContext.Provider value={{ user, userData, loading, updateProfile, changePassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );

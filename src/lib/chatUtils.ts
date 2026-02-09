@@ -1,6 +1,7 @@
 
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { setDocInInsforge, getDocFromInsforge } from './insforgeUtils';
 import type { User as AppUser } from '@/lib/types';
 
 /**
@@ -41,7 +42,18 @@ export const createOrNavigateToChat = async (
       lastMessage: null,
     };
     await setDoc(chatDocRef, newChatData);
+
+    // InsForge Sync
+    try {
+      await setDocInInsforge('chats', chatId, {
+        ...newChatData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error("InsForge createChat sync failed:", error);
+    }
   }
-  
+
   return chatId;
 };

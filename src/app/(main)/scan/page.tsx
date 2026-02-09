@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, VideoOff, Loader2, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getDocWithRetry, setDocWithRetry } from '@/lib/firestoreUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -29,27 +30,27 @@ export default function ScanPage() {
   const handleScannedCode = useCallback(async (code: string) => {
     if (isProcessing || !currentUser) {
       if (!currentUser) {
-        toast({ 
-          variant: 'destructive', 
-          title: 'لاگ ان نہیں', 
-          description: 'کیو آر کوڈ اسکین کرنے کے لیے لاگ ان ہونا ضروری ہے۔' 
+        toast({
+          variant: 'destructive',
+          title: 'لاگ ان نہیں',
+          description: 'کیو آر کوڈ اسکین کرنے کے لیے لاگ ان ہونا ضروری ہے۔'
         });
       }
       return;
     }
-    
+
     if (!userData) {
-      toast({ 
-        variant: 'destructive', 
-        title: 'پروفائل لوڈ ہو رہی ہے', 
+      toast({
+        variant: 'destructive',
+        title: 'پروفائل لوڈ ہو رہی ہے',
         description: 'براہ کرم ایک لمحہ انتظار کریں اور دوبارہ اسکین کریں۔',
         duration: 3000,
       });
       return;
     }
-    
+
     setIsProcessing(true);
-    
+
     // Show processing message
     toast({
       title: 'پروسیسنگ...',
@@ -57,85 +58,80 @@ export default function ScanPage() {
     });
 
     try {
-    if (scannerRef.current?.isScanning) {
+      if (scannerRef.current?.isScanning) {
         try {
-            await scannerRef.current.stop();
+          await scannerRef.current.stop();
         } catch (err) {
-            console.error("Error stopping scanner:", err);
+          console.error("Error stopping scanner:", err);
         }
-    }
+      }
 
-    if (!code.startsWith('amik-chat-user://')) {
+      if (!code.startsWith('amik-chat-user://')) {
         toast({
-            variant: 'destructive',
-            title: 'غلط کیو آر کوڈ',
-            description: 'یہ ایک درست اے ایم آئی کے چیٹ کیو آر کوڈ نہیں ہے۔',
+          variant: 'destructive',
+          title: 'غلط کیو آر کوڈ',
+          description: 'یہ ایک درست اے ایم آئی کے چیٹ کیو آر کوڈ نہیں ہے۔',
         });
-          setIsProcessing(false);
+        setIsProcessing(false);
         router.back();
         return;
-    }
+      }
 
-    const contactId = code.replace('amik-chat-user://', '');
+      const contactId = code.replace('amik-chat-user://', '');
 
-    if (contactId === currentUser.uid) {
+      if (contactId === currentUser.id) {
         toast({
-            title: "یہ آپ ہیں!",
-            description: "آپ خود کو بطور رابطہ شامل نہیں کر سکتے۔",
+          title: "یہ آپ ہیں!",
+          description: "آپ خود کو بطور رابطہ شامل نہیں کر سکتے۔",
         });
-          setIsProcessing(false);
+        setIsProcessing(false);
         router.back();
         return;
-    }
+      }
 
-        const userDocRef = doc(db, 'users', contactId);
-        const userDoc = await getDoc(userDocRef);
+      const contactData = await getDocWithRetry<User>(doc(db, 'users', contactId));
 
-        if (!userDoc.exists()) {
-            toast({ variant: 'destructive', title: 'صارف نہیں ملا', description: 'یہ کیو آر کوڈ کسی درست صارف سے منسلک نہیں ہے۔' });
-          setIsProcessing(false);
-            router.back();
-            return;
-        }
+      if (!contactData) {
+        toast({ variant: 'destructive', title: 'صارف نہیں ملا', description: 'یہ کیو آر کوڈ کسی درست صارف سے منسلک نہیں ہے۔' });
+        setIsProcessing(false);
+        router.back();
+        return;
+      }
 
-        const contactData = userDoc.data();
+      const existingContactData = await getDocWithRetry(doc(db, 'users', currentUser.id, 'contacts', contactId));
 
-        const existingContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
-        const existingContactSnap = await getDoc(existingContactRef);
-      const contactProfile = { id: contactId, ...contactData } as User;
-
-        if (existingContactSnap.exists()) {
-          const chatId = await createOrNavigateToChat(currentUser.uid, userData, contactProfile);
-            toast({
-                title: 'پہلے سے رابطہ ہے',
-              description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے، چیٹ کھول رہے ہیں۔`,
-            });
-          setIsProcessing(false);
-          router.push(`/chats/${chatId}`);
-            return;
-        }
-
-        const newContactRef = doc(db, 'users', currentUser.uid, 'contacts', contactId);
-        await setDoc(newContactRef, { addedAt: serverTimestamp() });
-
-      const chatId = await createOrNavigateToChat(currentUser.uid, userData, contactProfile);
-
+      if (existingContactData) {
+        const chatId = await createOrNavigateToChat(currentUser.id, userData, contactData);
         toast({
-          title: 'چیٹ کے لیے تیار!',
-          description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'صارف'} کے ساتھ چیٹ کھول رہے ہیں۔`,
+          title: 'پہلے سے رابطہ ہے',
+          description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے، چیٹ کھول رہے ہیں۔`,
         });
+        setIsProcessing(false);
+        router.push(`/chats/${chatId}`);
+        return;
+      }
+
+      const newContactRef = doc(db, 'users', currentUser.id, 'contacts', contactId);
+      await setDocWithRetry(newContactRef, { addedAt: serverTimestamp() });
+
+      const chatId = await createOrNavigateToChat(currentUser.id, userData, contactData);
+
+      toast({
+        title: 'چیٹ کے لیے تیار!',
+        description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'صارف'} کے ساتھ چیٹ کھول رہے ہیں۔`,
+      });
       setIsProcessing(false);
       router.push(`/chats/${chatId}`);
 
     } catch (error: any) {
-        console.error("Error adding contact from QR code:", error);
-        setIsProcessing(false);
-        toast({
-            variant: 'destructive',
-            title: 'رابطہ شامل کرنے میں خرابی',
-            description: error.message || 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔',
-        });
-        router.back();
+      console.error("Error adding contact from QR code:", error);
+      setIsProcessing(false);
+      toast({
+        variant: 'destructive',
+        title: 'رابطہ شامل کرنے میں خرابی',
+        description: error.message || 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔',
+      });
+      router.back();
     }
   }, [currentUser, isProcessing, router, toast, userData]);
 
@@ -151,22 +147,39 @@ export default function ScanPage() {
         setHasCameraPermission(true);
 
         if (qrScanner.getState() === Html5QrcodeScannerState.SCANNING) {
-            return;
+          return;
         }
 
-        await qrScanner.start(
-          { facingMode: 'environment' },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
-          },
-          (decodedText, _decodedResult) => {
-            handleScannedCode(decodedText);
-          },
-          (_errorMessage) => {
-            // parse error, ignore it.
-          }
-        )
+        const config = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        };
+
+        try {
+          await qrScanner.start(
+            { facingMode: 'environment' },
+            config,
+            (decodedText, _decodedResult) => {
+              handleScannedCode(decodedText);
+            },
+            (_errorMessage) => {
+              // parse error, ignore it.
+            }
+          );
+        } catch (envError) {
+          console.warn('Environment camera failed, trying user camera...', envError);
+          await qrScanner.start(
+            { facingMode: 'user' },
+            config,
+            (decodedText, _decodedResult) => {
+              handleScannedCode(decodedText);
+            },
+            (_errorMessage) => {
+              // parse error, ignore it.
+            }
+          );
+        }
+
         setIsScanning(true);
 
       } catch (error: any) {
@@ -182,7 +195,7 @@ export default function ScanPage() {
         });
       }
     };
-    
+
     startScanning();
 
     return () => {
@@ -209,7 +222,7 @@ export default function ScanPage() {
       // Strategy 1: html5-qrcode built-in decoder
       try {
         decoded = (await scannerRef.current?.scanFile(file, true)) ?? null;
-      } catch (_) {}
+      } catch (_) { }
 
       // Strategy 2: Native BarcodeDetector (if available)
       if (!decoded && 'BarcodeDetector' in window) {
@@ -228,7 +241,7 @@ export default function ScanPage() {
               decoded = detected[0].rawValue || null;
             }
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       // Strategy 3: jsQR multi-pass (scales + rotations + binarization)
@@ -286,7 +299,7 @@ export default function ScanPage() {
           };
 
           decoded = tryDecode();
-        } catch (_) {}
+        } catch (_) { }
       }
 
       if (decoded) {
@@ -320,15 +333,15 @@ export default function ScanPage() {
       </header>
       <main className="flex-1 flex flex-col items-center justify-center p-4 relative">
         <div id="qr-reader" ref={readerRef} className="w-full max-w-sm aspect-square"></div>
-        
+
         {hasCameraPermission === false && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white p-4 text-center">
             <VideoOff className="h-16 w-16 mb-4" />
             <Alert variant="destructive" className="bg-transparent border-red-500 text-white">
-                <AlertTitle>کیمرے تک رسائی مسترد</AlertTitle>
-                <AlertDescription>
-                    کیو آر کوڈ اسکین کرنے کے لیے براہ کرم اپنے براؤزر کی ترتیبات میں کیمرے کی اجازت کو فعال کریں۔
-                </AlertDescription>
+              <AlertTitle>کیمرے تک رسائی مسترد</AlertTitle>
+              <AlertDescription>
+                کیو آر کوڈ اسکین کرنے کے لیے براہ کرم اپنے براؤزر کی ترتیبات میں کیمرے کی اجازت کو فعال کریں۔
+              </AlertDescription>
             </Alert>
           </div>
         )}
@@ -336,7 +349,7 @@ export default function ScanPage() {
         {isProcessing && (
           <LoadingOverlay message="پروسیسنگ..." />
         )}
-        
+
         {!isProcessing && <p className="mt-4 text-center text-white">
           {hasCameraPermission === null ? 'اسکینر شروع ہو رہا ہے...' : isScanning ? 'اسکین کرنے کے لیے فریم کے اندر ایک کیو آر کوڈ رکھیں۔' : 'کیمرے کا انتظار ہے...'}
         </p>}

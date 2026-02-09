@@ -10,9 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { doc, getDoc } from 'firebase/firestore';
+import { getDocWithRetry } from '@/lib/firestoreUtils';
+import { doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
+import type { User } from '@/lib/types';
 import { sendContactRequest, ContactRequestError } from '@/lib/contactRequestService';
 
 export default function AddContactPage() {
@@ -38,17 +40,17 @@ export default function AddContactPage() {
 
     // Add timeout to prevent infinite loading
     timeoutRef.current = setTimeout(() => {
-        setLoading(false);
-        toast({
-          variant: 'destructive',
-          title: 'وقت ختم',
-          description: 'درخواست بہت دیر لگ رہی ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
-        });
+      setLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'وقت ختم',
+        description: 'درخواست بہت دیر لگ رہی ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
+      });
       timeoutRef.current = null;
     }, 10000); // 10 second timeout
 
     try {
-      if (trimmedId === currentUser.uid) {
+      if (trimmedId === currentUser.id) {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
@@ -61,12 +63,11 @@ export default function AddContactPage() {
         setLoading(false);
         return;
       }
-      
-      // First, check if the target user exists
-      const userDocRef = doc(db, 'users', trimmedId);
-      const userDoc = await getDoc(userDocRef);
 
-      if (!userDoc.exists()) {
+      // First, check if the target user exists
+      const userDoc = await getDocWithRetry<User>(doc(db, 'users', trimmedId));
+
+      if (!userDoc) {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
@@ -79,9 +80,9 @@ export default function AddContactPage() {
         setLoading(false);
         return;
       }
-      
+
       await sendContactRequest({
-        senderId: currentUser.uid,
+        senderId: currentUser.id,
         senderProfile: userData ?? undefined,
         targetUserId: trimmedId,
       });
@@ -106,7 +107,7 @@ export default function AddContactPage() {
       console.error("Error adding contact:", error);
       console.error("Error code:", error.code);
       console.error("Error message:", error.message);
-      
+
       if (error instanceof ContactRequestError) {
         let message = 'کچھ غلط ہو گیا۔';
         if (error.code === 'already-contact') {
@@ -127,25 +128,25 @@ export default function AddContactPage() {
           description: message,
         });
       } else {
-      // Provide more specific error messages
-      let errorMessage = 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
-      
-      if (error.code === 'permission-denied') {
-        errorMessage = 'سیکیورٹی قوانین کو چیک کریں۔ Firebase اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو Firebase کنسول میں اپ ڈیٹ کریں۔';
-      } else if (error.code === 'unavailable') {
-        errorMessage = 'Firebase سروس دستیاب نہیں ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں۔';
-      } else if (error.code === 'deadline-exceeded') {
-        errorMessage = 'درخواست کا وقت ختم ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      toast({
-        variant: 'destructive',
-        title: 'رابطہ شامل کرنے میں خرابی',
-        description: errorMessage,
-        duration: 10000, // Show for 10 seconds so user can read it
-      });
+        // Provide more specific error messages
+        let errorMessage = 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
+
+        if (error.code === 'permission-denied') {
+          errorMessage = 'سیکیورٹی قوانین کو چیک کریں۔ Firebase اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو Firebase کنسول میں اپ ڈیٹ کریں۔';
+        } else if (error.code === 'unavailable') {
+          errorMessage = 'Firebase سروس دستیاب نہیں ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں۔';
+        } else if (error.code === 'deadline-exceeded') {
+          errorMessage = 'درخواست کا وقت ختم ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        toast({
+          variant: 'destructive',
+          title: 'رابطہ شامل کرنے میں خرابی',
+          description: errorMessage,
+          duration: 10000, // Show for 10 seconds so user can read it
+        });
       }
       setLoading(false);
     }

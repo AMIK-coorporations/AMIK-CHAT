@@ -1,262 +1,135 @@
-/**
- * Firestore utility functions with retry logic and error handling
- */
-
-import { 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  query, 
-  getDocs,
-  onSnapshot,
-  Query,
-  DocumentReference,
-  Unsubscribe,
-  FirestoreError
-} from 'firebase/firestore';
-import { db } from './firebase';
-
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+import { setDocInInsforge, updateDocInInsforge, deleteDocFromInsforge, getDocFromInsforge, getQueryFromInsforge, onSnapshotFromInsforge } from './insforgeUtils';
 
 /**
- * Retry a Firestore operation with exponential backoff
- */
-async function retryOperation<T>(
-  operation: () => Promise<T>,
-  retries = MAX_RETRIES,
-  delay = RETRY_DELAY
-): Promise<T> {
-  try {
-    return await operation();
-  } catch (error) {
-    if (retries <= 0) {
-      throw error;
-    }
-    
-    // Check if it's a retryable error
-    const firestoreError = error as FirestoreError;
-    if (
-      firestoreError.code === 'unavailable' ||
-      firestoreError.code === 'deadline-exceeded' ||
-      firestoreError.code === 'resource-exhausted' ||
-      firestoreError.message?.includes('timeout') ||
-      firestoreError.message?.includes('network')
-    ) {
-      // Wait before retrying with exponential backoff
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return retryOperation(operation, retries - 1, delay * 2);
-    }
-    
-    // Non-retryable error, throw immediately
-    throw error;
-  }
-}
-
-/**
- * Get a document with retry logic
+ * Get a document from InsForge
  */
 export async function getDocWithRetry<T = any>(
-  docRef: DocumentReference
+  docRef: any // This was a DocumentReference
 ): Promise<T | null> {
   try {
-    const docSnap = await retryOperation(() => getDoc(docRef));
-    if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as T;
+    const table = docRef.table || (docRef as any)._path?.segments[0] || (docRef.parent as any)?.id;
+    const id = docRef.id;
+    if (table && id) {
+      return await getDocFromInsforge<T>(table, id);
     }
     return null;
   } catch (error) {
-    console.error('Error getting document:', error);
+    console.error('Error getting document from InsForge:', error);
     throw error;
   }
 }
 
 /**
- * Set a document with retry logic
+ * Set a document in InsForge
  */
 export async function setDocWithRetry(
-  docRef: DocumentReference,
+  docRef: any,
   data: any
 ): Promise<void> {
   try {
-    await retryOperation(() => setDoc(docRef, data));
+    const table = docRef.table || (docRef as any)._path?.segments[0] || (docRef.parent as any)?.id;
+    const id = docRef.id;
+    if (table && id) {
+      await setDocInInsforge(table, id, data);
+    }
   } catch (error) {
-    console.error('Error setting document:', error);
+    console.error('Error setting document in InsForge:', error);
     throw error;
   }
 }
 
 /**
- * Update a document with retry logic
+ * Update a document in InsForge
  */
 export async function updateDocWithRetry(
-  docRef: DocumentReference,
+  docRef: any,
   data: any
 ): Promise<void> {
   try {
-    await retryOperation(() => updateDoc(docRef, data));
+    const table = docRef.table || (docRef as any)._path?.segments[0] || (docRef.parent as any)?.id;
+    const id = docRef.id;
+    if (table && id) {
+      await updateDocInInsforge(table, id, data);
+    }
   } catch (error) {
-    console.error('Error updating document:', error);
+    console.error('Error updating document in InsForge:', error);
     throw error;
   }
 }
 
 /**
- * Delete a document with retry logic
+ * Delete a document from InsForge
  */
 export async function deleteDocWithRetry(
-  docRef: DocumentReference
+  docRef: any
 ): Promise<void> {
   try {
-    await retryOperation(() => deleteDoc(docRef));
+    const table = docRef.table || (docRef as any)._path?.segments[0] || (docRef.parent as any)?.id;
+    const id = docRef.id;
+    if (table && id) {
+      await deleteDocFromInsforge(table, id);
+    }
   } catch (error) {
-    console.error('Error deleting document:', error);
+    console.error('Error deleting document from InsForge:', error);
     throw error;
   }
 }
 
 /**
- * Get query results with retry logic
+ * Get query results from InsForge
  */
 export async function getQueryWithRetry<T = any>(
-  queryRef: Query
+  queryRef: any
 ): Promise<T[]> {
   try {
-    const querySnapshot = await retryOperation(() => getDocs(queryRef));
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    const table = queryRef.table || (queryRef as any)._query?.path?.segments[0] || (queryRef as any).path;
+    if (table) {
+      return await getQueryFromInsforge<T>(table);
+    }
+    return [];
   } catch (error) {
-    console.error('Error getting query results:', error);
+    console.error('Error getting query results from InsForge:', error);
     throw error;
   }
 }
 
 /**
- * Create a snapshot listener with error handling and retry
+ * Snapshot listener using InsForge Realtime
  */
 export function onSnapshotWithRetry<T = any>(
-  queryOrDoc: Query | DocumentReference,
+  queryOrDoc: any,
   onNext: (data: T | T[] | null) => void,
-  onError?: (error: Error) => void,
-  timeout = 30000 // 30 seconds default timeout
-): Unsubscribe {
-  let timeoutId: NodeJS.Timeout | null = null;
-  let retryCount = 0;
-  let unsubscribe: Unsubscribe | null = null;
+  onError?: (error: Error) => void
+): () => void {
+  const table = queryOrDoc.table || (queryOrDoc as any)._path?.segments[0] || (queryOrDoc as any).path || (queryOrDoc as any).parent?.id;
+  const id = queryOrDoc.id;
 
-  const setupListener = () => {
-    // Clear existing timeout
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
-    }
+  if (!table) {
+    console.error("No table found for InsForge realtime subscription");
+    return () => { };
+  }
 
-    // Set timeout
-    timeoutId = setTimeout(() => {
-      console.warn('Firestore snapshot timeout, retrying...');
-      if (retryCount < MAX_RETRIES) {
-        retryCount++;
-        if (unsubscribe) unsubscribe();
-        setupListener();
+  // Subscribe to all changes on the table/record
+  // We'll use a wildcard for now to mirror the general collection behavior
+  const channelName = id ? `${table}:${id}` : `${table}:*`;
+  const eventName = id ? `UPDATE_${table}` : `INSERT_${table}`; // This needs to match backend event names
+
+  try {
+    const unsubscribe = onSnapshotFromInsforge(channelName, '*', (payload) => {
+      // For InsForge, we might need to handle the list vs single logic
+      // This is a simplification
+      if (id) {
+        onNext(payload as T);
       } else {
-        const error = new Error('Firestore snapshot connection timeout');
-        if (onError) {
-          onError(error);
-        } else {
-          console.error('Firestore snapshot error:', error);
-        }
+        // For collections, we'd ideally fetch again or maintain a local list
+        // For now, let's trigger a re-fetch or pass the single item if that's what backend sends
+        onNext([payload] as T[]);
       }
-    }, timeout);
-
-    // Helper function to handle snapshot errors
-    const handleSnapshotError = (error: FirestoreError) => {
-      // Clear timeout on error
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-
-      // Check if error is retryable
-      if (
-        (error.code === 'unavailable' || 
-         error.code === 'deadline-exceeded' ||
-         error.code === 'resource-exhausted' ||
-         error.message?.includes('timeout') ||
-         error.message?.includes('network')) &&
-        retryCount < MAX_RETRIES
-      ) {
-        retryCount++;
-        console.warn(`Firestore snapshot error (retry ${retryCount}/${MAX_RETRIES}):`, error);
-        // Retry after delay
-        setTimeout(() => {
-          if (unsubscribe) unsubscribe();
-          setupListener();
-        }, RETRY_DELAY * retryCount);
-      } else {
-        // Non-retryable or max retries reached
-        if (onError) {
-          onError(error);
-        } else {
-          console.error('Firestore snapshot error:', error);
-        }
-      }
-    };
-
-    // Setup listener - handle Query and DocumentReference separately
-    // Use type assertion to help TypeScript understand which overload to use
-    if ('docs' in (queryOrDoc as any) || (queryOrDoc as any).type === 'query') {
-      // Handle Query - use 'as any' to bypass type checking, then cast to Query
-      unsubscribe = onSnapshot(
-        queryOrDoc as any as Query,
-        (snapshot) => {
-          // Clear timeout on successful data
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-          }
-          retryCount = 0; // Reset retry count on success
-
-          // Query snapshot
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-          onNext(data as T[]);
-        },
-        handleSnapshotError
-      );
-    } else {
-      // Handle DocumentReference
-      unsubscribe = onSnapshot(
-        queryOrDoc as any as DocumentReference,
-        (snapshot) => {
-          // Clear timeout on successful data
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-          }
-          retryCount = 0; // Reset retry count on success
-
-          // Document snapshot
-          if (snapshot.exists()) {
-            onNext({ id: snapshot.id, ...snapshot.data() } as T);
-          } else {
-            onNext(null);
-          }
-        },
-        handleSnapshotError
-      );
-    }
-  };
-
-  setupListener();
-
-  // Return unsubscribe function
-  return () => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    if (unsubscribe) {
-      unsubscribe();
-    }
-  };
+    });
+    return unsubscribe;
+  } catch (err: any) {
+    if (onError) onError(err);
+    return () => { };
+  }
 }
 

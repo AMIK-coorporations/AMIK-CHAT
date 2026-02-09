@@ -23,7 +23,7 @@ const CallContext = createContext<CallContextType>({
   showCallInterface: false,
   callType: 'voice',
   isIncomingCall: false,
-  handleEndCall: () => {},
+  handleEndCall: () => { },
 });
 
 export function CallProvider({ children }: { children: ReactNode }) {
@@ -74,7 +74,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       handleEndCall,
     }}>
       {children}
-      
+
       {/* Global Call Interface */}
       {showCallInterface && (
         <CallInterface

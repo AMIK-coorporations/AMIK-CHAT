@@ -12,21 +12,21 @@ import { Button } from "@/components/ui/button";
 import { FileMessageCard } from "./FileCards";
 
 interface MessageBubbleProps {
-    message: Message;
-    translation?: string;
-    isTranslated: boolean;
-    isTranslating: boolean;
-    onDeleteForEveryone: (messageId: string) => void;
-    onTranslate: (messageId: string, text: string) => void;
-    onForward: (message: Message) => void;
-    onReact: (messageId: string, emoji: string) => void;
-    onDeleteForMe: () => void;
-    onCopy: (text: string) => void;
+  message: Message;
+  translation?: string;
+  isTranslated: boolean;
+  isTranslating: boolean;
+  onDeleteForEveryone: (messageId: string) => void;
+  onTranslate: (messageId: string, text: string) => void;
+  onForward: (message: Message) => void;
+  onReact: (messageId: string, emoji: string) => void;
+  onDeleteForMe: () => void;
+  onCopy: (text: string) => void;
 }
 
 export default function MessageBubble({ message, translation, isTranslated, isTranslating, ...handlers }: MessageBubbleProps) {
   const { user: currentUser } = useAuth();
-  const isSentByMe = message.senderId === currentUser?.uid;
+  const isSentByMe = message.senderId === currentUser?.id;
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -35,8 +35,8 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
   const LONG_PRESS_DURATION = 1350; // 1.35 seconds
 
   // Check if message is deleted for current user
-  const isDeletedForMe = message.deletedFor?.[currentUser?.uid || ''] || false;
-  
+  const isDeletedForMe = message.deletedFor?.[currentUser?.id || ''] || false;
+
   // Hide message if it's deleted for current user
   if (isDeletedForMe) return null;
 
@@ -44,7 +44,7 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
 
   const handleVoicePlay = () => {
     if (!message.audioUrl) return;
-    
+
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
@@ -78,7 +78,7 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
   const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Clear any existing timer
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
@@ -97,7 +97,7 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
   const handleLongPressEnd = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Clear timer if released before long press duration
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
@@ -234,7 +234,7 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
 
       default:
         return (
-          <p className="text-base text-left" style={{ wordBreak: 'break-word', direction: 'ltr' }}>
+          <p className="text-base" style={{ wordBreak: 'break-word', direction: 'rtl', textAlign: 'right' }}>
             {message.text}
           </p>
         );
@@ -268,67 +268,67 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
           >
             {message.isForwarded && !message.isDeleted && (
               <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
-                  <CornerUpRight className="h-3 w-3" />
-                  <span>فارورڈ شدہ</span>
+                <CornerUpRight className="h-3 w-3" />
+                <span>فارورڈ شدہ</span>
               </div>
             )}
             {renderMessageContent()}
             {hasReactions && (
               <div className={cn("absolute -bottom-3 flex items-center gap-0.5 z-10", isSentByMe ? "right-2" : "left-2")}>
-                  {Object.entries(message.reactions!).map(([emoji, uids]) => (
-                      uids.length > 0 && (
-                          <div key={emoji} className="flex items-center bg-background border rounded-full px-1.5 py-0.5 shadow-sm text-xs">
-                              <span>{emoji}</span>
-                              {uids.length > 1 && <span className="ml-1 text-muted-foreground">{uids.length}</span>}
-                          </div>
-                      )
-                  ))}
+                {Object.entries(message.reactions!).map(([emoji, uids]) => (
+                  uids.length > 0 && (
+                    <div key={emoji} className="flex items-center bg-background border rounded-full px-1.5 py-0.5 shadow-sm text-xs">
+                      <span>{emoji}</span>
+                      {uids.length > 1 && <span className="ml-1 text-muted-foreground">{uids.length}</span>}
+                    </div>
+                  )
+                ))}
               </div>
             )}
           </div>
         </PopoverTrigger>
-        <PopoverContent 
-          className="w-auto p-1" 
-          side={isSentByMe ? "left" : "right"} 
+        <PopoverContent
+          className="w-auto p-1"
+          side={isSentByMe ? "left" : "right"}
           align="center"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <ChatMessageActions 
-            message={message} 
-            isTranslated={isTranslated} 
+          <ChatMessageActions
+            message={message}
+            isTranslated={isTranslated}
             onClose={() => setIsMenuOpen(false)}
-            {...handlers} 
+            {...handlers}
           />
         </PopoverContent>
       </Popover>
 
       {isTranslating && (
-          <div className={cn(
-              "flex items-center gap-2 text-sm max-w-sm rounded-lg px-3 py-2 lg:max-w-lg",
-              isSentByMe
-                  ? "rounded-br-none bg-primary text-primary-foreground"
-                  : "rounded-bl-none bg-card text-card-foreground border"
-          )}>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>ترجمہ کیا جا رہا ہے...</span>
-          </div>
+        <div className={cn(
+          "flex items-center gap-2 text-sm max-w-sm rounded-lg px-3 py-2 lg:max-w-lg",
+          isSentByMe
+            ? "rounded-br-none bg-primary text-primary-foreground"
+            : "rounded-bl-none bg-card text-card-foreground border"
+        )}>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>ترجمہ کیا جا رہا ہے...</span>
+        </div>
       )}
-      
+
       {translation && !isTranslating && (
-          <div className={cn(
-              "max-w-sm rounded-lg px-3 py-2 lg:max-w-lg",
-              isSentByMe
-                ? "rounded-br-none bg-primary text-primary-foreground"
-                : "rounded-bl-none bg-card text-card-foreground border"
-          )}>
-              <p className="text-base text-right" style={{ wordBreak: 'break-word', direction: 'rtl' }}>
-                  {translation}
-              </p>
-              <div className="flex items-center gap-1.5 text-xs opacity-80 pt-1.5 mt-1.5 border-t border-t-black/10 dark:border-t-white/20">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>اے ایم آئی کے سے ترجمہ شدہ</span>
-              </div>
+        <div className={cn(
+          "max-w-sm rounded-lg px-3 py-2 lg:max-w-lg",
+          isSentByMe
+            ? "rounded-br-none bg-primary text-primary-foreground"
+            : "rounded-bl-none bg-card text-card-foreground border"
+        )}>
+          <p className="text-base text-right" style={{ wordBreak: 'break-word', direction: 'rtl' }}>
+            {translation}
+          </p>
+          <div className="flex items-center gap-1.5 text-xs opacity-80 pt-1.5 mt-1.5 border-t border-t-black/10 dark:border-t-white/20">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span>اے ایم آئی کے سے ترجمہ شدہ</span>
           </div>
+        </div>
       )}
     </div>
   );

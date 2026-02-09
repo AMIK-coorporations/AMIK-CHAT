@@ -10,8 +10,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { SendHorizonal } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import { Label } from "@/components/ui/label";
-import { db } from "@/lib/firebase";
-import { collection, serverTimestamp, query, orderBy, onSnapshot, writeBatch, doc, updateDoc, getDoc } from "firebase/firestore";
+import { onSnapshotFromInsforge, getQueryFromInsforge, setDocInInsforge, updateDocInInsforge } from '@/lib/insforgeUtils';
+import { getDocWithRetry, updateDocWithRetry, setDocWithRetry } from '@/lib/firestoreUtils';
+import { doc, collection, query, orderBy, onSnapshot, getDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 // Translation is handled server-side via API to avoid bundling AI SDK on client
 import { useToast } from "@/hooks/use-toast";
 import ForwardMessageDialog from "./ForwardMessageDialog";
@@ -42,7 +44,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
         if (chatDoc.exists()) {
           const chatData = chatDoc.data();
-          const otherParticipantId = chatData.participantIds?.find((participantId: string) => participantId !== currentUser.uid);
+          const otherParticipantId = chatData.participantIds?.find((participantId: string) => participantId !== currentUser.id);
 
           if (otherParticipantId && chatData.participantsInfo) {
             const otherInfo = chatData.participantsInfo[otherParticipantId];
@@ -70,7 +72,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
     };
 
     fetchChatInfo();
-  }, [chatId, currentUser]);
+  }, [chatId, currentUser?.id]);
 
   useEffect(() => {
     if (!chatId || !currentUser) {
@@ -103,7 +105,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
         // Auto-translate incoming messages that aren't in Urdu
         msgs.forEach(async (msg) => {
-          if (msg.senderId !== currentUser?.uid && // Only incoming messages
+          if (msg.senderId !== currentUser?.id && // Only incoming messages
             !translations[msg.id] && // Not already translated
             !isUrduText(msg.text)) { // Not already in Urdu
             // Auto-translate after a short delay
@@ -136,13 +138,36 @@ export default function ChatView({ chatId }: { chatId: string }) {
       }
     );
 
+    // InsForge Sync (Snapshot)
+    const insforgeUnsubscribe = onSnapshotFromInsforge(`messages:${chatId}`, 'UPDATE_message', (payload) => {
+      setMessages(prev => {
+        const index = prev.findIndex(m => m.id === payload.id);
+        if (index >= 0) {
+          const newMsgs = [...prev];
+          newMsgs[index] = { ...newMsgs[index], ...payload };
+          return newMsgs;
+        } else {
+          // Check if it's the right chat
+          if (payload.chatId === chatId) {
+            return [...prev, payload].sort((a, b) => {
+              const t1 = a.timestamp;
+              const t2 = b.timestamp;
+              return (new Date(t1).getTime()) - (new Date(t2).getTime());
+            });
+          }
+        }
+        return prev;
+      });
+    });
+
     return () => {
       if (loadingTimeout) {
         clearTimeout(loadingTimeout);
       }
       unsubscribe();
+      insforgeUnsubscribe();
     };
-  }, [chatId, currentUser, translations, toast]);
+  }, [chatId, currentUser?.id, toast]);
   useEffect(() => {
     if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
@@ -172,7 +197,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
       return;
     }
 
-    if (message.senderId !== currentUser.uid) {
+    if (message.senderId !== currentUser.id) {
       toast({ title: 'آپ صرف اپنے پیغامات حذف کر سکتے ہیں' });
       return;
     }
@@ -184,12 +209,12 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
     const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
     try {
-      await updateDoc(messageRef, {
+      await updateDocWithRetry(messageRef, {
         text: 'یہ پیغام حذف کر دیا گیا',
         isDeleted: true,
         reactions: {},
         deletedAt: serverTimestamp(),
-        deletedBy: currentUser.uid
+        deletedBy: currentUser.id
       });
 
       // Update local state
@@ -210,7 +235,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
     if (!currentUser) return;
 
     const message = messages.find(m => m.id === messageId);
-    if (!message || message.isDeleted || message.deletedFor?.[currentUser.uid]) {
+    if (!message || message.isDeleted || message.deletedFor?.[currentUser.id]) {
       toast({ title: 'پیغام پہلے سے حذف شدہ ہے' });
       return;
     }
@@ -218,14 +243,14 @@ export default function ChatView({ chatId }: { chatId: string }) {
     try {
       // Mark message as deleted for current user only
       const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
-      await updateDoc(messageRef, {
-        [`deletedFor.${currentUser.uid}`]: true
+      await updateDocWithRetry(messageRef, {
+        [`deletedFor.${currentUser.id}`]: true
       });
 
       // Remove from local state
       setMessages(prev => prev.map(msg =>
         msg.id === messageId
-          ? { ...msg, [`deletedFor.${currentUser.uid}`]: true }
+          ? { ...msg, [`deletedFor.${currentUser.id}`]: true }
           : msg
       ));
 
@@ -327,23 +352,23 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
       Object.keys(reactions).forEach(key => {
         if (key !== emoji) {
-          reactions[key] = reactions[key]?.filter(uid => uid !== currentUser.uid);
+          reactions[key] = reactions[key]?.filter(id => id !== currentUser.id);
           if (reactions[key]?.length === 0) {
             delete reactions[key];
           }
         }
       });
 
-      if (uidsWithThisReaction.includes(currentUser.uid)) {
-        reactions[emoji] = uidsWithThisReaction.filter(uid => uid !== currentUser.uid);
+      if (uidsWithThisReaction.includes(currentUser.id)) {
+        reactions[emoji] = uidsWithThisReaction.filter(id => id !== currentUser.id);
         if (reactions[emoji].length === 0) {
           delete reactions[emoji];
         }
       } else {
-        reactions[emoji] = [...uidsWithThisReaction, currentUser.uid];
+        reactions[emoji] = [...uidsWithThisReaction, currentUser.id];
       }
 
-      await updateDoc(messageRef, { reactions });
+      await updateDocWithRetry(messageRef, { reactions });
 
     } catch (error) {
       console.error("Error reacting to message:", error);
@@ -360,14 +385,13 @@ export default function ChatView({ chatId }: { chatId: string }) {
       const batch = writeBatch(db);
 
       const contactDocs = await Promise.all(
-        selectedContactIds.map(id => getDoc(doc(db, 'users', id)))
+        selectedContactIds.map(id => getDocWithRetry<User>(doc(db, 'users', id)))
       );
 
-      for (const contactDoc of contactDocs) {
-        if (!contactDoc.exists()) continue;
-        const contact = { id: contactDoc.id, ...contactDoc.data() } as User;
+      for (const contact of contactDocs) {
+        if (!contact) continue;
 
-        const chatId = await createOrNavigateToChat(currentUser.uid, userData, contact);
+        const chatId = await createOrNavigateToChat(currentUser.id, userData, contact);
         const chatRef = doc(db, 'chats', chatId);
         const messagesColRef = collection(chatRef, 'messages');
         const newMessageRef = doc(messagesColRef);
@@ -376,7 +400,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
         const forwardedMessageData: Partial<Message> = {
           text: messageToForward.text,
-          senderId: currentUser.uid,
+          senderId: currentUser.id,
           timestamp: timestamp,
           isRead: false,
           isForwarded: true,
@@ -386,11 +410,32 @@ export default function ChatView({ chatId }: { chatId: string }) {
         batch.update(chatRef, {
           lastMessage: {
             text: forwardedMessageData.text,
-            senderId: currentUser.uid,
+            senderId: currentUser.id,
             timestamp: timestamp,
             isRead: false,
           }
         });
+
+        // InsForge Sync (Forwarded Message)
+        try {
+          const insforgeTimestamp = new Date();
+          await setDocInInsforge('messages', newMessageRef.id, {
+            ...forwardedMessageData,
+            chatId: chatId,
+            timestamp: insforgeTimestamp
+          });
+          await updateDocInInsforge('chats', chatId, {
+            lastMessage: {
+              text: forwardedMessageData.text,
+              senderId: currentUser.id,
+              timestamp: insforgeTimestamp,
+              isRead: false,
+            },
+            updatedAt: insforgeTimestamp
+          });
+        } catch (error) {
+          console.error("InsForge forward message sync failed:", error);
+        }
       }
 
       await batch.commit();

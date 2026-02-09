@@ -1,0 +1,11 @@
+import { createClient } from '@insforge/sdk';
+
+const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_API_BASE_URL || 'https://suiirdm9.ap-southeast.insforge.app';
+const anonKey = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY || '';
+
+export const insforge = createClient({
+    baseUrl,
+    anonKey,
+});
+
+export const db_insforge = insforge.database;

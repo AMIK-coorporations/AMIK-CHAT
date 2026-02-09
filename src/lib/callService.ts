@@ -1,9 +1,9 @@
 import { db } from './firebase';
-import { 
-  doc, 
-  setDoc, 
-  onSnapshot, 
-  deleteDoc, 
+import {
+  doc,
+  setDoc,
+  onSnapshot,
+  deleteDoc,
   serverTimestamp,
   collection,
   query,
@@ -11,8 +11,11 @@ import {
   orderBy,
   limit
 } from 'firebase/firestore';
+import { setDocInInsforge, deleteDocFromInsforge, onSnapshotFromInsforge } from './insforgeUtils';
 
 export interface CallSignal {
+  id?: string;
+  callId?: string;
   type: 'offer' | 'answer' | 'ice-candidate' | 'call-request' | 'call-accepted' | 'call-rejected' | 'call-ended';
   data: any;
   from: string;
@@ -96,8 +99,8 @@ export class CallService {
     this.peerConnection.onconnectionstatechange = () => {
       if (this.peerConnection?.connectionState === 'connected') {
         this.notifyStateChange();
-      } else if (this.peerConnection?.connectionState === 'failed' || 
-                 this.peerConnection?.connectionState === 'disconnected') {
+      } else if (this.peerConnection?.connectionState === 'failed' ||
+        this.peerConnection?.connectionState === 'disconnected') {
         this.endCall();
       }
     };
@@ -279,18 +282,43 @@ export class CallService {
 
     const signalRef = doc(db, 'calls', this.currentCallId, 'signals', `${Date.now()}_${signal.from}`);
     await setDoc(signalRef, signal);
+
+    // InsForge Sync (Signal)
+    try {
+      const signalId = `${Date.now()}_${signal.from}`;
+      await setDocInInsforge('call_signals', signalId, {
+        ...signal,
+        callId: this.currentCallId,
+        fromUserId: signal.from,
+        toUserId: signal.to,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('InsForge sendSignal failed:', error);
+    }
   }
 
   private async createCallDocument(): Promise<void> {
     if (!this.currentCallId) return;
 
     const callRef = doc(db, 'calls', this.currentCallId);
-    await setDoc(callRef, {
+    const callData = {
       participants: [this.currentUserId, this.remoteUserId],
       isVideo: this.isVideo,
       createdAt: serverTimestamp(),
       status: 'active'
-    });
+    };
+    await setDoc(callRef, callData);
+
+    // InsForge Sync (Call)
+    try {
+      await setDocInInsforge('calls', this.currentCallId, {
+        ...callData,
+        createdAt: new Date()
+      });
+    } catch (error) {
+      console.error('InsForge createCallDocument failed:', error);
+    }
   }
 
   private listenForSignals(): void {
@@ -299,18 +327,30 @@ export class CallService {
     const signalsRef = collection(db, 'calls', this.currentCallId, 'signals');
     const q = query(signalsRef, orderBy('timestamp', 'asc'));
 
-    this.signalingUnsubscribe = onSnapshot(q, async (snapshot) => {
+    const insforgeUnsubscribe = onSnapshotFromInsforge(`call_signals:${this.currentCallId}`, 'UPDATE_signal', async (payload) => {
+      const signal = payload as CallSignal;
+      // Don't process our own signals
+      if (signal.from === this.currentUserId) return;
+      await this.handleSignal(signal);
+    });
+
+    const firestoreUnsubscribe = onSnapshot(q, async (snapshot) => {
       for (const change of snapshot.docChanges()) {
         if (change.type === 'added') {
           const signal = change.doc.data() as CallSignal;
-          
           // Don't process our own signals
           if (signal.from === this.currentUserId) continue;
-
           await this.handleSignal(signal);
         }
       }
+    }, (error) => {
+      console.error("Firestore signaling listener error:", error);
     });
+
+    this.signalingUnsubscribe = () => {
+      firestoreUnsubscribe();
+      insforgeUnsubscribe();
+    };
   }
 
   private async handleSignal(signal: CallSignal): Promise<void> {
@@ -324,13 +364,13 @@ export class CallService {
             isVideo: signal.data.isVideo,
             callId: this.currentCallId!
           });
-          
+
           // Set local description for incoming call
           if (signal.data.offer) {
             await this.peerConnection!.setRemoteDescription(signal.data.offer);
             const answer = await this.peerConnection!.createAnswer();
             await this.peerConnection!.setLocalDescription(answer);
-            
+
             await this.sendSignal({
               type: 'answer',
               data: answer,
@@ -361,7 +401,7 @@ export class CallService {
           await this.peerConnection!.setRemoteDescription(signal.data);
           const answer = await this.peerConnection!.createAnswer();
           await this.peerConnection!.setLocalDescription(answer);
-          
+
           await this.sendSignal({
             type: 'call-accepted',
             data: { answer },

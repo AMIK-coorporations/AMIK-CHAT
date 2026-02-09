@@ -22,7 +22,12 @@ export default function ChatRow({ chat, currentUserId }: ChatRowProps) {
 
     let timestampDisplay = '';
     if (lastMessage?.timestamp) {
-        const date = lastMessage.timestamp.toDate ? lastMessage.timestamp.toDate() : new Date(lastMessage.timestamp);
+        let date: Date;
+        if (typeof lastMessage.timestamp === 'object' && lastMessage.timestamp.toDate) {
+            date = lastMessage.timestamp.toDate();
+        } else {
+            date = new Date(lastMessage.timestamp);
+        }
         if (isToday(date)) {
             timestampDisplay = format(date, 'HH:mm');
         } else if (isYesterday(date)) {

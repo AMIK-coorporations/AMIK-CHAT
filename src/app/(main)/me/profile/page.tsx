@@ -42,7 +42,7 @@ export default function ProfileDetailsPage() {
 				return;
 			}
 			const start = toast({ title: "اپ لوڈ ہو رہا ہے...", description: "براہ کرم انتظار کریں۔" });
-			const url = await uploadUserAvatarReliable(file, user.uid, (p) => setProgress(p));
+			const url = await uploadUserAvatarReliable(file, user.id, (p) => setProgress(p));
 			await updateProfile({ avatarUrl: url, photoURL: url } as any);
 			toast({ id: start.id, title: "ہو گیا", description: "پروفائل تصویر اپ ڈیٹ ہو گئی۔" });
 			setTempPreview(null);
@@ -95,11 +95,11 @@ export default function ProfileDetailsPage() {
 							</Link>
 							<div className="flex items-center p-4 gap-2">
 								<span className="flex-1 font-medium">اے ایم آئی کے گفتگو شناخت</span>
-								<span className="text-muted-foreground break-all">{user?.uid}</span>
+								<span className="text-muted-foreground break-all">{user?.id}</span>
 								<button
 									className="h-8 w-8 inline-flex items-center justify-center rounded-full border border-muted-foreground/30 hover:border-accent hover:bg-accent/10 text-accent transition-colors"
 									title="شناخت کاپی کریں"
-									onClick={async () => { if (!user?.uid) return; await navigator.clipboard.writeText(user.uid); toast({ title: 'کاپی ہوگیا', description: 'شناخت کلپ بورڈ میں کاپی ہو گئی۔' }); }}
+									onClick={async () => { if (!user?.id) return; await navigator.clipboard.writeText(user.id); toast({ title: 'کاپی ہوگیا', description: 'شناخت کلپ بورڈ میں کاپی ہو گئی۔' }); }}
 								>
 									{/* using unicode copy icon for simplicity */}
 									<span className="text-sm">⧉</span>

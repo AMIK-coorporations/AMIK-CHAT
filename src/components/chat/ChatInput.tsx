@@ -4,15 +4,15 @@ import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  SendHorizonal, 
-  Mic, 
-  Paperclip, 
-  Camera, 
-  Phone, 
-  Video, 
-  MapPin, 
-  UserPlus, 
+import {
+  SendHorizonal,
+  Mic,
+  Paperclip,
+  Camera,
+  Phone,
+  Video,
+  MapPin,
+  UserPlus,
   FileText,
   Image as ImageIcon,
   Smile,
@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { FileService } from "@/lib/fileService";
 import { VoiceService } from "@/lib/voiceService";
 import { FilePreviewCard } from "./FileCards";
+import { setDocInInsforge, updateDocInInsforge } from "@/lib/insforgeUtils";
 
 interface ChatInputProps {
   chatId: string;
@@ -51,7 +52,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   const { user: currentUser, userData } = useAuth();
   const { toast } = useToast();
   const { initiateCall } = useCall();
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -72,13 +73,13 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       const batch = writeBatch(db);
       const timestamp = serverTimestamp();
 
-      batch.set(doc(db, 'users', currentUser.uid, 'contacts', remoteUserId), {
+      batch.set(doc(db, 'users', currentUser.id, 'contacts', remoteUserId), {
         addedAt: timestamp,
         contactName: remoteData.name ?? remoteData.displayName ?? 'Unknown User',
         contactAvatarUrl: remoteData.avatarUrl ?? remoteData.photoURL ?? '',
       }, { merge: true });
 
-      batch.set(doc(db, 'users', remoteUserId, 'contacts', currentUser.uid), {
+      batch.set(doc(db, 'users', remoteUserId, 'contacts', currentUser.id), {
         addedAt: timestamp,
         contactName: userData.name ?? (userData as any).displayName ?? 'Unknown User',
         contactAvatarUrl: userData.avatarUrl ?? (userData as any).photoURL ?? '',
@@ -110,24 +111,46 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
       const messageData = {
         text: messageText,
-        senderId: currentUser.uid,
+        senderId: currentUser.id,
         timestamp: timestamp,
         isRead: false,
         type: 'text'
       };
-      
+
       batch.set(newMessageRef, messageData);
       batch.update(chatRef, {
         lastMessage: {
           text: messageText,
-          senderId: currentUser.uid,
+          senderId: currentUser.id,
           timestamp: timestamp,
           isRead: false,
         }
       });
 
       await batch.commit();
-      
+
+      // InsForge Sync
+      try {
+        const timestamp = new Date();
+        const insforgeMessage = {
+          ...messageData,
+          chatId: chatId,
+          timestamp: timestamp
+        };
+        await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
+        await updateDocInInsforge('chats', chatId, {
+          lastMessage: {
+            text: messageText,
+            senderId: currentUser.id,
+            timestamp: timestamp,
+            isRead: false,
+          },
+          updatedAt: timestamp
+        });
+      } catch (error) {
+        console.error("InsForge send message sync failed:", error);
+      }
+
       // Send to Pipedream webhook
       try {
         const senderName = currentUser.displayName || currentUser.email || userData?.name || (userData as any)?.displayName || "User";
@@ -138,7 +161,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
           },
           body: JSON.stringify({
             text: messageText,
-            senderId: currentUser.uid,
+            senderId: currentUser.id,
             senderName: senderName,
             recipientId: remoteUserId || '',
             chatId: chatId
@@ -147,7 +170,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       } catch (webhookError) {
         console.log('Pipedream webhook error:', webhookError);
       }
-      
+
       onMessageSent?.();
       toast({ title: 'پیغام بھیجا گیا', description: 'آپ کا پیغام کامیابی سے بھیجا گیا' });
     } catch (error) {
@@ -212,14 +235,14 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       for (const file of selectedFiles) {
         try {
           // Upload file using FileService
-          const fileAttachment = await FileService.uploadFile(file, chatId, currentUser.uid);
-          
+          const fileAttachment = await FileService.uploadFile(file, chatId, currentUser.id);
+
           const newMessageRef = doc(messagesColRef);
           const timestamp = serverTimestamp();
 
           const messageData: any = {
             text: file.name,
-            senderId: currentUser.uid,
+            senderId: currentUser.id,
             timestamp: timestamp,
             isRead: false,
             type: file.type.startsWith('image/') ? 'image' : 'file',
@@ -241,6 +264,19 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
           console.log('Sending file message:', messageData);
 
           batch.set(newMessageRef, messageData);
+
+          // InsForge Sync (Individual File Message)
+          try {
+            const insforgeTimestamp = new Date();
+            const insforgeMessage = {
+              ...messageData,
+              chatId: chatId,
+              timestamp: insforgeTimestamp
+            };
+            await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
+          } catch (error) {
+            console.error("InsForge file message sync failed:", error);
+          }
         } catch (error: any) {
           console.error(`Error uploading file ${file.name}:`, error);
           toast({
@@ -255,13 +291,29 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       batch.update(chatRef, {
         lastMessage: {
           text: `${selectedFiles.length} فائلیں`,
-          senderId: currentUser.uid,
+          senderId: currentUser.id,
           timestamp: serverTimestamp(),
           isRead: false,
         }
       });
 
       await batch.commit();
+
+      // InsForge Sync (Chat UpdatedAt)
+      try {
+        const insforgeTimestamp = new Date();
+        await updateDocInInsforge('chats', chatId, {
+          lastMessage: {
+            text: `${selectedFiles.length} فائلیں`,
+            senderId: currentUser.id,
+            timestamp: insforgeTimestamp,
+            isRead: false,
+          },
+          updatedAt: insforgeTimestamp
+        });
+      } catch (error) {
+        console.error("InsForge last message sync failed:", error);
+      }
       setSelectedFiles([]); // Clear selected files
       onMessageSent?.();
       toast({ title: 'فائلیں بھیجی گئیں', description: `${selectedFiles.length} فائلیں کامیابی سے بھیجی گئیں` });
@@ -287,31 +339,44 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       for (const file of files) {
         try {
           // Upload file using FileService
-          const fileAttachment = await FileService.uploadFile(file, chatId, currentUser.uid);
+          const fileAttachment = await FileService.uploadFile(file, chatId, currentUser.id);
 
-        const newMessageRef = doc(messagesColRef);
-        const timestamp = serverTimestamp();
+          const newMessageRef = doc(messagesColRef);
+          const timestamp = serverTimestamp();
 
-        const messageData: any = {
-          text: file.name,
-          senderId: currentUser.uid,
-          timestamp: timestamp,
-          isRead: false,
+          const messageData: any = {
+            text: file.name,
+            senderId: currentUser.id,
+            timestamp: timestamp,
+            isRead: false,
             type: file.type.startsWith('image/') ? 'image' : 'file',
-          fileName: file.name,
-          fileSize: file.size,
+            fileName: file.name,
+            fileSize: file.size,
             fileType: file.type,
             fileId: fileAttachment.id // Reference to RTDB file
-        };
+          };
 
-        // Add type-specific properties
+          // Add type-specific properties
           if (file.type.startsWith('image/')) {
             messageData.imageUrl = `data:${file.type};base64,${fileAttachment.fileData}`;
-        } else {
+          } else {
             messageData.fileUrl = `data:${file.type};base64,${fileAttachment.fileData}`;
-        }
+          }
 
-        batch.set(newMessageRef, messageData);
+          batch.set(newMessageRef, messageData);
+
+          // InsForge Sync (Individual File Message)
+          try {
+            const insforgeTimestamp = new Date();
+            const insforgeMessage = {
+              ...messageData,
+              chatId: chatId,
+              timestamp: insforgeTimestamp
+            };
+            await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
+          } catch (error) {
+            console.error("InsForge file message sync failed:", error);
+          }
         } catch (error: any) {
           console.error(`Error uploading file ${file.name}:`, error);
           toast({
@@ -326,13 +391,29 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       batch.update(chatRef, {
         lastMessage: {
           text: `${files.length} فائلیں`,
-          senderId: currentUser.uid,
+          senderId: currentUser.id,
           timestamp: serverTimestamp(),
           isRead: false,
         }
       });
 
       await batch.commit();
+
+      // InsForge Sync (Chat UpdatedAt)
+      try {
+        const insforgeTimestamp = new Date();
+        await updateDocInInsforge('chats', chatId, {
+          lastMessage: {
+            text: `${files.length} فائلیں`,
+            senderId: currentUser.id,
+            timestamp: insforgeTimestamp,
+            isRead: false,
+          },
+          updatedAt: insforgeTimestamp
+        });
+      } catch (error) {
+        console.error("InsForge last message sync failed:", error);
+      }
       onMessageSent?.();
       toast({ title: `${files.length} فائلیں بھیجی گئیں` });
     } catch (error) {
@@ -346,15 +427,15 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   // Simple voice recording function
   const startVoiceRecording = useCallback(async () => {
     if (!currentUser) return;
-    
+
     try {
       setIsRecording(true);
       setRecordingDuration(0);
 
       // Use VoiceService to record
       const voiceMessage = await VoiceService.recordVoiceMessage(
-        chatId, 
-        currentUser.uid,
+        chatId,
+        currentUser.id,
         (duration) => setRecordingDuration(duration)
       );
 
@@ -364,10 +445,10 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       toast({ title: 'آواز کا پیغام بھیجا گیا' });
     } catch (error: any) {
       console.error("Error recording voice:", error);
-      toast({ 
-        variant: 'destructive', 
-        title: 'آواز ریکارڈ نہیں ہو سکی', 
-        description: error.message || 'مائیکروفون تک رسائی نہیں' 
+      toast({
+        variant: 'destructive',
+        title: 'آواز ریکارڈ نہیں ہو سکی',
+        description: error.message || 'مائیکروفون تک رسائی نہیں'
       });
     } finally {
       setIsRecording(false);
@@ -377,8 +458,8 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
   const stopVoiceRecording = useCallback(() => {
     VoiceService.stopRecording();
-      setIsRecording(false);
-      setRecordingDuration(0);
+    setIsRecording(false);
+    setRecordingDuration(0);
   }, []);
 
   // Simple file upload
@@ -394,13 +475,13 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
-    
+
     // Filter only image files
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     if (imageFiles.length > 0) {
       setSelectedFiles(prev => [...prev, ...imageFiles]);
     }
-    
+
     // Reset input value
     if (event.target) {
       event.target.value = '';
@@ -422,7 +503,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
         const { latitude, longitude } = position.coords;
         const locationText = `📍 مقام: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        
+
         const chatRef = doc(db, 'chats', chatId);
         const messagesColRef = collection(chatRef, 'messages');
         const newMessageRef = doc(messagesColRef);
@@ -432,24 +513,46 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
         const messageData = {
           text: locationText,
-          senderId: currentUser?.uid,
+          senderId: currentUser?.id,
           timestamp: timestamp,
           isRead: false,
           type: 'location',
           location: { latitude, longitude }
         };
-        
+
         batch.set(newMessageRef, messageData);
         batch.update(chatRef, {
           lastMessage: {
             text: '📍 مقام شیئر کیا گیا',
-            senderId: currentUser?.uid,
+            senderId: currentUser?.id,
             timestamp: timestamp,
             isRead: false,
           }
         });
 
         await batch.commit();
+
+        // InsForge Sync (Location)
+        try {
+          const insforgeTimestamp = new Date();
+          const insforgeMessage = {
+            ...messageData,
+            chatId: chatId,
+            timestamp: insforgeTimestamp
+          };
+          await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
+          await updateDocInInsforge('chats', chatId, {
+            lastMessage: {
+              text: '📍 مقام شیئر کیا گیا',
+              senderId: currentUser?.id,
+              timestamp: insforgeTimestamp,
+              isRead: false,
+            },
+            updatedAt: insforgeTimestamp
+          });
+        } catch (error) {
+          console.error("InsForge location share sync failed:", error);
+        }
         onMessageSent?.();
         toast({ title: 'مقام شیئر کیا گیا' });
       } catch (error) {
@@ -464,10 +567,10 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   // Simple contact sharing
   const handleContactShare = async () => {
     if (!currentUser) return;
-    
+
     try {
       const contactText = `👤 رابطہ: ${currentUser.displayName || 'نامعلوم'}\n📧 ای میل: ${currentUser.email || 'نامعلوم'}`;
-      
+
       const chatRef = doc(db, 'chats', chatId);
       const messagesColRef = collection(chatRef, 'messages');
       const newMessageRef = doc(messagesColRef);
@@ -477,23 +580,45 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
       const messageData = {
         text: contactText,
-        senderId: currentUser.uid,
+        senderId: currentUser.id,
         timestamp: timestamp,
         isRead: false,
         type: 'contact'
       };
-      
+
       batch.set(newMessageRef, messageData);
       batch.update(chatRef, {
         lastMessage: {
           text: '👤 رابطہ شیئر کیا گیا',
-          senderId: currentUser.uid,
+          senderId: currentUser.id,
           timestamp: timestamp,
           isRead: false,
         }
       });
 
       await batch.commit();
+
+      // InsForge Sync (Contact)
+      try {
+        const insforgeTimestamp = new Date();
+        const insforgeMessage = {
+          ...messageData,
+          chatId: chatId,
+          timestamp: insforgeTimestamp
+        };
+        await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
+        await updateDocInInsforge('chats', chatId, {
+          lastMessage: {
+            text: '👤 رابطہ شیئر کیا گیا',
+            senderId: currentUser.id,
+            timestamp: insforgeTimestamp,
+            isRead: false,
+          },
+          updatedAt: insforgeTimestamp
+        });
+      } catch (error) {
+        console.error("InsForge contact share sync failed:", error);
+      }
       onMessageSent?.();
       toast({ title: 'رابطہ شیئر کیا گیا' });
     } catch (error) {
@@ -510,19 +635,19 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   // WebRTC call handling
   const handleVideoCall = async () => {
     if (!remoteUserId) {
-      toast({ 
+      toast({
         variant: 'destructive',
-        title: 'خرابی', 
-        description: 'رابطہ کا ID دستیاب نہیں ہے' 
+        title: 'خرابی',
+        description: 'رابطہ کا ID دستیاب نہیں ہے'
       });
       return;
     }
 
     if (!currentUser) {
-      toast({ 
+      toast({
         variant: 'destructive',
-        title: 'خرابی', 
-        description: 'آپ لاگ ان نہیں ہیں' 
+        title: 'خرابی',
+        description: 'آپ لاگ ان نہیں ہیں'
       });
       return;
     }
@@ -535,29 +660,29 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       });
     } catch (error: any) {
       console.error('Error initiating video call:', error);
-      toast({ 
+      toast({
         variant: 'destructive',
-        title: 'خرابی', 
-        description: error.message || 'ویڈیو کال شروع نہیں ہو سکی' 
+        title: 'خرابی',
+        description: error.message || 'ویڈیو کال شروع نہیں ہو سکی'
       });
     }
   };
 
   const handleVoiceCall = async () => {
     if (!remoteUserId) {
-      toast({ 
+      toast({
         variant: 'destructive',
-        title: 'خرابی', 
-        description: 'رابطہ کا ID دستیاب نہیں ہے' 
+        title: 'خرابی',
+        description: 'رابطہ کا ID دستیاب نہیں ہے'
       });
       return;
     }
 
     if (!currentUser) {
-      toast({ 
+      toast({
         variant: 'destructive',
-        title: 'خرابی', 
-        description: 'آپ لاگ ان نہیں ہیں' 
+        title: 'خرابی',
+        description: 'آپ لاگ ان نہیں ہیں'
       });
       return;
     }
@@ -570,10 +695,10 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       });
     } catch (error: any) {
       console.error('Error initiating voice call:', error);
-      toast({ 
+      toast({
         variant: 'destructive',
-        title: 'خرابی', 
-        description: error.message || 'وائس کال شروع نہیں ہو سکی' 
+        title: 'خرابی',
+        description: error.message || 'وائس کال شروع نہیں ہو سکی'
       });
     }
   };
@@ -600,7 +725,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
       const messageData = {
         text: 'آواز کا پیغام',
-        senderId: currentUser.uid,
+        senderId: currentUser.id,
         timestamp: timestamp,
         isRead: false,
         type: 'voice',
@@ -608,18 +733,40 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         duration: voiceMessage.duration,
         voiceMessageId: voiceMessage.id // Reference to RTDB voice message
       };
-      
+
       batch.set(newMessageRef, messageData);
       batch.update(chatRef, {
         lastMessage: {
           text: 'آواز کا پیغام',
-          senderId: currentUser.uid,
+          senderId: currentUser.id,
           timestamp: timestamp,
           isRead: false,
         }
       });
 
       await batch.commit();
+
+      // InsForge Sync (Voice)
+      try {
+        const insforgeTimestamp = new Date();
+        const insforgeMessage = {
+          ...messageData,
+          chatId: chatId,
+          timestamp: insforgeTimestamp
+        };
+        await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
+        await updateDocInInsforge('chats', chatId, {
+          lastMessage: {
+            text: 'آواز کا پیغام',
+            senderId: currentUser.id,
+            timestamp: insforgeTimestamp,
+            isRead: false,
+          },
+          updatedAt: insforgeTimestamp
+        });
+      } catch (error) {
+        console.error("InsForge voice message sync failed:", error);
+      }
       onMessageSent?.();
       toast({ title: 'آواز کا پیغام بھیجا گیا' });
     } catch (error) {
@@ -638,7 +785,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   return (
-    <div 
+    <div
       className={cn(
         "border-t bg-background p-4 transition-all duration-200",
         isDragOver && "bg-blue-50 dark:bg-blue-950/20 border-blue-300"
@@ -662,7 +809,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         <Label htmlFor="message-input" className="sr-only">
           ایک پیغام لکھیں
         </Label>
-        
+
         {/* File Preview Cards */}
         {selectedFiles.length > 0 && (
           <div className="absolute bottom-full left-0 right-0 mb-2 p-2 bg-background border rounded-lg shadow-lg">
@@ -701,15 +848,15 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
             </div>
           </div>
         )}
-        
+
         {/* Mobile Features */}
         {isMobile && (
           <>
             <Popover open={showFeatures} onOpenChange={setShowFeatures}>
               <PopoverTrigger asChild>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
+                <Button
+                  type="button"
+                  variant="ghost"
                   size="icon"
                   className="h-10 w-10 shrink-0"
                 >
@@ -821,7 +968,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         {!isMobile && (
           <>
             <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-            
+
             <Button
               type="button"
               variant="ghost"
@@ -833,7 +980,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
             >
               <Paperclip className="h-5 w-5" />
             </Button>
-            
+
             <Button
               type="button"
               variant="ghost"
@@ -844,7 +991,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
             >
               <Scissors className="h-5 w-5" />
             </Button>
-            
+
             <Button
               type="button"
               variant="ghost"
@@ -856,7 +1003,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
             >
               <Mic className="h-5 w-5" />
             </Button>
-            
+
             {remoteUserId && (
               <>
                 <Button
@@ -870,7 +1017,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
                 >
                   <Phone className="h-5 w-5" />
                 </Button>
-                
+
                 <Button
                   type="button"
                   variant="ghost"
@@ -896,7 +1043,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
           autoComplete="off"
           className="text-base flex-1"
         />
-        
+
         <Button type="submit" className="shrink-0" disabled={isUploading}>
           <SendHorizonal className="h-5 w-5" />
           <span className="sr-only">پیغام بھیجیں</span>
@@ -924,7 +1071,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         onChange={handleFileUpload}
         accept=".pdf,.doc,.docx,.txt,.zip,.rar,.mp3,.mp4,.avi,.mov,.png,.jpg,.jpeg,.gif"
       />
-      
+
       <input
         ref={cameraInputRef}
         type="file"

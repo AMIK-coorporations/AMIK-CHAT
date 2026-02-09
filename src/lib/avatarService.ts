@@ -53,7 +53,7 @@ async function uploadWithResumableThenFallback(
 		const stall = setTimeout(async () => {
 			// If still stuck <=5%, cancel and fallback
 			if (!settled && lastPct <= 5) {
-				try { task.cancel(); } catch {}
+				try { task.cancel(); } catch { }
 				try {
 					const snap = await uploadBytes(storageRef, blob, { contentType: 'image/webp' });
 					const url = await getDownloadURL(snap.ref);

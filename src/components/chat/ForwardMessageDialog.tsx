@@ -39,12 +39,12 @@ export default function ForwardMessageDialog({ message, onClose, onForward }: Fo
       setSearchTerm('');
     }
   }, [message]);
-  
+
   useEffect(() => {
     if (!open || !currentUser) return;
-    
+
     setLoading(true);
-    const contactsColRef = collection(db, 'users', currentUser.uid, 'contacts');
+    const contactsColRef = collection(db, 'users', currentUser.id, 'contacts');
     const unsubscribe = onSnapshot(contactsColRef, async (snapshot) => {
       try {
         if (snapshot.empty) {
@@ -63,26 +63,29 @@ export default function ForwardMessageDialog({ message, onClose, onForward }: Fo
       } finally {
         setLoading(false);
       }
+    }, (error) => {
+      console.error("Error fetching contacts for forwarding (listener):", error);
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [open, currentUser]);
+  }, [open, currentUser?.id]);
 
   const handleToggleContact = (contactId: string) => {
-    setSelectedContacts(prev => 
-      prev.includes(contactId) 
+    setSelectedContacts(prev =>
+      prev.includes(contactId)
         ? prev.filter(id => id !== contactId)
         : [...prev, contactId]
     );
   };
-  
+
   const handleForwardClick = async () => {
-      setIsForwarding(true);
-      await onForward(selectedContacts);
-      setIsForwarding(false);
+    setIsForwarding(true);
+    await onForward(selectedContacts);
+    setIsForwarding(false);
   }
 
-  const filteredContacts = contacts.filter(contact => 
+  const filteredContacts = contacts.filter(contact =>
     (contact.name ?? (contact as any).displayName ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -93,50 +96,50 @@ export default function ForwardMessageDialog({ message, onClose, onForward }: Fo
           <DialogTitle>پیغام فارورڈ کریں</DialogTitle>
         </DialogHeader>
         <div className="relative">
-            <Input 
-                placeholder="رابطے تلاش کریں..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <Input
+            placeholder="رابطے تلاش کریں..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
         <ScrollArea className="flex-1 -mx-6">
           <div className="px-6">
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <Skeleton className="h-5 flex-1" />
-                </div>
-              ))}
-            </div>
-          ) : filteredContacts.length > 0 ? (
-            filteredContacts.map(contact => (
-              <div
-                key={contact.id}
-                onClick={() => handleToggleContact(contact.id)}
-                className="flex items-center gap-4 p-2 -mx-2 rounded-md hover:bg-muted/50 cursor-pointer"
-              >
-                <Checkbox 
+            {loading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <Skeleton className="h-5 flex-1" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredContacts.length > 0 ? (
+              filteredContacts.map(contact => (
+                <div
+                  key={contact.id}
+                  onClick={() => handleToggleContact(contact.id)}
+                  className="flex items-center gap-4 p-2 -mx-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                >
+                  <Checkbox
                     id={`contact-${contact.id}`}
                     checked={selectedContacts.includes(contact.id)}
                     onCheckedChange={() => handleToggleContact(contact.id)}
-                />
-                <Avatar className="h-10 w-10 border">
-                  <AvatarImage src={(contact as any).avatarUrl ?? (contact as any).photoURL ?? ''} alt={(contact as any).name ?? (contact as any).displayName ?? ''} data-ai-hint="person avatar" />
-                  <AvatarFallback>{((contact as any).name ?? (contact as any).displayName ?? '?').charAt(0)}</AvatarFallback>
-                </Avatar>
-                <Label htmlFor={`contact-${contact.id}`} className="font-semibold flex-1 cursor-pointer">{(contact as any).name ?? (contact as any).displayName ?? 'Unknown'}</Label>
-              </div>
-            ))
-          ) : (
-            <p className="p-4 text-center text-muted-foreground">کوئی رابطہ نہیں ملا۔</p>
-          )}
+                  />
+                  <Avatar className="h-10 w-10 border">
+                    <AvatarImage src={(contact as any).avatarUrl ?? (contact as any).photoURL ?? ''} alt={(contact as any).name ?? (contact as any).displayName ?? ''} data-ai-hint="person avatar" />
+                    <AvatarFallback>{((contact as any).name ?? (contact as any).displayName ?? '?').charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <Label htmlFor={`contact-${contact.id}`} className="font-semibold flex-1 cursor-pointer">{(contact as any).name ?? (contact as any).displayName ?? 'Unknown'}</Label>
+                </div>
+              ))
+            ) : (
+              <p className="p-4 text-center text-muted-foreground">کوئی رابطہ نہیں ملا۔</p>
+            )}
           </div>
         </ScrollArea>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>منسوخ کریں</Button>
-          <Button 
+          <Button
             onClick={handleForwardClick}
             disabled={selectedContacts.length === 0 || isForwarding}
           >

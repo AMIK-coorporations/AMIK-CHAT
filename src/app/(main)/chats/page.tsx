@@ -24,9 +24,9 @@ export default function ChatsPage() {
   // Filter chats based on search term
   const filteredChats = chats.filter(chat => {
     if (!currentUser) return false;
-    const otherParticipantId = chat.participantIds?.find(id => id !== currentUser.uid);
+    const otherParticipantId = chat.participantIds?.find(id => id !== currentUser.id);
     // If self chat
-    const targetId = otherParticipantId || currentUser.uid;
+    const targetId = otherParticipantId || currentUser.id;
 
     const participantInfo = chat.participantsInfo?.[targetId];
     if (!participantInfo) return false;
@@ -88,7 +88,7 @@ export default function ChatsPage() {
           <LoadingOverlay message="چیٹ لوڈ ہو رہی ہے..." />
         ) : filteredChats.length > 0 ? (
           filteredChats.map(chat => (
-            currentUser && <ChatRow key={chat.id} chat={chat} currentUserId={currentUser.uid} />
+            currentUser && <ChatRow key={chat.id} chat={chat} currentUserId={currentUser.id} />
           ))
         ) : (
           <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground h-full space-y-4">

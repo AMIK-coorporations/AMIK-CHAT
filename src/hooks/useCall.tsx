@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { callService, type CallState } from '@/lib/callService';
 import { useToast } from './use-toast';
-import { doc, getDoc } from 'firebase/firestore';
+import { getDocWithRetry } from '@/lib/firestoreUtils';
+import { doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { User } from '@/lib/types';
 
@@ -49,9 +50,8 @@ export function useCall() {
       async (callData) => {
         try {
           // Get caller's user data
-          const callerDoc = await getDoc(doc(db, 'users', callData.from));
-          const callerData = callerDoc.exists() ? callerDoc.data() as User : null;
-          
+          const callerData = await getDocWithRetry<User>(doc(db, 'users', callData.from));
+
           setCallData({
             isIncoming: true,
             isOutgoing: false,
@@ -86,7 +86,7 @@ export function useCall() {
     return () => {
       callService.destroy();
     };
-  }, [currentUser, toast]);
+  }, [currentUser?.id, toast]);
 
   const initiateCall = useCallback(async (remoteUserId: string, isVideo: boolean) => {
     if (!currentUser) {
@@ -100,11 +100,10 @@ export function useCall() {
 
     try {
       // Get remote user's data
-      const remoteUserDoc = await getDoc(doc(db, 'users', remoteUserId));
-      const remoteUserData = remoteUserDoc.exists() ? remoteUserDoc.data() as User : null;
+      const remoteUserData = await getDocWithRetry<User>(doc(db, 'users', remoteUserId));
 
-      const callId = await callService.initiateCall(remoteUserId, isVideo, currentUser.uid);
-      
+      const callId = await callService.initiateCall(remoteUserId, isVideo, currentUser.id);
+
       setCallData({
         isIncoming: false,
         isOutgoing: true,
@@ -134,8 +133,8 @@ export function useCall() {
     if (!currentUser || !callData?.callId) return;
 
     try {
-      await callService.acceptCall(callData.callId, currentUser.uid);
-      
+      await callService.acceptCall(callData.callId, currentUser.id);
+
       setCallData(prev => prev ? {
         ...prev,
         isIncoming: false,
@@ -160,10 +159,10 @@ export function useCall() {
     if (!currentUser || !callData?.callId) return;
 
     try {
-      await callService.rejectCall(callData.callId, currentUser.uid);
+      await callService.rejectCall(callData.callId, currentUser.id);
       setCallData(null);
       setIsCallActive(false);
-      
+
       toast({
         title: 'کال مسترد کر دی گئی',
         description: 'کال مسترد کر دی گئی ہے',
@@ -178,7 +177,7 @@ export function useCall() {
       await callService.endCall();
       setCallData(null);
       setIsCallActive(false);
-      
+
       toast({
         title: 'کال ختم کر دی گئی',
         description: 'کال ختم کر دی گئی ہے',

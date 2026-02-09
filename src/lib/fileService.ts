@@ -33,7 +33,7 @@ export class FileService {
 
     // Convert file to base64
     const base64Data = await this.fileToBase64(file);
-    
+
     const fileAttachment: Omit<FileAttachment, 'id'> = {
       fileName: file.name,
       fileType: file.type,
@@ -56,7 +56,7 @@ export class FileService {
     try {
       const fileRef = ref(rtdb, `files/${chatId}/${fileId}`);
       const snapshot = await get(fileRef);
-      
+
       if (snapshot.exists()) {
         return { id: fileId, ...snapshot.val() } as FileAttachment;
       }
@@ -95,11 +95,11 @@ export class FileService {
   static base64ToBlob(base64: string, mimeType: string): Blob {
     const byteCharacters = atob(base64);
     const byteNumbers = new Array(byteCharacters.length);
-    
+
     for (let i = 0; i < byteCharacters.length; i++) {
       byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
-    
+
     const byteArray = new Uint8Array(byteNumbers);
     return new Blob([byteArray], { type: mimeType });
   }

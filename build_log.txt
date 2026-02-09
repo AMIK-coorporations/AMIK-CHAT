@@ -1,0 +1,163 @@
+﻿
+> nextn@0.1.0 build C:\Users\Track Computers\Desktop\AMIK CHAT DOWNLOADES
+> next build
+
+  Γû▓ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+node.exe : Failed to 
+compile.
+At C:\Users\Track Computer
+s\AppData\Roaming\npm\pnpm
+.ps1:24 char:5
++     & "node$exe"  "$base
+dir/node_modules/pnpm/bin/
+pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpe    cified: 
+(Failed     to 
+compile.:Stri    ng) [], 
+RemoteEx    ception
+    + FullyQualified    
+ErrorId : Native    
+CommandError
+ 
+
+./src/app/(main)/contacts/
+page.tsx
+Error: 
+  [31mx[0m the name 
+`acceptContactRequest` is 
+defined multiple times
+    ,-[[36;1;4mC:\Users\T
+rack 
+Computers\Desktop\AMIK 
+CHAT DOWNLOADES\src\app\(m
+ain)\contacts\page.tsx[0m
+:17:1]
+ [2m17[0m | import { 
+createOrNavigateToChat } 
+from '@/lib/chatUtils';
+ [2m18[0m | import { 
+DropdownMenu, 
+DropdownMenuContent, 
+DropdownMenuItem, 
+DropdownMenuTrigger } 
+from '@/components/ui/drop
+down-menu';
+ [2m19[0m | import { 
+Tabs, TabsContent, 
+TabsList, TabsTrigger } 
+from 
+'@/components/ui/tabs';
+ [2m20[0m | import { 
+acceptContactRequest, 
+rejectContactRequest } 
+from '@/lib/contactRequest
+Service';
+    : [31;1m         
+^^^^^^^^^^|^^^^^^^^^[0m
+    :                    
+[31;1m`-- 
+[31;1mprevious 
+definition of 
+`acceptContactRequest` 
+here[0m[0m
+ [2m21[0m | import { 
+acceptContactRequest, 
+rejectContactRequest } 
+from '@/lib/contactRequest
+Service';
+    : [33;1m         
+^^^^^^^^^^|^^^^^^^^^[0m
+    :                    
+[33;1m`-- [33;1m`acceptC
+ontactRequest` redefined 
+here[0m[0m
+ [2m22[0m | 
+ [2m23[0m | function 
+ContactItem({ contact, 
+onClick, isCreatingChat 
+}: { contact: User; 
+onClick: () => void; 
+isCreatingChat: boolean; 
+}) {
+ [2m23[0m |   return (
+    `----
+
+  [31mx[0m the name 
+`rejectContactRequest` is 
+defined multiple times
+    ,-[[36;1;4mC:\Users\T
+rack 
+Computers\Desktop\AMIK 
+CHAT DOWNLOADES\src\app\(m
+ain)\contacts\page.tsx[0m
+:17:1]
+ [2m17[0m | import { 
+createOrNavigateToChat } 
+from '@/lib/chatUtils';
+ [2m18[0m | import { 
+DropdownMenu, 
+DropdownMenuContent, 
+DropdownMenuItem, 
+DropdownMenuTrigger } 
+from '@/components/ui/drop
+down-menu';
+ [2m19[0m | import { 
+Tabs, TabsContent, 
+TabsList, TabsTrigger } 
+from 
+'@/components/ui/tabs';
+ [2m20[0m | import { 
+acceptContactRequest, 
+rejectContactRequest } 
+from '@/lib/contactRequest
+Service';
+    : [31;1m             
+                  
+^^^^^^^^^^|^^^^^^^^^[0m
+    :                     
+                     
+[31;1m`-- 
+[31;1mprevious 
+definition of 
+`rejectContactRequest` 
+here[0m[0m
+ [2m21[0m | import { 
+acceptContactRequest, 
+rejectContactRequest } 
+from '@/lib/contactRequest
+Service';
+    : [33;1m             
+                  
+^^^^^^^^^^|^^^^^^^^^[0m
+    :                     
+                     
+[33;1m`-- [33;1m`rejectC
+ontactRequest` redefined 
+here[0m[0m
+ [2m22[0m | 
+ [2m23[0m | function 
+ContactItem({ contact, 
+onClick, isCreatingChat 
+}: { contact: User; 
+onClick: () => void; 
+isCreatingChat: boolean; 
+}) {
+ [2m23[0m |   return (
+    `----
+
+Import trace for 
+requested module:
+./src/app/(main)/contacts/
+page.tsx
+
+
+> Build failed because of 
+webpack errors
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

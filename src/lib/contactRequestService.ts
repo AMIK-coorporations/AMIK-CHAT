@@ -1,5 +1,6 @@
 import { collection, doc, getDoc, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { setDocInInsforge, getDocFromInsforge, updateDocInInsforge } from './insforgeUtils';
 import type { ContactRequest, User } from '@/lib/types';
 import { createOrNavigateToChat } from './chatUtils';
 
@@ -96,6 +97,25 @@ export const sendContactRequest = async ({
 
   await batch.commit();
 
+  // InsForge Sync
+  try {
+    const requestData = {
+      fromUserId: senderId,
+      toUserId: targetUserId,
+      fromName: senderInfo.name,
+      toName: targetInfo.name,
+      fromAvatarUrl: senderInfo.avatarUrl,
+      toAvatarUrl: targetInfo.avatarUrl,
+      status: 'pending' as const,
+      updatedAt: new Date(),
+    };
+    // We only need one record in InsForge for both directions if we query by from_user_id or to_user_id
+    // But since the IDs might conflict if we use doc ID, we'll use a composite ID
+    await setDocInInsforge('contact_requests', `${senderId}_${targetUserId}`, requestData);
+  } catch (error) {
+    console.error("InsForge sendContactRequest sync failed:", error);
+  }
+
   return { targetName: targetInfo.name };
 };
 
@@ -148,6 +168,30 @@ export const acceptContactRequest = async ({
 
   await batch.commit();
 
+  // InsForge Sync (Accept)
+  try {
+    const timestamp = new Date();
+    await setDocInInsforge('user_contacts', `${currentUserId}_${otherUserId}`, {
+      userId: currentUserId,
+      contactId: otherUserId,
+      contactName: otherUser.name ?? otherUser.displayName ?? 'Unknown User',
+      contactAvatarUrl: otherUser.avatarUrl ?? otherUser.photoURL ?? '',
+      addedAt: timestamp
+    });
+    await setDocInInsforge('user_contacts', `${otherUserId}_${currentUserId}`, {
+      userId: otherUserId,
+      contactId: currentUserId,
+      contactName: currentUserProfile.name ?? currentUserProfile.displayName ?? 'Unknown User',
+      contactAvatarUrl: currentUserProfile.avatarUrl ?? (currentUserProfile as any).photoURL ?? '',
+      addedAt: timestamp
+    });
+    // For contact requests, we use a consistent ID format
+    const reqId1 = currentUserId < otherUserId ? `${currentUserId}_${otherUserId}` : `${otherUserId}_${currentUserId}`;
+    await updateDocInInsforge('contact_requests', reqId1, { status: 'accepted', updatedAt: timestamp });
+  } catch (error) {
+    console.error("InsForge acceptContactRequest sync failed:", error);
+  }
+
   const chatId = await createOrNavigateToChat(currentUserId, currentUserProfile, otherUser);
 
   // Send automated acceptance message
@@ -198,6 +242,15 @@ export const rejectContactRequest = async ({
   }, { merge: true });
 
   await batch.commit();
+
+  // InsForge Sync (Reject)
+  try {
+    const timestamp = new Date();
+    const reqId = currentUserId < otherUserId ? `${currentUserId}_${otherUserId}` : `${otherUserId}_${currentUserId}`;
+    await updateDocInInsforge('contact_requests', reqId, { status: 'rejected', updatedAt: timestamp });
+  } catch (error) {
+    console.error("InsForge rejectContactRequest sync failed:", error);
+  }
 };
 
 

@@ -1,19 +1,17 @@
-
 "use client";
 
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState, useRef, cloneElement } from "react";
+import { useEffect, useState, useRef } from "react";
 import type React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
 import type { Chat } from "@/lib/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { MiniProgramsTopSheet } from "@/components/MiniProgramsTopSheet";
 import { ChatProvider } from "@/context/ChatContext";
+import { onSnapshotFromInsforge, getQueryFromInsforge } from "@/lib/insforgeUtils";
 
 export default function MainAppLayout({
   children,
@@ -28,17 +26,11 @@ export default function MainAppLayout({
 
   const [chats, setChats] = useState<Chat[]>([]);
   const [chatsLoading, setChatsLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [miniOpen, setMiniOpen] = useState(false);
   const mainRef = useRef<HTMLDivElement | null>(null);
   const pullStartYRef = useRef<number | null>(null);
   const [isPulling, setIsPulling] = useState(false);
-
-  // Redirect removed for public access
-  // useEffect(() => {
-  //   if (!authLoading && !user) {
-  //     router.replace("/login");
-  //   }
-  // }, [user, authLoading, router]);
 
   useEffect(() => {
     if (!user) {
@@ -46,137 +38,89 @@ export default function MainAppLayout({
       return;
     }
 
-    const chatsQuery = query(
-      collection(db, "chats"),
-      where("participantIds", "array-contains", user.uid)
-    );
-
-    // Set loading timeout (20 seconds)
-    let loadingTimeout: NodeJS.Timeout | null = setTimeout(() => {
-      if (chatsLoading) {
-        setChatsLoading(false);
-        console.warn('Chats loading timeout');
-      }
-    }, 20000);
-
-    const unsubscribe = onSnapshot(
-      chatsQuery,
-      (snapshot) => {
-        if (loadingTimeout) {
-          clearTimeout(loadingTimeout);
-          loadingTimeout = null;
-        }
+    const fetchChats = async () => {
+      // Only show loading on initial load
+      if (!initialLoadComplete) {
         setChatsLoading(true);
-        const chatsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Chat[];
+      }
+      try {
+        // Equivalent of array-contains in InsForge (PostgreSQL)
+        const data = await getQueryFromInsforge<Chat>('chats', (q) =>
+          q.filter('participant_ids', 'cs', `{"${user.id}"}`)
+        );
 
-        chatsData.sort((a, b) => {
-          const t1: any = a.lastMessage?.timestamp as any;
-          const c1: any = a.createdAt as any;
-          const t2: any = b.lastMessage?.timestamp as any;
-          const c2: any = b.createdAt as any;
-          const timeA =
-            typeof t1?.toDate === "function"
-              ? t1.toDate().getTime()
-              : typeof c1?.toDate === "function"
-                ? c1.toDate().getTime()
-                : 0;
-          const timeB =
-            typeof t2?.toDate === "function"
-              ? t2.toDate().getTime()
-              : typeof c2?.toDate === "function"
-                ? c2.toDate().getTime()
-                : 0;
+        const chatsData = data || [];
+        chatsData.sort((a: any, b: any) => {
+          const timeA = new Date(a.lastMessage?.timestamp || a.createdAt || 0).getTime();
+          const timeB = new Date(b.lastMessage?.timestamp || b.createdAt || 0).getTime();
           return timeB - timeA;
         });
-
         setChats(chatsData);
+      } catch (error) {
+        console.error("Failed to fetch chats from InsForge:", error);
+      } finally {
+        setChatsLoading(false);
+        setInitialLoadComplete(true);
+      }
+    };
 
-        snapshot.docChanges().forEach(async (change) => {
-          if (change.type === "added" || change.type === "modified") {
-            const chat = change.doc.data() as Chat;
-            const chatId = change.doc.id;
-            const { lastMessage } = chat;
+    fetchChats();
 
-            const isViewingChat = pathname === `/chats/${chatId}`;
+    // Subscribe to REALTIME chat updates
+    const unsubscribe = onSnapshotFromInsforge(`chats:*`, '*', (payload) => {
+      if (payload?.participant_ids?.includes(user.id)) {
+        setChats(prev => {
+          const index = prev.findIndex(c => c.id === payload.id);
+          let newList = [...prev];
+          if (index >= 0) {
+            newList[index] = { ...newList[index], ...payload };
+          } else {
+            newList.push(payload);
+          }
 
-            if (
-              lastMessage &&
-              lastMessage.senderId !== user.uid &&
-              !lastMessage.isRead &&
-              !isViewingChat
-            ) {
-              const ts: any = lastMessage.timestamp as any;
-              const messageTimestamp =
-                typeof ts?.toMillis === "function" ? ts.toMillis() : Date.now();
-              const messageKey = `${chatId}-${messageTimestamp}`;
+          const chat = payload as Chat;
+          const lastMessage = chat.lastMessage;
+          const isViewingChat = pathname === `/chats/${chat.id}`;
 
-              if (notifiedMessageKeys.current.has(messageKey)) {
-                return;
-              }
+          if (lastMessage && lastMessage.senderId !== user.id && !lastMessage.isRead && !isViewingChat) {
+            const messageKey = `${chat.id}-${lastMessage.timestamp}`;
+            if (!notifiedMessageKeys.current.has(messageKey)) {
               notifiedMessageKeys.current.add(messageKey);
-
               const senderInfo = chat.participantsInfo?.[lastMessage.senderId];
-              if (!senderInfo) return;
-
               const toastId = `new-message-${messageKey}`;
 
               toast({
                 id: toastId,
-                className:
-                  "bg-primary text-primary-foreground p-2 rounded-full cursor-pointer w-auto max-w-[320px] shadow-lg data-[state=open]:sm:slide-in-from-bottom-full",
-                duration: 6000,
                 description: (
-                  <div
-                    className="flex items-center gap-2"
-                    onClick={() => {
-                      router.push(`/chats/${chatId}`);
-                      dismiss(toastId);
-                    }}
-                  >
+                  <div className="flex items-center gap-2 cursor-pointer" onClick={() => { router.push(`/chats/${chat.id}`); dismiss(toastId); }}>
                     <Avatar className="h-8 w-8 border">
-                      <AvatarImage
-                        src={senderInfo.avatarUrl}
-                        alt={senderInfo.name}
-                        data-ai-hint="person avatar"
-                      />
-                      <AvatarFallback>{senderInfo.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={senderInfo?.avatarUrl} />
+                      <AvatarFallback>{senderInfo?.name?.charAt(0) || '?'}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
-                      <p className="font-semibold truncate">{senderInfo.name}</p>
-                      <p className="text-sm truncate">{lastMessage.text}</p>
+                      <p className="font-semibold truncate text-primary">{senderInfo?.name || 'New Message'}</p>
+                      <p className="text-sm truncate opacity-80">{lastMessage.text}</p>
                     </div>
                   </div>
                 ),
+                duration: 5000,
               });
             }
           }
-        });
-        setChatsLoading(false);
-      },
-      (error) => {
-        if (loadingTimeout) {
-          clearTimeout(loadingTimeout);
-          loadingTimeout = null;
-        }
-        console.error("Firestore permission error in main layout:", error);
-        setChatsLoading(false);
-        if (error.code === "permission-denied") {
-          toast({
-            variant: "destructive",
-            title: "اجازت کی خرابی",
-            description:
-              "چیٹ کی فہرست لوڈ نہیں ہو سکی۔ براہ کرم 'chats' کلیکشن سے استفسار کی اجازت دینے کے لیے اپنے Firestore سیکیورٹی قوانین کو چیک کریں۔",
-            duration: 10000,
-          });
-        }
-      }
-    );
 
-    return () => unsubscribe();
-  }, [user, pathname, router, toast, dismiss]);
+          return newList.sort((a: any, b: any) => {
+            const timeA = new Date(a.lastMessage?.timestamp || a.createdAt || 0).getTime();
+            const timeB = new Date(b.lastMessage?.timestamp || b.createdAt || 0).getTime();
+            return timeB - timeA;
+          });
+        });
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [user?.id, pathname, router, toast, dismiss]);
 
   const handleMainTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const el = mainRef.current;
@@ -205,10 +149,10 @@ export default function MainAppLayout({
 
   if (authLoading || !user) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center p-4">
         <div className="w-full max-w-sm space-y-4">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-12 w-3/4 mx-auto" />
+          <Skeleton className="h-[400px] w-full" />
           <Skeleton className="h-12 w-full" />
         </div>
       </div>
@@ -216,12 +160,12 @@ export default function MainAppLayout({
   }
 
   return (
-    <div className="relative mx-auto flex h-screen max-w-2xl flex-col bg-background">
-      <ChatProvider value={{ chats, loading: chatsLoading }}>
+    <div className="relative mx-auto flex h-screen max-w-2xl flex-col bg-background overflow-hidden">
+      <ChatProvider value={{ chats, loading: chatsLoading && !initialLoadComplete }}>
         <MiniProgramsTopSheet open={miniOpen} onOpenChange={setMiniOpen} />
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto pb-20"
+          className="flex-1 overflow-y-auto pb-20 scroll-smooth"
           onTouchStart={handleMainTouchStart}
           onTouchMove={handleMainTouchMove}
           onTouchEnd={handleMainTouchEnd}
@@ -233,4 +177,3 @@ export default function MainAppLayout({
     </div>
   );
 }
-

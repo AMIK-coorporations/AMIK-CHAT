@@ -35,8 +35,8 @@ export default function ChatMessageActions({
 
   if (!message || !currentUser) return null;
 
-  const isSentByMe = message.senderId === currentUser?.uid;
-  const isDeletedForMe = message.deletedFor?.[currentUser.uid] || false;
+  const isSentByMe = message.senderId === currentUser?.id;
+  const isDeletedForMe = message.deletedFor?.[currentUser.id] || false;
 
   const reactions = ["👍", "❤️", "😂", "😯", "😢", "🙏"];
 
@@ -50,9 +50,9 @@ export default function ChatMessageActions({
   const handleShare = async () => {
     try {
       // Detect if running in mobile app (WebView)
-      const isMobileApp = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && 
-                         (window as any).Android !== undefined || 
-                         (window as any).webkit?.messageHandlers !== undefined;
+      const isMobileApp = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) &&
+        (window as any).Android !== undefined ||
+        (window as any).webkit?.messageHandlers !== undefined;
 
       // Prepare share content
       let shareText = message.text || '';
@@ -123,7 +123,7 @@ export default function ChatMessageActions({
           const response = await fetch(message.imageUrl);
           const blob = await response.blob();
           const file = new File([blob], message.fileName || 'image.jpg', { type: blob.type });
-          
+
           if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
               files: [file],
@@ -176,7 +176,7 @@ export default function ChatMessageActions({
         // Create a data URI or use tel: or sms: schemes
         const encodedText = encodeURIComponent(shareText);
         const encodedUrl = shareUrl ? encodeURIComponent(shareUrl) : '';
-        
+
         // Try opening share via intent URL (Android)
         if (/Android/i.test(navigator.userAgent)) {
           const intentUrl = `intent://send?text=${encodedText}${encodedUrl ? `&url=${encodedUrl}` : ''}#Intent;scheme=android.intent;action=android.intent.action.SEND;type=text/plain;end`;
@@ -196,7 +196,7 @@ export default function ChatMessageActions({
       try {
         const finalShareText = shareText || message.text || message.fileName || message.imageUrl || message.fileUrl || 'Shared from AMIK Chat';
         await navigator.clipboard.writeText(finalShareText);
-        
+
         // Show success message
         if (onClose) {
           onClose();
@@ -215,7 +215,7 @@ export default function ChatMessageActions({
       if (error.name === 'AbortError') {
         return;
       }
-      
+
       // Other errors - fallback to copy
       console.error('Error sharing:', error);
       try {
@@ -272,31 +272,31 @@ export default function ChatMessageActions({
 
   return (
     <>
-        {!message.isDeleted && (
-            <div className="flex items-center justify-between p-1 mb-1 border-b">
-                {reactions.map((r, i) => (
-                    <Button key={i} variant="ghost" size="icon" className="h-8 w-8 text-xl" onClick={() => handleActionClick(() => onReact(message.id, r))}>{r}</Button>
-                ))}
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleActionClick(() => alert('More reactions coming soon!'))}>
-                    <Plus className="h-5 w-5" />
-                </Button>
-            </div>
-        )}
-        <div className="flex flex-col gap-0.5">
-            {actions.map((action, index) => (
-                action.show && (
-                    <Button
-                        key={index}
-                        variant="ghost"
-                        className={`justify-start px-2 py-1.5 h-auto text-base ${action.className || ''}`}
-                        onClick={action.onClick}
-                    >
-                        <action.icon className="mr-3 h-5 w-5" />
-                        <span>{action.label}</span>
-                    </Button>
-                )
-            ))}
+      {!message.isDeleted && (
+        <div className="flex items-center justify-between p-1 mb-1 border-b">
+          {reactions.map((r, i) => (
+            <Button key={i} variant="ghost" size="icon" className="h-8 w-8 text-xl" onClick={() => handleActionClick(() => onReact(message.id, r))}>{r}</Button>
+          ))}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleActionClick(() => alert('More reactions coming soon!'))}>
+            <Plus className="h-5 w-5" />
+          </Button>
         </div>
+      )}
+      <div className="flex flex-col gap-0.5">
+        {actions.map((action, index) => (
+          action.show && (
+            <Button
+              key={index}
+              variant="ghost"
+              className={`justify-start px-2 py-1.5 h-auto text-base ${action.className || ''}`}
+              onClick={action.onClick}
+            >
+              <action.icon className="mr-3 h-5 w-5" />
+              <span>{action.label}</span>
+            </Button>
+          )
+        ))}
+      </div>
     </>
   );
 }

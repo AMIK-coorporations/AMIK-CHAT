@@ -9,8 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight, LogOut, Settings, UserCircle, QrCode, Plus, MessageCircle, UserPlus, ScanLine, Landmark, Copy, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { uploadUserAvatarReliable, downloadImage } from '@/lib/avatarService';
@@ -20,7 +18,7 @@ import React from "react";
 
 export default function MePage() {
   const router = useRouter();
-  const { userData, user, updateProfile, loading: authLoading } = useAuth();
+  const { userData, user, updateProfile, signOut, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [avatarOpen, setAvatarOpen] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -62,18 +60,7 @@ export default function MePage() {
 
   const handleLogout = async () => {
     try {
-      // Clear any local storage or session data
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // Sign out from Firebase
-      await signOut(auth);
-
-      // Wait a moment to ensure signOut completes
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Force redirect to login page
-      window.location.href = '/login';
+      await signOut();
     } catch (error) {
       console.error("Error signing out: ", error);
       toast({
@@ -103,7 +90,7 @@ export default function MePage() {
         return;
       }
       const start = toast({ title: 'اپ لوڈ ہو رہا ہے...', description: 'براہ کرم انتظار کریں۔' });
-      const url = await uploadUserAvatarReliable(file, user.uid, (p) => setProgress(p));
+      const url = await uploadUserAvatarReliable(file, user.id, (p) => setProgress(p));
       await updateProfile({ avatarUrl: url, photoURL: url } as any);
       setCurrentAvatar(url); // keep it visible immediately
       toast({ id: start.id, title: 'ہو گیا', description: 'پروفائل تصویر اپ ڈیٹ ہو گئی۔' });
@@ -172,7 +159,7 @@ export default function MePage() {
                 <button
                   className="h-7 w-7 inline-flex items-center justify-center rounded-full border border-muted-foreground/30 hover:border-accent hover:bg-accent/10 text-accent transition-colors"
                   title="اے ایم آئی کے شناخت کاپی کریں"
-                  onClick={async () => { await navigator.clipboard.writeText(user.uid); toast({ title: 'کاپی ہوگیا', description: 'شناخت کلپ بورڈ میں کاپی ہو گئی۔' }); }}
+                  onClick={async () => { await navigator.clipboard.writeText(user.id); toast({ title: 'کاپی ہوگیا', description: 'شناخت کلپ بورڈ میں کاپی ہو گئی۔' }); }}
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </button>

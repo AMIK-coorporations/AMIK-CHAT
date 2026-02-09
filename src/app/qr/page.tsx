@@ -20,7 +20,7 @@ export default function QrCodePage() {
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const qrValue = user ? `amik-chat-user://${user.uid}` : '';
+  const qrValue = user ? `amik-chat-user://${user.id}` : '';
   const [overlaySrc, setOverlaySrc] = useState<string>("https://iili.io/fU7NHil.png");
   const overlayCandidates = [
     "https://iili.io/fU7NHil.png",
@@ -56,20 +56,52 @@ export default function QrCodePage() {
     }
 
     const img = new window.Image();
+    // Enable CORS for the overlay if needed, though we use local assets for overlay now if possible, 
+    // but the main image is the SVG which is data-uri so it's fine.
+    // However, we want to draw the OVERLAY on top.
+
     img.onload = () => {
       canvas.width = img.width;
       canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      const pngFile = canvas.toDataURL("image/png");
 
+      // Draw QR Code
+      ctx.drawImage(img, 0, 0);
+
+      // Draw Overlay
+      const overlayImg = new window.Image();
+      overlayImg.crossOrigin = "anonymous";
+      overlayImg.src = overlaySrc;
+
+      overlayImg.onload = () => {
+        // Center the overlay. QR size is 256. Overlay container is 72x72 centered.
+        // We need to scale relative to the rendered image size.
+        // The img.width might be scaled. 
+        // Assuming standard 256x256 viewbox.
+        const size = img.width;
+        const overlaySize = size * (72 / 256); // Proportional size
+        const x = (size - overlaySize) / 2;
+        const y = (size - overlaySize) / 2;
+
+        ctx.drawImage(overlayImg, x, y, overlaySize, overlaySize);
+        finalizeDownload();
+      };
+
+      overlayImg.onerror = () => {
+        // If overlay fails, just download the QR
+        finalizeDownload();
+      };
+    };
+
+    const finalizeDownload = () => {
+      const pngFile = canvas.toDataURL("image/png");
       const downloadLink = document.createElement("a");
-      const displayName = userData?.name ?? (userData as any)?.displayName ?? user?.uid ?? 'amik-user';
+      const displayName = userData?.name ?? (userData as any)?.displayName ?? user?.id ?? 'amik-user';
       downloadLink.download = `amik-chat-qr-${displayName}.png`;
       downloadLink.href = pngFile;
       downloadLink.click();
-
       toast({ title: 'کامیابی', description: 'کیو آر کوڈ ڈاؤن لوڈ میں محفوظ ہو گیا۔' });
     };
+
     img.onerror = () => {
       toast({ variant: 'destructive', title: 'خرابی', description: 'محفوظ کرنے کے لیے کیو آر کوڈ لوڈ نہیں ہو سکا۔' });
     }
@@ -77,8 +109,8 @@ export default function QrCodePage() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <header className="sticky top-0 z-10 flex items-center justify-between bg-background p-3">
+    <div className="flex min-h-[100dvh] flex-col bg-background">
+      <header className="sticky top-0 z-10 flex items-center justify-between bg-background p-3 border-b">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ChevronLeft className="h-6 w-6" />
         </Button>
@@ -88,50 +120,55 @@ export default function QrCodePage() {
         </Button>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-between p-8 text-center">
-        <div className="flex-grow flex flex-col items-center justify-center space-y-6">
-          {userData ? (
+      <main className="flex flex-1 flex-col items-center justify-between p-4 md:p-8 text-center w-full max-w-md mx-auto">
+        <div className="flex-grow flex flex-col items-center justify-center space-y-6 w-full">
+          {user ? (
             <>
-              <div className="flex items-center gap-4 self-start">
+              <div className="flex items-center gap-4 self-start w-full px-2">
                 <Avatar className="h-16 w-16 border">
-                  <AvatarImage src={userData.avatarUrl ?? (userData as any).photoURL ?? ''} alt={(userData as any).name ?? (userData as any).displayName ?? ''} data-ai-hint="profile person" />
-                  <AvatarFallback className="text-2xl">{((userData as any).name ?? (userData as any).displayName ?? '?').charAt(0)}</AvatarFallback>
+                  <AvatarImage src={userData?.avatarUrl ?? (userData as any)?.photoURL ?? ''} alt={userData?.name ?? (userData as any)?.displayName ?? ''} data-ai-hint="profile person" />
+                  <AvatarFallback className="text-2xl">{((userData?.name ?? (userData as any)?.displayName ?? user.email ?? '?').charAt(0)).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="text-xl font-bold text-left">{(userData as any).name ?? (userData as any).displayName ?? 'Unknown'}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xl font-bold text-left truncate">
+                    {userData?.name ?? (userData as any)?.displayName ?? user.email?.split('@')[0] ?? 'Unknown User'}
+                  </p>
                   <p className="text-muted-foreground text-left">پاکستان</p>
                 </div>
               </div>
 
-              <div className="bg-white p-4 rounded-lg shadow-md relative">
+              <div className="bg-white p-4 rounded-lg shadow-md relative mx-auto" ref={qrCodeRef}>
                 <div className="absolute inset-0 rounded-lg" aria-hidden="true" />
-                <QRCode
-                  value={qrValue}
-                  size={256}
-                  fgColor="hsl(var(--primary))"
-                  bgColor="#FFFFFF"
-                  level="H"
-                />
-                <div className="absolute top-1/2 left-1/2 h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2 overflow-hidden border rounded-md border-white/90 z-10 bg-white">
-                  <img
-                    src={overlaySrc}
-                    alt="AMIK Logo"
-                    width={72}
-                    height={72}
-                    className="w-full h-full object-cover"
-                    onError={handleOverlayError}
-                    decoding="async"
+                <div className="relative">
+                  <QRCode
+                    value={qrValue}
+                    size={256}
+                    fgColor="hsl(var(--primary))"
+                    bgColor="#FFFFFF"
+                    level="H"
+                    style={{ maxWidth: '100%', height: 'auto' }}
                   />
+                  <div className="absolute top-1/2 left-1/2 h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2 overflow-hidden border rounded-md border-white/90 z-10 bg-white">
+                    <img
+                      src={overlaySrc}
+                      alt="AMIK Logo"
+                      width={72}
+                      height={72}
+                      className="w-full h-full object-cover"
+                      onError={handleOverlayError}
+                      decoding="async"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <p className="text-muted-foreground">دوست کے طور پر شامل کرنے کے لیے کیو آر کوڈ اسکین کریں</p>
+              <p className="text-muted-foreground text-sm">دوست کے طور پر شامل کرنے کے لیے کیو آر کوڈ اسکین کریں</p>
             </>
           ) : (
-            <div className="space-y-6 flex flex-col items-center">
-              <div className="flex items-center gap-4 self-start w-full">
-                <Skeleton className="h-16 w-16 rounded-full" />
-                <div className="space-y-2">
+            <div className="space-y-6 flex flex-col items-center w-full">
+              <div className="flex items-center gap-4 self-start w-full px-2">
+                <Skeleton className="h-16 w-16 rounded-full flex-shrink-0" />
+                <div className="space-y-2 flex-1">
                   <Skeleton className="h-6 w-32" />
                   <Skeleton className="h-4 w-24" />
                 </div>
@@ -142,11 +179,14 @@ export default function QrCodePage() {
           )}
         </div>
 
-        <div className="w-full">
-          <Separator className="my-4" />
-          <div className="flex justify-center space-x-4">
-            <Button onClick={handleSaveImage} variant="outline">
-              کیو آر کوڈ محفوظ کریں
+        <div className="w-full mt-6">
+          <Separator className="mb-4" />
+          <div className="flex gap-3">
+            <Button onClick={handleSaveImage} variant="outline" className="flex-1">
+              محفوظ کریں
+            </Button>
+            <Button onClick={() => router.push('/scan')} variant="outline" className="flex-1">
+              اسکین کریں
             </Button>
           </div>
         </div>

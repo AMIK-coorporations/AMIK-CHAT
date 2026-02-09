@@ -30,7 +30,7 @@ const nextConfig = {
   },
   // Production optimizations for Vercel
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
     optimizePackageImports: ['@radix-ui/react-icons', '@radix-ui/react-primitives'],
   },
   // Webpack optimizations for production
@@ -103,9 +103,4 @@ const nextConfig = {
   },
 };
 
-export default withPWA({
-  dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
-  register: true,
-  skipWaiting: true,
-})(nextConfig);
+export default nextConfig;

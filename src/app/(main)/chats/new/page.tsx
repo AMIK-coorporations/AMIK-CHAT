@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { getDocWithRetry } from '@/lib/firestoreUtils';
+import { onSnapshotFromInsforge } from '@/lib/insforgeUtils';
+import { doc, collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import type { User } from '@/lib/types';
@@ -23,48 +25,65 @@ export default function NewChatPage() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const contactsColRef = collection(db, 'users', currentUser.uid, 'contacts');
+    const contactsColRef = collection(db, 'users', currentUser.id, 'contacts');
     const unsubscribe = onSnapshot(contactsColRef, async (snapshot) => {
       try {
         if (snapshot.empty) {
-          setContacts([]);
-          setLoading(false);
-          return;
+          // If Firestore is empty, we don't return immediately
         }
-        const contactPromises = snapshot.docs.map(contactDoc => getDoc(doc(db, 'users', contactDoc.id)));
+        const contactPromises = snapshot.docs.map(contactDoc => getDocWithRetry<User>(doc(db, 'users', contactDoc.id)));
         const contactDocs = await Promise.all(contactPromises);
         const contactsData = contactDocs
-          .filter(doc => doc.exists())
-          .map(doc => ({ id: doc.id, ...doc.data() } as User));
+          .filter((doc): doc is User => doc !== null)
+          .map(doc => doc);
         setContacts(contactsData);
       } catch (error) {
         console.error("Error fetching contacts:", error);
       } finally {
         setLoading(false);
       }
+    }, (error) => {
+      console.error("Error fetching contacts (listener):", error);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [currentUser]);
+    // InsForge Sync (Contacts)
+    const insforgeUnsubscribe = onSnapshotFromInsforge(`user_contacts:${currentUser.id}`, 'UPDATE_user_contact', async (payload) => {
+      if (payload.userId === currentUser.id) {
+        const contactData = await getDocWithRetry<User>(doc(db, 'users', payload.contactId));
+        if (contactData) {
+          setContacts(prev => {
+            if (prev.find(c => c.id === contactData.id)) return prev;
+            return [...prev, contactData];
+          });
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      insforgeUnsubscribe();
+    }
+  }, [currentUser?.id]);
 
   const handleSelectContact = async (contact: User) => {
     if (!currentUser || !userData) return;
     setCreatingChat(contact.id);
-    
+
     try {
-      const chatId = await createOrNavigateToChat(currentUser.uid, userData, contact);
+      const chatId = await createOrNavigateToChat(currentUser.id, userData, contact);
       router.push(`/chats/${chatId}`);
     } catch (error: any) {
       console.error("Error creating or finding chat: ", error);
       toast({
         variant: 'destructive',
         title: 'چیٹ شروع کرنے میں خرابی',
-        description: error.code === 'permission-denied' 
-          ? 'اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو چیک کریں۔' 
+        description: error.code === 'permission-denied'
+          ? 'اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو چیک کریں۔'
           : error.message || 'ایک نامعلوم خرابی پیش آگئی۔',
       });
     } finally {
-        setCreatingChat(null);
+      setCreatingChat(null);
     }
   };
 
@@ -79,12 +98,12 @@ export default function NewChatPage() {
       <div className="divide-y">
         <h2 className="p-4 text-sm font-semibold text-muted-foreground">ایک رابطہ منتخب کریں</h2>
         {loading ? (
-           <div className="p-4 space-y-4">
+          <div className="p-4 space-y-4">
             <div className="flex items-center gap-4">
               <Skeleton className="h-10 w-10 rounded-full" />
               <Skeleton className="h-5 w-32" />
             </div>
-             <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
               <Skeleton className="h-10 w-10 rounded-full" />
               <Skeleton className="h-5 w-40" />
             </div>

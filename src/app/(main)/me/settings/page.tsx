@@ -47,6 +47,14 @@ export default function SettingsPage() {
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Link>
+              <Link href="/me/settings/about" className="flex items-center p-4 transition-colors hover:bg-muted/50">
+                <Shield className="h-6 w-6 text-accent mr-4" />
+                <div className="flex-1">
+                  <p className="font-medium">ایپ کے بارے میں</p>
+                  <p className="text-sm text-muted-foreground">ورژن، شرائط اور پرائیویسی</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Link>
             </div>
           </CardContent>
         </Card>

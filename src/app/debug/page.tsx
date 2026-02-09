@@ -18,7 +18,7 @@ export default function DebugPage() {
 
   const runDebugTests = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     const results: any = {};
 
@@ -40,7 +40,7 @@ export default function DebugPage() {
 
       // Test 3: Try to write to user document
       try {
-        await setDoc(userDocRef, { 
+        await setDoc(userDocRef, {
           lastDebugTest: new Date().toISOString(),
           ...userDoc.data()
         }, { merge: true });
@@ -64,17 +64,17 @@ export default function DebugPage() {
       // Test 5: Try to write to contacts collection
       try {
         const testContactRef = doc(db, 'users', user.uid, 'contacts', 'test-contact');
-        await setDoc(testContactRef, { 
+        await setDoc(testContactRef, {
           addedAt: new Date(),
-          test: true 
+          test: true
         });
         results.canWriteContacts = true;
-        
+
         // Clean up test contact
-        await setDoc(testContactRef, { 
+        await setDoc(testContactRef, {
           addedAt: new Date(),
           test: true,
-          shouldDelete: true 
+          shouldDelete: true
         });
       } catch (error: any) {
         results.canWriteContacts = false;
@@ -97,7 +97,7 @@ export default function DebugPage() {
 
     setDebugInfo(results);
     setLoading(false);
-    
+
     toast({
       title: 'Debug tests completed',
       description: 'Check the results below',
@@ -106,7 +106,7 @@ export default function DebugPage() {
 
   const createTestUser = async () => {
     if (!user) return;
-    
+
     try {
       const testUserId = 'test-user-' + Date.now();
       const testUserRef = doc(db, 'users', testUserId);
@@ -115,7 +115,7 @@ export default function DebugPage() {
         avatarUrl: 'https://placehold.co/100x100.png?text=T',
         createdAt: new Date()
       });
-      
+
       toast({
         title: 'Test user created',
         description: `User ID: ${testUserId}`,
@@ -131,7 +131,7 @@ export default function DebugPage() {
 
   const createTestChat = async () => {
     if (!user) return;
-    
+
     try {
       // Create a test user first
       const testUserId = 'test-user-' + Date.now();
@@ -141,11 +141,11 @@ export default function DebugPage() {
         avatarUrl: 'https://placehold.co/100x100.png?text=T',
         createdAt: new Date()
       });
-      
+
       // Create a chat between current user and test user
       const chatId = [user.uid, testUserId].sort().join('_');
       const chatRef = doc(db, 'chats', chatId);
-      
+
       await setDoc(chatRef, {
         participantIds: [user.uid, testUserId],
         participantsInfo: {
@@ -161,15 +161,15 @@ export default function DebugPage() {
         createdAt: new Date(),
         lastMessage: null
       });
-      
+
       toast({
         title: 'Test chat created',
         description: `Chat ID: ${chatId}`,
       });
-      
+
       // Navigate to the new chat
       router.push(`/chats/${chatId}`);
-      
+
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -190,7 +190,7 @@ export default function DebugPage() {
             <p>Please log in to access debug features.</p>
           </CardContent>
         </Card>
-          </div>
+      </div>
     );
   }
 
@@ -201,7 +201,7 @@ export default function DebugPage() {
           <CardTitle>Firebase Debug Tools</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-        <div>
+          <div>
             <h3 className="font-semibold mb-2">Current User Info:</h3>
             <pre className="bg-muted p-2 rounded text-sm overflow-auto">
               {JSON.stringify({
@@ -210,7 +210,7 @@ export default function DebugPage() {
                 userData: userData
               }, null, 2)}
             </pre>
-        </div>
+          </div>
 
           <div className="flex gap-2">
             <Button onClick={runDebugTests} disabled={loading}>
@@ -222,15 +222,15 @@ export default function DebugPage() {
             <Button onClick={createTestChat} variant="outline">
               Create Test Chat
             </Button>
-        </div>
+          </div>
 
           {Object.keys(debugInfo).length > 0 && (
-        <div>
+            <div>
               <h3 className="font-semibold mb-2">Debug Results:</h3>
               <pre className="bg-muted p-2 rounded text-sm overflow-auto max-h-96">
                 {JSON.stringify(debugInfo, null, 2)}
               </pre>
-          </div>
+            </div>
           )}
         </CardContent>
       </Card>
