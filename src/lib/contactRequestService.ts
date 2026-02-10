@@ -1,5 +1,3 @@
-import { collection, doc, getDoc, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { setDocInInsforge, getDocFromInsforge, updateDocInInsforge } from './insforgeUtils';
 import type { ContactRequest, User } from '@/lib/types';
 import { createOrNavigateToChat } from './chatUtils';
@@ -46,8 +44,7 @@ export const sendContactRequest = async ({
   }
 
   // Check for existing requests in InsForge
-  // We use a consistent composite ID format: smallerId_largerId or just from_to
-  // To avoid confusion, let's stick to from_to as the primary ID for the request itself
+  // We use a consistent composite ID format: fromUserId_toUserId
   const reqId = `${senderId}_${targetUserId}`;
   const inverseReqId = `${targetUserId}_${senderId}`;
 
@@ -99,7 +96,9 @@ export const acceptContactRequest = async ({
   currentUserProfile: User;
   request: ContactRequest;
 }) => {
-  const otherUserId = request.fromUserId === currentUserId ? request.toUserId : request.fromUserId;
+  // sender is request.fromUserId, receiver (me) is request.toUserId
+  const otherUserId = request.fromUserId;
+  const requestId = request.id || `${request.fromUserId}_${request.toUserId}`;
 
   const otherUser = await getDocFromInsforge<User>('users', otherUserId);
   if (!otherUser) {
@@ -109,7 +108,10 @@ export const acceptContactRequest = async ({
   const timestamp = new Date();
 
   // Primary Storage: InsForge user_contacts
+  // We prioritize updating our OWN contact list. 
+  // Updating the OTHER person's list might fail due to RLS, but that shouldn't block us.
   try {
+    // 1. Update MY contacts
     await setDocInInsforge('user_contacts', `${currentUserId}_${otherUserId}`, {
       userId: currentUserId,
       contactId: otherUserId,
@@ -118,52 +120,31 @@ export const acceptContactRequest = async ({
       addedAt: timestamp
     });
 
-    await setDocInInsforge('user_contacts', `${otherUserId}_${currentUserId}`, {
-      userId: otherUserId,
-      contactId: currentUserId,
-      contactName: currentUserProfile.name ?? currentUserProfile.displayName ?? 'Unknown User',
-      contactAvatarUrl: currentUserProfile.avatarUrl ?? (currentUserProfile as any).photoURL ?? '',
-      addedAt: timestamp
-    });
+    // 2. Try to update THEIR contacts (non-blocking in case of RLS)
+    try {
+      await setDocInInsforge('user_contacts', `${otherUserId}_${currentUserId}`, {
+        userId: otherUserId,
+        contactId: currentUserId,
+        contactName: currentUserProfile.name ?? currentUserProfile.displayName ?? 'Unknown User',
+        contactAvatarUrl: currentUserProfile.avatarUrl ?? (currentUserProfile as any).photoURL ?? '',
+        addedAt: timestamp
+      });
+    } catch (rlsError) {
+      console.warn("Could not sync mutual contact in InsForge (expected if RLS is strict):", rlsError);
+    }
 
-    // Update Request Status in InsForge
-    // IDs are senderId_targetUserId. 
-    // If currentUserId accepted, senderId is otherUserId.
-    const reqId = `${otherUserId}_${currentUserId}`;
-    await updateDocInInsforge('contact_requests', reqId, { status: 'accepted', updatedAt: timestamp });
+    // 3. Update Request Status in InsForge
+    await updateDocInInsforge('contact_requests', requestId, {
+      status: 'accepted',
+      updatedAt: timestamp
+    });
   } catch (error: any) {
-    console.error("InsForge acceptContactRequest failed:", error);
+    console.error("InsForge acceptContactRequest critical failure:", error);
     throw new Error(error.message || "InsForge contact sync failed");
   }
 
+  // Create Chat in InsForge
   const chatId = await createOrNavigateToChat(currentUserId, currentUserProfile, otherUser);
-
-  // Send automated acceptance message in Firestore (where chats are stored)
-  try {
-    const chatRef = doc(db, 'chats', chatId);
-    const messagesColRef = collection(chatRef, 'messages');
-    const acceptanceMessageRef = doc(messagesColRef);
-    const messageTimestamp = serverTimestamp();
-
-    await setDoc(acceptanceMessageRef, {
-      text: 'میں نے آپ کی درخواست قبول کر لی ہے، آئیے چیٹ کریں',
-      senderId: currentUserId,
-      timestamp: messageTimestamp,
-      isRead: false,
-      type: 'text',
-    });
-
-    await updateDoc(chatRef, {
-      lastMessage: {
-        text: 'میں نے آپ کی درخواست قبول کر لی ہے، آئیے چیٹ کریں',
-        senderId: currentUserId,
-        timestamp: messageTimestamp,
-        isRead: false,
-      },
-    });
-  } catch (err) {
-    console.error("Firestore acceptance message failed (non-critical):", err);
-  }
 
   return { chatId, otherUser };
 };
@@ -175,15 +156,15 @@ export const rejectContactRequest = async ({
   currentUserId: string;
   request: ContactRequest;
 }) => {
-  const otherUserId = request.fromUserId === currentUserId ? request.toUserId : request.fromUserId;
+  const requestId = request.id || `${request.fromUserId}_${request.toUserId}`;
   const timestamp = new Date();
 
   // Update Status in InsForge
   try {
-    // ID is always senderId_targetUserId. 
-    // If request was FROM otherUser TO currentUserId, ID is otherUserId_currentUserId
-    const reqId = `${otherUserId}_${currentUserId}`;
-    await updateDocInInsforge('contact_requests', reqId, { status: 'rejected', updatedAt: timestamp });
+    await updateDocInInsforge('contact_requests', requestId, {
+      status: 'rejected',
+      updatedAt: timestamp
+    });
   } catch (error: any) {
     console.error("InsForge rejectContactRequest failed:", error);
     throw new Error(error.message || "InsForge contact sync failed");

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -6,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, VideoOff, Loader2, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { doc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { getDocFromInsforge, setDocInInsforge } from '@/lib/insforgeUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
@@ -66,7 +63,8 @@ export default function ScanPage() {
         }
       }
 
-      if (!code.startsWith('amik-chat-user://')) {
+      const cleanCode = code.trim();
+      if (!cleanCode.startsWith('amik-chat-user://')) {
         toast({
           variant: 'destructive',
           title: 'غلط کیو آر کوڈ',
@@ -77,7 +75,7 @@ export default function ScanPage() {
         return;
       }
 
-      const contactId = code.replace('amik-chat-user://', '');
+      const contactId = cleanCode.replace('amik-chat-user://', '');
 
       if (contactId === currentUser.id) {
         toast({
@@ -89,40 +87,45 @@ export default function ScanPage() {
         return;
       }
 
+      // Lookup user in InsForge
       const contactData = await getDocFromInsforge<User>('users', contactId);
 
       if (!contactData) {
-        toast({ variant: 'destructive', title: 'صارف نہیں ملا', description: 'یہ کیو آر کوڈ کسی درست صارف سے منسلک نہیں ہے۔' });
+        console.error("User not found in InsForge for ID:", contactId);
+        toast({
+          variant: 'destructive',
+          title: 'صارف نہیں ملا',
+          description: 'یہ کیو آر کوڈ کسی رجسٹرڈ صارف سے منسلک نہیں ہے۔ صارف کو ایپ میں لاگ ان ہونا ضروری ہے۔'
+        });
         setIsProcessing(false);
         router.back();
         return;
       }
 
-      // For existing contacts, we still check Firestore as that's where the contacts subcollection is for now
-      // though ideally this should also be migrated to user_contacts table in InsForge if we want full migration.
-      // But the user said "without change logics", so I'll keep the storage location same if possible, 
-      // but the LOOKUP of the user itself must be InsForge.
+      // Check for existing contact in InsForge
       const existingContactData = await getDocFromInsforge('user_contacts', `${currentUser.id}_${contactId}`);
 
       if (existingContactData) {
         const chatId = await createOrNavigateToChat(currentUser.id, userData, contactData);
         toast({
           title: 'پہلے سے رابطہ ہے',
-          description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے، چیٹ کھول رہے ہیں۔`,
+          description: `${contactData.name ?? (contactData as any).displayName ?? 'یہ صارف'} پہلے ہی آپ کے رابطوں میں ہے، چیٹ کھول رہے ہیں۔`,
         });
         setIsProcessing(false);
         router.push(`/chats/${chatId}`);
         return;
       }
 
-      // Sync to InsForge user_contacts
+      // Add to InsForge user_contacts
       try {
         await setDocInInsforge('user_contacts', `${currentUser.id}_${contactId}`, {
           userId: currentUser.id,
           contactId: contactId,
+          contactName: contactData.name ?? (contactData as any).displayName ?? 'User',
+          contactAvatarUrl: contactData.avatarUrl ?? (contactData as any).photoURL ?? '',
           addedAt: new Date()
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error("InsForge QR scan sync failed:", err);
       }
 
@@ -130,7 +133,7 @@ export default function ScanPage() {
 
       toast({
         title: 'چیٹ کے لیے تیار!',
-        description: `${(contactData as any).name ?? (contactData as any).displayName ?? 'صارف'} کے ساتھ چیٹ کھول رہے ہیں۔`,
+        description: `${contactData.name ?? (contactData as any).displayName ?? 'صارف'} کے ساتھ چیٹ کھول رہے ہیں۔`,
       });
       setIsProcessing(false);
       router.push(`/chats/${chatId}`);

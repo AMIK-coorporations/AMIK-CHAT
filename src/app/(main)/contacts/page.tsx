@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
@@ -6,8 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Users, UserPlus, Loader2, Plus, MessageCircle, ScanLine, Landmark, Clock3, CheckCheck, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import type { ContactRequest, User } from '@/lib/types';
 import { getDocFromInsforge, onSnapshotFromInsforge, setDocInInsforge, deleteDocFromInsforge, getQueryFromInsforge } from '@/lib/insforgeUtils';

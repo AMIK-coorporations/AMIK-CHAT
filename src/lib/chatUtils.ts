@@ -1,6 +1,3 @@
-
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { setDocInInsforge, getDocFromInsforge } from './insforgeUtils';
 import type { User as AppUser } from '@/lib/types';
 
@@ -21,37 +18,33 @@ export const createOrNavigateToChat = async (
   const participantIds = [currentUserId, contact.id].sort();
   const chatId = participantIds.join('_');
 
-  const chatDocRef = doc(db, 'chats', chatId);
-  const chatDocSnap = await getDoc(chatDocRef);
+  // Check if chat exists in InsForge
+  const existingChat = await getDocFromInsforge('chats', chatId);
 
-  if (!chatDocSnap.exists()) {
+  if (!existingChat) {
     // Chat doesn't exist, create it with the deterministic ID
     const newChatData = {
       participantIds: participantIds,
       participantsInfo: {
         [currentUserId]: {
-          name: currentUserData.name,
-          avatarUrl: currentUserData.avatarUrl,
+          name: currentUserData.name ?? (currentUserData as any).displayName ?? 'User',
+          avatarUrl: currentUserData.avatarUrl ?? (currentUserData as any).photoURL ?? '',
         },
         [contact.id]: {
-          name: contact.name,
-          avatarUrl: contact.avatarUrl,
+          name: contact.name ?? (contact as any).displayName ?? 'User',
+          avatarUrl: contact.avatarUrl ?? (contact as any).photoURL ?? '',
         },
       },
-      createdAt: serverTimestamp(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
       lastMessage: null,
     };
-    await setDoc(chatDocRef, newChatData);
 
-    // InsForge Sync
     try {
-      await setDocInInsforge('chats', chatId, {
-        ...newChatData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-    } catch (error) {
-      console.error("InsForge createChat sync failed:", error);
+      await setDocInInsforge('chats', chatId, newChatData);
+    } catch (error: any) {
+      console.error("InsForge createOrNavigateToChat failed:", error);
+      throw new Error(error.message || "InsForge chat creation failed");
     }
   }
 
