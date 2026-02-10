@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getDocWithRetry } from '@/lib/firestoreUtils';
-import { onSnapshotFromInsforge } from '@/lib/insforgeUtils';
+import { getDocFromInsforge, onSnapshotFromInsforge, getQueryFromInsforge } from '@/lib/insforgeUtils';
 import { doc, collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,32 +24,25 @@ export default function NewChatPage() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const contactsColRef = collection(db, 'users', currentUser.id, 'contacts');
-    const unsubscribe = onSnapshot(contactsColRef, async (snapshot) => {
+    const fetchInitialContacts = async () => {
       try {
-        if (snapshot.empty) {
-          // If Firestore is empty, we don't return immediately
-        }
-        const contactPromises = snapshot.docs.map(contactDoc => getDocWithRetry<User>(doc(db, 'users', contactDoc.id)));
+        const userContacts = await getQueryFromInsforge<any>('user_contacts', (q) => q.eq('user_id', currentUser.id));
+        const contactPromises = userContacts.map(uc => getDocFromInsforge<User>('users', uc.contactId));
         const contactDocs = await Promise.all(contactPromises);
-        const contactsData = contactDocs
-          .filter((doc): doc is User => doc !== null)
-          .map(doc => doc);
+        const contactsData = contactDocs.filter((doc): doc is User => doc !== null);
         setContacts(contactsData);
       } catch (error) {
-        console.error("Error fetching contacts:", error);
+        console.error("Error fetching initial contacts:", error);
       } finally {
         setLoading(false);
       }
-    }, (error) => {
-      console.error("Error fetching contacts (listener):", error);
-      setLoading(false);
-    });
+    };
+    fetchInitialContacts();
 
     // InsForge Sync (Contacts)
     const insforgeUnsubscribe = onSnapshotFromInsforge(`user_contacts:${currentUser.id}`, 'UPDATE_user_contact', async (payload) => {
       if (payload.userId === currentUser.id) {
-        const contactData = await getDocWithRetry<User>(doc(db, 'users', payload.contactId));
+        const contactData = await getDocFromInsforge<User>('users', payload.contactId);
         if (contactData) {
           setContacts(prev => {
             if (prev.find(c => c.id === contactData.id)) return prev;
@@ -61,7 +53,6 @@ export default function NewChatPage() {
     });
 
     return () => {
-      unsubscribe();
       insforgeUnsubscribe();
     }
   }, [currentUser?.id]);

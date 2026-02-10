@@ -2,8 +2,8 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getDocFromInsforge, getQueryFromInsforge } from '@/lib/insforgeUtils';
 import { useAuth } from '@/hooks/useAuth';
 import type { User, Message } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -43,32 +43,23 @@ export default function ForwardMessageDialog({ message, onClose, onForward }: Fo
   useEffect(() => {
     if (!open || !currentUser) return;
 
-    setLoading(true);
-    const contactsColRef = collection(db, 'users', currentUser.id, 'contacts');
-    const unsubscribe = onSnapshot(contactsColRef, async (snapshot) => {
+    const fetchContacts = async () => {
+      setLoading(true);
       try {
-        if (snapshot.empty) {
-          setContacts([]);
-          setLoading(false);
-          return;
-        }
-        const contactPromises = snapshot.docs.map(contactDoc => getDoc(doc(db, 'users', contactDoc.id)));
+        const userContacts = await getQueryFromInsforge<any>('user_contacts', (q) => q.eq('user_id', currentUser.id));
+        const contactPromises = userContacts.map(uc => getDocFromInsforge<User>('users', uc.contactId));
         const contactDocs = await Promise.all(contactPromises);
-        const contactsData = contactDocs
-          .filter(doc => doc.exists())
-          .map(doc => ({ id: doc.id, ...doc.data() } as User));
+        const contactsData = contactDocs.filter((doc): doc is User => doc !== null);
         setContacts(contactsData);
       } catch (error) {
         console.error("Error fetching contacts for forwarding:", error);
       } finally {
         setLoading(false);
       }
-    }, (error) => {
-      console.error("Error fetching contacts for forwarding (listener):", error);
-      setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
+    fetchContacts();
+    return () => { };
   }, [open, currentUser?.id]);
 
   const handleToggleContact = (contactId: string) => {

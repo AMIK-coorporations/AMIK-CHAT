@@ -10,7 +10,7 @@ import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import type { ContactRequest, User } from '@/lib/types';
-import { getDocFromInsforge, onSnapshotFromInsforge, setDocInInsforge, deleteDocFromInsforge } from '@/lib/insforgeUtils';
+import { getDocFromInsforge, onSnapshotFromInsforge, setDocInInsforge, deleteDocFromInsforge, getQueryFromInsforge } from '@/lib/insforgeUtils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
@@ -72,13 +72,25 @@ export default function ContactsPage() {
       return;
     };
 
-    // InsForge Sync (Contacts)
+    // Initial Load - Fetch contacts from InsForge
+    const fetchInitialContacts = async () => {
+      try {
+        const userContacts = await getQueryFromInsforge<any>('user_contacts', (q) => q.eq('user_id', currentUser.id));
+        const contactPromises = userContacts.map(uc => getDocFromInsforge<User>('users', uc.contactId));
+        const contactsData = (await Promise.all(contactPromises)).filter(Boolean) as User[];
+        setContacts(contactsData);
+      } catch (err) {
+        console.error("Failed to fetch initial contacts from InsForge:", err);
+      } finally {
+        setLoading(false);
+        setInitialLoadComplete(true);
+      }
+    };
+    fetchInitialContacts();
+
     // Primary listener for contacts updates
     const insforgeUnsubscribe = onSnapshotFromInsforge(`user_contacts:${currentUser.id}`, 'UPDATE_user_contact', async (payload) => {
-      // payload might be the contact record itself or an event
-      // Assuming payload has userId and contactId
       if (payload.userId === currentUser.id) {
-        // Fetch fresh contact data from InsForge users table
         const contactDoc = await getDocFromInsforge<User>('users', payload.contactId);
         if (contactDoc) {
           setContacts(prev => {
@@ -91,36 +103,7 @@ export default function ContactsPage() {
       }
     });
 
-    // Initial Load - Fetch contacts from InsForge directly if possible, or fallback to safe Firestore
-    // Since we want to Avoid "Permission Denied", we prefer InsForge SDK if available.
-    // If we must use Firestore, we should wrap it.
-    // But since `onSnapshotFromInsforge` is real-time, we might need an initial fetch.
-    // Let's assume onSnapshotFromInsforge handles the real-time part.
-    // For initial list, we can try to fetch from `users/{id}/contacts` via InsForge SDK if we have a way.
-    // If not, we will rely on Firestore but with strict error handling to avoid the "Crash" feeling.
-
-    // SAFE FIRESTORE FALLBACK (Only for initial list, with error suppression)
-    const contactsColRef = collection(db, 'users', currentUser.id, 'contacts');
-    const unsubscribeFirestore = onSnapshot(contactsColRef, async (snapshot) => {
-      // ... existing logic ...
-      try {
-        const contactPromises = snapshot.docs.map(doc => getDocFromInsforge<User>('users', doc.id));
-        const contactsData = (await Promise.all(contactPromises)).filter(Boolean) as User[];
-        setContacts(contactsData);
-      } catch (e) {
-        console.warn("Firestore fallback failed, relying on InsForge stream", e);
-      } finally {
-        setLoading(false);
-        setInitialLoadComplete(true);
-      }
-    }, (err) => {
-      console.warn("Firestore contacts listener blocked (expected if migrating):", err);
-      setLoading(false);
-      setInitialLoadComplete(true);
-    });
-
     return () => {
-      unsubscribeFirestore();
       insforgeUnsubscribe();
     };
   }, [currentUser?.id]);
@@ -131,46 +114,41 @@ export default function ContactsPage() {
       return;
     }
 
+    // Initial Load - Fetch requests from InsForge
+    const fetchInitialRequests = async () => {
+      try {
+        const requests = await getQueryFromInsforge<ContactRequest>('contact_requests', (q) =>
+          q.or(`from_user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`)
+        );
+        setReceivedRequests(requests.filter(r => r.toUserId === currentUser.id));
+        setSentRequests(requests.filter(r => r.fromUserId === currentUser.id));
+      } catch (err) {
+        console.error("Failed to fetch initial requests from InsForge:", err);
+      } finally {
+        setRequestsLoading(false);
+      }
+    };
+    fetchInitialRequests();
+
     // InsForge Sync (Requests) - Primary
     const insforgeUnsubscribe = onSnapshotFromInsforge(`contact_requests:${currentUser.id}`, 'UPDATE_contact_request', (payload) => {
-      // ... existing logic ...
       const request = payload as ContactRequest;
-      // Optimize state updates
       if (request.toUserId === currentUser.id) {
         setReceivedRequests(prev => {
-          const idx = prev.findIndex(r => r.id === request.id);
+          const idx = prev.findIndex(r => r.id === request.id || (r.fromUserId === request.fromUserId && r.toUserId === request.toUserId));
           if (idx >= 0) { const n = [...prev]; n[idx] = request; return n; }
           return [...prev, request];
         });
       } else if (request.fromUserId === currentUser.id) {
         setSentRequests(prev => {
-          const idx = prev.findIndex(r => r.id === request.id);
+          const idx = prev.findIndex(r => r.id === request.id || (r.fromUserId === request.fromUserId && r.toUserId === request.toUserId));
           if (idx >= 0) { const n = [...prev]; n[idx] = request; return n; }
           return [...prev, request];
         });
       }
     });
 
-    // Firestore Fallback (Safe)
-    const requestsColRef = collection(db, 'users', currentUser.id, 'contactRequests');
-    const unsubscribeFirestore = onSnapshot(requestsColRef, (snapshot) => {
-      setRequestsLoading(true);
-      try {
-        const reqs = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ContactRequest));
-        setReceivedRequests(reqs.filter(r => r.direction === 'received'));
-        setSentRequests(reqs.filter(r => r.direction === 'sent'));
-      } catch (error) {
-        console.warn("Firestore requests fallback failed:", error);
-      } finally {
-        setRequestsLoading(false);
-      }
-    }, (error) => {
-      console.warn("Firestore requests listener blocked:", error);
-      setRequestsLoading(false);
-    });
-
     return () => {
-      unsubscribeFirestore();
       insforgeUnsubscribe();
     };
   }, [currentUser?.id]);

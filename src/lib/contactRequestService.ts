@@ -28,77 +28,47 @@ export const sendContactRequest = async ({
 }) => {
   const senderInfo = buildUserSnapshot(senderProfile);
 
-  const targetUserRef = doc(db, 'users', targetUserId);
-  const targetUserSnap = await getDoc(targetUserRef);
-  if (!targetUserSnap.exists()) {
+  // First, check if the target user exists in InsForge
+  const targetUser = await getDocFromInsforge<User>('users', targetUserId);
+  if (!targetUser) {
     throw new ContactRequestError('user-not-found', 'صارف نہیں ملا');
   }
 
-  const targetUserData = targetUserSnap.data() as Partial<User>;
   const targetInfo = {
-    name: targetUserData.name ?? (targetUserData as any)?.displayName ?? 'نامعلوم صارف',
-    avatarUrl: targetUserData.avatarUrl ?? (targetUserData as any)?.photoURL ?? '',
+    name: targetUser.name ?? (targetUser as any)?.displayName ?? 'نامعلوم صارف',
+    avatarUrl: targetUser.avatarUrl ?? (targetUser as any)?.photoURL ?? '',
   };
 
-  const existingContactRef = doc(db, 'users', senderId, 'contacts', targetUserId);
-  const existingContactSnap = await getDoc(existingContactRef);
-  if (existingContactSnap.exists()) {
+  // Check if already contacts in InsForge
+  const existingContact = await getDocFromInsforge('user_contacts', `${senderId}_${targetUserId}`);
+  if (existingContact) {
     throw new ContactRequestError('already-contact', 'پہلے سے رابطہ ہے');
   }
 
-  const senderRequestRef = doc(db, 'users', senderId, 'contactRequests', targetUserId);
-  const receiverRequestRef = doc(db, 'users', targetUserId, 'contactRequests', senderId);
+  // Check for existing requests in InsForge
+  // We use a consistent composite ID format: smallerId_largerId or just from_to
+  // To avoid confusion, let's stick to from_to as the primary ID for the request itself
+  const reqId = `${senderId}_${targetUserId}`;
+  const inverseReqId = `${targetUserId}_${senderId}`;
 
-  const senderRequestSnap = await getDoc(senderRequestRef);
-  const receiverRequestSnap = await getDoc(receiverRequestRef);
+  const existingRequest = await getDocFromInsforge<ContactRequest>('contact_requests', reqId);
+  const existingInverseRequest = await getDocFromInsforge<ContactRequest>('contact_requests', inverseReqId);
 
-  // If any side already marked accepted, no need to re-request
-  if (senderRequestSnap.exists() && senderRequestSnap.data().status === 'accepted') {
+  if (existingRequest && existingRequest.status === 'accepted') {
     throw new ContactRequestError('already-accepted', 'درخواست پہلے ہی قبول ہو چکی ہے۔');
   }
 
-  if (senderRequestSnap.exists() && senderRequestSnap.data().status === 'pending') {
+  if (existingRequest && existingRequest.status === 'pending') {
     throw new ContactRequestError('already-pending', 'درخواست پہلے سے بھیجی جا چکی ہے۔');
   }
 
-  // If the other user already sent a request, surface that so UI can guide
-  if (receiverRequestSnap.exists() && receiverRequestSnap.data().status === 'pending') {
+  if (existingInverseRequest && existingInverseRequest.status === 'pending') {
     throw new ContactRequestError('incoming-exists', 'دوسرے صارف نے پہلے ہی درخواست بھیجی ہے۔');
   }
 
-  const timestamp = serverTimestamp();
-  const batch = writeBatch(db);
-
-  batch.set(senderRequestRef, {
-    fromUserId: senderId,
-    toUserId: targetUserId,
-    fromName: senderInfo.name,
-    toName: targetInfo.name,
-    fromAvatarUrl: senderInfo.avatarUrl,
-    toAvatarUrl: targetInfo.avatarUrl,
-    direction: 'sent' as const,
-    status: 'pending' as const,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  });
-
-  batch.set(receiverRequestRef, {
-    fromUserId: senderId,
-    toUserId: targetUserId,
-    fromName: senderInfo.name,
-    toName: targetInfo.name,
-    fromAvatarUrl: senderInfo.avatarUrl,
-    toAvatarUrl: targetInfo.avatarUrl,
-    direction: 'received' as const,
-    status: 'pending' as const,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  });
-
-  await batch.commit();
-
-  // InsForge Sync
+  // Save request to InsForge
   try {
+    const timestamp = new Date();
     const requestData = {
       fromUserId: senderId,
       toUserId: targetUserId,
@@ -107,13 +77,14 @@ export const sendContactRequest = async ({
       fromAvatarUrl: senderInfo.avatarUrl,
       toAvatarUrl: targetInfo.avatarUrl,
       status: 'pending' as const,
-      updatedAt: new Date(),
+      updatedAt: timestamp,
+      createdAt: timestamp,
     };
-    // We only need one record in InsForge for both directions if we query by from_user_id or to_user_id
-    // But since the IDs might conflict if we use doc ID, we'll use a composite ID
-    await setDocInInsforge('contact_requests', `${senderId}_${targetUserId}`, requestData);
-  } catch (error) {
-    console.error("InsForge sendContactRequest sync failed:", error);
+
+    await setDocInInsforge('contact_requests', reqId, requestData);
+  } catch (error: any) {
+    console.error("InsForge sendContactRequest failed:", error);
+    throw new ContactRequestError('insforge-error', error.message || 'درخواست بھیجنے میں خرابی۔');
   }
 
   return { targetName: targetInfo.name };
@@ -129,48 +100,16 @@ export const acceptContactRequest = async ({
   request: ContactRequest;
 }) => {
   const otherUserId = request.fromUserId === currentUserId ? request.toUserId : request.fromUserId;
-  const otherUserRef = doc(db, 'users', otherUserId);
-  const otherUserSnap = await getDoc(otherUserRef);
 
-  if (!otherUserSnap.exists()) {
+  const otherUser = await getDocFromInsforge<User>('users', otherUserId);
+  if (!otherUser) {
     throw new ContactRequestError('user-not-found', 'درخواست بھیجنے والا صارف نہیں ملا۔');
   }
 
-  const otherUser = { id: otherUserId, ...otherUserSnap.data() } as User;
+  const timestamp = new Date();
 
-  const timestamp = serverTimestamp();
-  const batch = writeBatch(db);
-
-  const myContactRef = doc(db, 'users', currentUserId, 'contacts', otherUserId);
-  const theirContactRef = doc(db, 'users', otherUserId, 'contacts', currentUserId);
-
-  batch.set(myContactRef, {
-    addedAt: timestamp,
-    contactName: otherUser.name ?? otherUser.displayName ?? 'Unknown User',
-    contactAvatarUrl: otherUser.avatarUrl ?? otherUser.photoURL ?? '',
-  });
-
-  batch.set(theirContactRef, {
-    addedAt: timestamp,
-    contactName: currentUserProfile.name ?? currentUserProfile.displayName ?? 'Unknown User',
-    contactAvatarUrl: currentUserProfile.avatarUrl ?? (currentUserProfile as any).photoURL ?? '',
-  });
-
-  batch.set(doc(db, 'users', currentUserId, 'contactRequests', otherUserId), {
-    status: 'accepted',
-    updatedAt: timestamp,
-  }, { merge: true });
-
-  batch.set(doc(db, 'users', otherUserId, 'contactRequests', currentUserId), {
-    status: 'accepted',
-    updatedAt: timestamp,
-  }, { merge: true });
-
-  await batch.commit();
-
-  // InsForge Sync (Accept)
+  // Primary Storage: InsForge user_contacts
   try {
-    const timestamp = new Date();
     await setDocInInsforge('user_contacts', `${currentUserId}_${otherUserId}`, {
       userId: currentUserId,
       contactId: otherUserId,
@@ -178,6 +117,7 @@ export const acceptContactRequest = async ({
       contactAvatarUrl: otherUser.avatarUrl ?? otherUser.photoURL ?? '',
       addedAt: timestamp
     });
+
     await setDocInInsforge('user_contacts', `${otherUserId}_${currentUserId}`, {
       userId: otherUserId,
       contactId: currentUserId,
@@ -185,37 +125,45 @@ export const acceptContactRequest = async ({
       contactAvatarUrl: currentUserProfile.avatarUrl ?? (currentUserProfile as any).photoURL ?? '',
       addedAt: timestamp
     });
-    // For contact requests, we use a consistent ID format
-    const reqId1 = currentUserId < otherUserId ? `${currentUserId}_${otherUserId}` : `${otherUserId}_${currentUserId}`;
-    await updateDocInInsforge('contact_requests', reqId1, { status: 'accepted', updatedAt: timestamp });
-  } catch (error) {
-    console.error("InsForge acceptContactRequest sync failed:", error);
+
+    // Update Request Status in InsForge
+    // IDs are senderId_targetUserId. 
+    // If currentUserId accepted, senderId is otherUserId.
+    const reqId = `${otherUserId}_${currentUserId}`;
+    await updateDocInInsforge('contact_requests', reqId, { status: 'accepted', updatedAt: timestamp });
+  } catch (error: any) {
+    console.error("InsForge acceptContactRequest failed:", error);
+    throw new Error(error.message || "InsForge contact sync failed");
   }
 
   const chatId = await createOrNavigateToChat(currentUserId, currentUserProfile, otherUser);
 
-  // Send automated acceptance message
-  const chatRef = doc(db, 'chats', chatId);
-  const messagesColRef = collection(chatRef, 'messages');
-  const acceptanceMessageRef = doc(messagesColRef);
-  const messageTimestamp = serverTimestamp();
+  // Send automated acceptance message in Firestore (where chats are stored)
+  try {
+    const chatRef = doc(db, 'chats', chatId);
+    const messagesColRef = collection(chatRef, 'messages');
+    const acceptanceMessageRef = doc(messagesColRef);
+    const messageTimestamp = serverTimestamp();
 
-  await setDoc(acceptanceMessageRef, {
-    text: 'میں نے آپ کی درخواست قبول کر لی ہے، آئیے چیٹ کریں',
-    senderId: currentUserId,
-    timestamp: messageTimestamp,
-    isRead: false,
-    type: 'text',
-  });
-
-  await updateDoc(chatRef, {
-    lastMessage: {
+    await setDoc(acceptanceMessageRef, {
       text: 'میں نے آپ کی درخواست قبول کر لی ہے، آئیے چیٹ کریں',
       senderId: currentUserId,
       timestamp: messageTimestamp,
       isRead: false,
-    },
-  });
+      type: 'text',
+    });
+
+    await updateDoc(chatRef, {
+      lastMessage: {
+        text: 'میں نے آپ کی درخواست قبول کر لی ہے، آئیے چیٹ کریں',
+        senderId: currentUserId,
+        timestamp: messageTimestamp,
+        isRead: false,
+      },
+    });
+  } catch (err) {
+    console.error("Firestore acceptance message failed (non-critical):", err);
+  }
 
   return { chatId, otherUser };
 };
@@ -228,28 +176,17 @@ export const rejectContactRequest = async ({
   request: ContactRequest;
 }) => {
   const otherUserId = request.fromUserId === currentUserId ? request.toUserId : request.fromUserId;
-  const timestamp = serverTimestamp();
-  const batch = writeBatch(db);
+  const timestamp = new Date();
 
-  batch.set(doc(db, 'users', currentUserId, 'contactRequests', otherUserId), {
-    status: 'rejected',
-    updatedAt: timestamp,
-  }, { merge: true });
-
-  batch.set(doc(db, 'users', otherUserId, 'contactRequests', currentUserId), {
-    status: 'rejected',
-    updatedAt: timestamp,
-  }, { merge: true });
-
-  await batch.commit();
-
-  // InsForge Sync (Reject)
+  // Update Status in InsForge
   try {
-    const timestamp = new Date();
-    const reqId = currentUserId < otherUserId ? `${currentUserId}_${otherUserId}` : `${otherUserId}_${currentUserId}`;
+    // ID is always senderId_targetUserId. 
+    // If request was FROM otherUser TO currentUserId, ID is otherUserId_currentUserId
+    const reqId = `${otherUserId}_${currentUserId}`;
     await updateDocInInsforge('contact_requests', reqId, { status: 'rejected', updatedAt: timestamp });
-  } catch (error) {
-    console.error("InsForge rejectContactRequest sync failed:", error);
+  } catch (error: any) {
+    console.error("InsForge rejectContactRequest failed:", error);
+    throw new Error(error.message || "InsForge contact sync failed");
   }
 };
 
