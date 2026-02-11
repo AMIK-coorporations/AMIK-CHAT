@@ -11,7 +11,7 @@ import type { Chat } from "@/lib/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { MiniProgramsTopSheet } from "@/components/MiniProgramsTopSheet";
 import { ChatProvider } from "@/context/ChatContext";
-import { onSnapshotFromInsforge, getQueryFromInsforge } from "@/lib/insforgeUtils";
+import { onSnapshotFromInsforge, getQueryFromInsforge, getDocFromInsforge } from "@/lib/insforgeUtils";
 
 export default function MainAppLayout({
   children,

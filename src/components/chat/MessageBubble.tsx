@@ -190,7 +190,7 @@ export default function MessageBubble({ message, senderName, senderAvatar, trans
             fileSize={message.fileSize || 0}
             fileType={message.fileType || 'application/octet-stream'}
             fileUrl={message.fileUrl || ''}
-            onDownload={() => handleFileDownload(message.fileUrl || '', message.fileName || 'File')}
+            onDownload={handleFileDownload}
           />
         );
 
@@ -202,7 +202,7 @@ export default function MessageBubble({ message, senderName, senderAvatar, trans
             fileType={message.fileType || 'image/jpeg'}
             fileUrl={message.imageUrl || ''}
             isImage={true}
-            onDownload={() => handleFileDownload(message.imageUrl || '', message.fileName || 'Image')}
+            onDownload={handleFileDownload}
           />
         );
 

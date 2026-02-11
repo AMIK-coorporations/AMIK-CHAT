@@ -462,8 +462,8 @@ export default function ChatView({ chatId }: { chatId: string }) {
                 )}
                 <MessageBubble
                   message={msg}
-                  senderName={isMe ? (userData?.name || currentUser?.displayName || 'You') : (otherParticipant?.name || 'User')}
-                  senderAvatar={isMe ? (userData?.avatarUrl || currentUser?.photoURL || '') : (otherParticipant?.avatarUrl || '')}
+                  senderName={isMe ? (userData?.name || userData?.displayName || (currentUser as any)?.displayName || 'You') : (otherParticipant?.name || 'User')}
+                  senderAvatar={isMe ? (userData?.avatarUrl || userData?.photoURL || (currentUser as any)?.photoURL || '') : (otherParticipant?.avatarUrl || '')}
                   isTranslated={!!translations[msg.id]}
                   translation={translations[msg.id]}
                   isTranslating={translatingId === msg.id}
