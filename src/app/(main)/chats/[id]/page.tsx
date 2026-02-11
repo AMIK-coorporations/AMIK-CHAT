@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronLeft, MoreHorizontal, Phone, Video } from 'lucide-react';
 import ChatView from '@/components/chat/ChatView';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

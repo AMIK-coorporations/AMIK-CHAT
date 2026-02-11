@@ -1,4 +1,6 @@
-import type { Timestamp, FieldValue } from "firebase/firestore";
+// Firebase types replaced with standard JS types
+export type Timestamp = any;
+export type FieldValue = any;
 
 export interface User {
   id: string;

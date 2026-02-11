@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { setDocInInsforge, getDocFromInsforge, getQueryFromInsforge } from '@/lib/insforgeUtils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -23,72 +22,41 @@ export default function DebugPage() {
     const results: any = {};
 
     try {
-      // Test 1: Check if user document exists
-      const userDocRef = doc(db, 'users', user.id);
-      const userDoc = await getDoc(userDocRef);
-      results.userDocumentExists = userDoc.exists();
-      results.userDocumentData = userDoc.exists() ? userDoc.data() : null;
+      // Test 1: Check if user document exists in InsForge
+      const userDoc = await getDocFromInsforge('users', user.id);
+      results.userDocumentExists = !!userDoc;
+      results.userDocumentData = userDoc;
 
-      // Test 2: Try to read user document
+      // Test 2: Try to write to user document in InsForge
       try {
-        await getDoc(userDocRef);
-        results.canReadUserDocument = true;
-      } catch (error: any) {
-        results.canReadUserDocument = false;
-        results.readUserError = error.message;
-      }
-
-      // Test 3: Try to write to user document
-      try {
-        await setDoc(userDocRef, {
+        await setDocInInsforge('users', user.id, {
           lastDebugTest: new Date().toISOString(),
-          ...userDoc.data()
-        }, { merge: true });
+          ...userDoc
+        });
         results.canWriteUserDocument = true;
       } catch (error: any) {
         results.canWriteUserDocument = false;
         results.writeUserError = error.message;
       }
 
-      // Test 4: Check contacts collection
-      const contactsColRef = collection(db, 'users', user.id, 'contacts');
+      // Test 3: Check contacts in user_contacts table
       try {
-        const contactsSnapshot = await getDocs(contactsColRef);
+        const contacts = await getQueryFromInsforge('user_contacts', (q) => q.eq('user_id', user.id));
         results.canReadContacts = true;
-        results.contactsCount = contactsSnapshot.size;
+        results.contactsCount = contacts.length;
       } catch (error: any) {
         results.canReadContacts = false;
         results.readContactsError = error.message;
       }
 
-      // Test 5: Try to write to contacts collection
+      // Test 4: Check chats in chats table
       try {
-        const testContactRef = doc(db, 'users', user.id, 'contacts', 'test-contact');
-        await setDoc(testContactRef, {
-          addedAt: new Date(),
-          test: true
-        });
-        results.canWriteContacts = true;
-
-        // Clean up test contact
-        await setDoc(testContactRef, {
-          addedAt: new Date(),
-          test: true,
-          shouldDelete: true
-        });
+        const chats = await getQueryFromInsforge('chats', (q) => q.contains('participant_ids', [user.id]));
+        results.canReadChats = true;
+        results.chatsCount = chats.length;
       } catch (error: any) {
-        results.canWriteContacts = false;
-        results.writeContactsError = error.message;
-      }
-
-      // Test 6: Check if we can read other users
-      try {
-        const otherUserRef = doc(db, 'users', 'test-user-id');
-        await getDoc(otherUserRef);
-        results.canReadOtherUsers = true;
-      } catch (error: any) {
-        results.canReadOtherUsers = false;
-        results.readOtherUsersError = error.message;
+        results.canReadChats = false;
+        results.readChatsError = error.message;
       }
 
     } catch (error: any) {
@@ -99,7 +67,7 @@ export default function DebugPage() {
     setLoading(false);
 
     toast({
-      title: 'Debug tests completed',
+      title: 'InsForge debug tests completed',
       description: 'Check the results below',
     });
   };
@@ -109,15 +77,14 @@ export default function DebugPage() {
 
     try {
       const testUserId = 'test-user-' + Date.now();
-      const testUserRef = doc(db, 'users', testUserId);
-      await setDoc(testUserRef, {
+      await setDocInInsforge('users', testUserId, {
         name: 'Test User',
         avatarUrl: 'https://placehold.co/100x100.png?text=T',
         createdAt: new Date()
       });
 
       toast({
-        title: 'Test user created',
+        title: 'Test user created in InsForge',
         description: `User ID: ${testUserId}`,
       });
     } catch (error: any) {
@@ -135,8 +102,7 @@ export default function DebugPage() {
     try {
       // Create a test user first
       const testUserId = 'test-user-' + Date.now();
-      const testUserRef = doc(db, 'users', testUserId);
-      await setDoc(testUserRef, {
+      await setDocInInsforge('users', testUserId, {
         name: 'Test User',
         avatarUrl: 'https://placehold.co/100x100.png?text=T',
         createdAt: new Date()
@@ -144,9 +110,7 @@ export default function DebugPage() {
 
       // Create a chat between current user and test user
       const chatId = [user.id, testUserId].sort().join('_');
-      const chatRef = doc(db, 'chats', chatId);
-
-      await setDoc(chatRef, {
+      await setDocInInsforge('chats', chatId, {
         participantIds: [user.id, testUserId],
         participantsInfo: {
           [user.id]: {
@@ -163,7 +127,7 @@ export default function DebugPage() {
       });
 
       toast({
-        title: 'Test chat created',
+        title: 'Test chat created in InsForge',
         description: `Chat ID: ${chatId}`,
       });
 
@@ -178,6 +142,7 @@ export default function DebugPage() {
       });
     }
   };
+
 
   if (!user) {
     return (
@@ -198,7 +163,7 @@ export default function DebugPage() {
     <div className="p-4 space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Firebase Debug Tools</CardTitle>
+          <CardTitle>InsForge Debug Tools</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>

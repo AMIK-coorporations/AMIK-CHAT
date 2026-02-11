@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -190,7 +190,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...files]);
+      setSelectedFiles((prev: File[]) => [...prev, ...files]);
     }
   }, []);
 
@@ -198,12 +198,12 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
     const fileArray = Array.from(files);
-    setSelectedFiles(prev => [...prev, ...fileArray]);
+    setSelectedFiles((prev: File[]) => [...prev, ...fileArray]);
   };
 
   // Remove file from selection
   const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles((prev: File[]) => prev.filter((_, i) => i !== index));
   };
 
   // Send selected files
@@ -239,9 +239,9 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
           // Add type-specific properties
           if (file.type.startsWith('image/')) {
-            messageData.imageUrl = `data:${file.type};base64,${fileAttachment.fileData}`;
+            messageData.imageUrl = fileAttachment.fileUrl;
           } else {
-            messageData.fileUrl = `data:${file.type};base64,${fileAttachment.fileData}`;
+            messageData.fileUrl = fileAttachment.fileUrl;
           }
 
           // InsForge Only - Sending File Message
@@ -312,9 +312,9 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
           // Add type-specific properties
           if (file.type.startsWith('image/')) {
-            messageData.imageUrl = `data:${file.type};base64,${fileAttachment.fileData}`;
+            messageData.imageUrl = fileAttachment.fileUrl;
           } else {
-            messageData.fileUrl = `data:${file.type};base64,${fileAttachment.fileData}`;
+            messageData.fileUrl = fileAttachment.fileUrl;
           }
 
           // InsForge Only - Sending File Message
@@ -406,7 +406,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
     // Filter only image files
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     if (imageFiles.length > 0) {
-      setSelectedFiles(prev => [...prev, ...imageFiles]);
+      setSelectedFiles((prev: File[]) => [...prev, ...imageFiles]);
     }
 
     // Reset input value
@@ -588,7 +588,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
   // Simple emoji selection
   const handleEmojiSelect = (emoji: string) => {
-    setNewMessage(prev => prev + emoji);
+    setNewMessage((prev: string) => prev + emoji);
   };
 
   // Send voice message function
@@ -610,9 +610,8 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         timestamp: timestamp,
         isRead: false,
         type: 'voice',
-        audioUrl: VoiceService.base64ToAudioUrl(voiceMessage.audioData),
+        audioUrl: voiceMessage.audioUrl,
         duration: voiceMessage.duration,
-        voiceMessageId: voiceMessage.id // Reference to RTDB voice message
       };
 
       // InsForge Only - Voice Message
@@ -687,7 +686,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
               </Button>
             </div>
             <div className="space-y-2 max-h-40 overflow-y-auto">
-              {selectedFiles.map((file, index) => (
+              {selectedFiles.map((file: File, index: number) => (
                 <FilePreviewCard
                   key={index}
                   file={file}

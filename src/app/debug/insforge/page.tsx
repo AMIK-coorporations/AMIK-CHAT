@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -68,8 +68,8 @@ export default function InsForgeDebugPage() {
     };
 
     const subscribeToRealtime = () => {
-        const unsub = onSnapshotFromInsforge('messages:*', 'UPDATE_message', (payload) => {
-            setRealtimeData(prev => [payload, ...prev].slice(0, 10));
+        const unsub = onSnapshotFromInsforge('messages:*', 'UPDATE_message', (payload: any) => {
+            setRealtimeData((prev: any[]) => [payload, ...prev].slice(0, 10));
         });
         toast({ title: "Subscribed to messages" });
         return unsub;

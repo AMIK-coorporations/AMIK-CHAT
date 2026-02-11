@@ -1,9 +1,8 @@
-import { ref, push, set, get } from 'firebase/database';
-import { rtdb } from '@/lib/firebase';
+import { insforge } from './insforge';
 
 export interface VoiceMessage {
   id: string;
-  audioData: string; // Base64 encoded
+  audioUrl: string; // Direct InsForge Storage URL
   duration: number;
   senderId: string;
   timestamp: number;
@@ -16,8 +15,8 @@ export class VoiceService {
   private static recordingStartTime: number = 0;
 
   static async recordVoiceMessage(
-    chatId: string, 
-    senderId: string, 
+    chatId: string,
+    senderId: string,
     onRecordingProgress?: (duration: number) => void
   ): Promise<VoiceMessage> {
     return new Promise((resolve, reject) => {
@@ -37,27 +36,31 @@ export class VoiceService {
             try {
               const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
               const duration = (Date.now() - this.recordingStartTime) / 1000;
-              
-              // Convert to base64
-              const base64Data = await this.blobToBase64(audioBlob);
-              
-              const voiceMessage: Omit<VoiceMessage, 'id'> = {
-                audioData: base64Data,
+
+              const filename = `${chatId}/${Date.now()}.wav`;
+
+              // InsForge Storage Upload
+              const { data, error } = await insforge.storage
+                .from('voice_messages')
+                .upload(filename, audioBlob);
+
+              if (error || !data) {
+                throw new Error(error?.message || 'Failed to upload voice message to InsForge');
+              }
+
+              const voiceMessage: VoiceMessage = {
+                id: data.key,
+                audioUrl: data.url,
                 duration: duration,
                 senderId: senderId,
                 timestamp: Date.now(),
                 chatId: chatId
               };
 
-              // Store in Realtime Database
-              const voiceRef = ref(rtdb, `voice_messages/${chatId}`);
-              const newVoiceRef = push(voiceRef);
-              await set(newVoiceRef, voiceMessage);
-
               // Stop all tracks
               stream.getTracks().forEach(track => track.stop());
 
-              resolve({ ...voiceMessage, id: newVoiceRef.key! });
+              resolve(voiceMessage);
             } catch (error) {
               reject(error);
             }
@@ -90,7 +93,7 @@ export class VoiceService {
   static stopRecording(): void {
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
       this.mediaRecorder.stop();
-      
+
       // Clear progress interval
       if ((this.mediaRecorder as any).progressInterval) {
         clearInterval((this.mediaRecorder as any).progressInterval);
@@ -98,34 +101,17 @@ export class VoiceService {
     }
   }
 
-  static async downloadVoiceMessage(messageId: string, chatId: string): Promise<VoiceMessage | null> {
+  static async deleteVoiceMessage(messageId: string): Promise<boolean> {
     try {
-      const voiceRef = ref(rtdb, `voice_messages/${chatId}/${messageId}`);
-      const snapshot = await get(voiceRef);
-      
-      if (snapshot.exists()) {
-        return { id: messageId, ...snapshot.val() } as VoiceMessage;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error downloading voice message:', error);
-      return null;
-    }
-  }
+      const { error } = await insforge.storage
+        .from('voice_messages')
+        .remove(messageId);
 
-  static async deleteVoiceMessage(messageId: string, chatId: string): Promise<boolean> {
-    try {
-      const voiceRef = ref(rtdb, `voice_messages/${chatId}/${messageId}`);
-      await set(voiceRef, null);
-      return true;
+      return !error;
     } catch (error) {
       console.error('Error deleting voice message:', error);
       return false;
     }
-  }
-
-  static base64ToAudioUrl(base64Data: string): string {
-    return `data:audio/wav;base64,${base64Data}`;
   }
 
   static formatDuration(seconds: number): string {
@@ -133,18 +119,4 @@ export class VoiceService {
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
-
-  private static blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Remove data URL prefix to get just the base64 data
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-} 
+}

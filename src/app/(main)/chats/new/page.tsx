@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getDocFromInsforge, onSnapshotFromInsforge, getQueryFromInsforge } from '@/lib/insforgeUtils';
-import { doc, collection, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import type { User } from '@/lib/types';
 import { ChevronLeft, Loader2 } from 'lucide-react';

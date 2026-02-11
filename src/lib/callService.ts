@@ -1,17 +1,11 @@
-import { db } from './firebase';
 import {
-  doc,
-  setDoc,
-  onSnapshot,
-  deleteDoc,
-  serverTimestamp,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit
-} from 'firebase/firestore';
-import { setDocInInsforge, deleteDocFromInsforge, onSnapshotFromInsforge } from './insforgeUtils';
+  setDocInInsforge,
+  deleteDocFromInsforge,
+  onSnapshotFromInsforge,
+  getDocFromInsforge,
+  updateDocInInsforge
+} from './insforgeUtils';
+import { insforge } from './insforge';
 
 export interface CallSignal {
   id?: string;
@@ -90,7 +84,7 @@ export class CallService {
           data: event.candidate,
           from: this.currentUserId!,
           to: this.remoteUserId,
-          timestamp: serverTimestamp()
+          timestamp: new Date()
         });
       }
     };
@@ -153,7 +147,7 @@ export class CallService {
         data: { offer, isVideo },
         from: currentUserId,
         to: remoteUserId,
-        timestamp: serverTimestamp()
+        timestamp: new Date()
       });
 
       // Listen for signals
@@ -194,7 +188,7 @@ export class CallService {
         data: {},
         from: currentUserId,
         to: this.remoteUserId!,
-        timestamp: serverTimestamp()
+        timestamp: new Date()
       });
 
       // Listen for signals
@@ -214,11 +208,11 @@ export class CallService {
       data: {},
       from: currentUserId,
       to: this.remoteUserId!,
-      timestamp: serverTimestamp()
+      timestamp: new Date()
     });
 
     // Clean up the call document
-    await deleteDoc(doc(db, 'calls', callId));
+    await deleteDocFromInsforge('calls', callId).catch(console.error);
   }
 
   public async endCall(): Promise<void> {
@@ -230,11 +224,11 @@ export class CallService {
         data: {},
         from: this.currentUserId!,
         to: this.remoteUserId!,
-        timestamp: serverTimestamp()
+        timestamp: new Date()
       });
 
       // Clean up the call document
-      await deleteDoc(doc(db, 'calls', this.currentCallId));
+      await deleteDocFromInsforge('calls', this.currentCallId);
     } catch (error) {
       console.error('Error ending call:', error);
     } finally {
@@ -280,10 +274,6 @@ export class CallService {
   private async sendSignal(signal: CallSignal): Promise<void> {
     if (!this.currentCallId) return;
 
-    const signalRef = doc(db, 'calls', this.currentCallId, 'signals', `${Date.now()}_${signal.from}`);
-    await setDoc(signalRef, signal);
-
-    // InsForge Sync (Signal)
     try {
       const signalId = `${Date.now()}_${signal.from}`;
       await setDocInInsforge('call_signals', signalId, {
@@ -301,21 +291,15 @@ export class CallService {
   private async createCallDocument(): Promise<void> {
     if (!this.currentCallId) return;
 
-    const callRef = doc(db, 'calls', this.currentCallId);
     const callData = {
       participants: [this.currentUserId, this.remoteUserId],
       isVideo: this.isVideo,
-      createdAt: serverTimestamp(),
+      createdAt: new Date(),
       status: 'active'
     };
-    await setDoc(callRef, callData);
 
-    // InsForge Sync (Call)
     try {
-      await setDocInInsforge('calls', this.currentCallId, {
-        ...callData,
-        createdAt: new Date()
-      });
+      await setDocInInsforge('calls', this.currentCallId, callData);
     } catch (error) {
       console.error('InsForge createCallDocument failed:', error);
     }
@@ -324,31 +308,14 @@ export class CallService {
   private listenForSignals(): void {
     if (!this.currentCallId) return;
 
-    const signalsRef = collection(db, 'calls', this.currentCallId, 'signals');
-    const q = query(signalsRef, orderBy('timestamp', 'asc'));
-
-    const insforgeUnsubscribe = onSnapshotFromInsforge(`call_signals:${this.currentCallId}`, 'UPDATE_signal', async (payload) => {
+    const insforgeUnsubscribe = onSnapshotFromInsforge(`call:${this.currentCallId}`, 'signal', async (payload) => {
       const signal = payload as CallSignal;
       // Don't process our own signals
       if (signal.from === this.currentUserId) return;
       await this.handleSignal(signal);
     });
 
-    const firestoreUnsubscribe = onSnapshot(q, async (snapshot) => {
-      for (const change of snapshot.docChanges()) {
-        if (change.type === 'added') {
-          const signal = change.doc.data() as CallSignal;
-          // Don't process our own signals
-          if (signal.from === this.currentUserId) continue;
-          await this.handleSignal(signal);
-        }
-      }
-    }, (error) => {
-      console.error("Firestore signaling listener error:", error);
-    });
-
     this.signalingUnsubscribe = () => {
-      firestoreUnsubscribe();
       insforgeUnsubscribe();
     };
   }
@@ -376,7 +343,7 @@ export class CallService {
               data: answer,
               from: this.currentUserId!,
               to: signal.from,
-              timestamp: serverTimestamp()
+              timestamp: new Date()
             });
           }
           break;
@@ -407,7 +374,7 @@ export class CallService {
             data: { answer },
             from: this.currentUserId!,
             to: signal.from,
-            timestamp: serverTimestamp()
+            timestamp: new Date()
           });
           break;
 

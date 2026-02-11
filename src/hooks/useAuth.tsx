@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { insforge } from '@/lib/insforge';
 import { getDocFromInsforge, updateDocInInsforge, setDocInInsforge } from '@/lib/insforgeUtils';
 import type { User } from '@/lib/types';
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await updateDocInInsforge('users', user.id, data);
 
       // Update local state if the update was successful
-      setUserData(prev => prev ? { ...prev, ...data } : null);
+      setUserData((prev: User | null) => prev ? { ...prev, ...data } : null);
 
       // Update setProfile in Auth (for identity/JWT metadata if applicable)
       await insforge.auth.setProfile(data);

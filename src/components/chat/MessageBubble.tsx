@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Loader2, CornerUpRight, CheckCircle2, Play, Pause, Download, MapPin, FileText, ImageIcon } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import ChatMessageActions from './ChatMessageActions';
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { FileMessageCard } from "./FileCards";
 
@@ -255,7 +255,7 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
               message.isDeleted && "bg-muted text-muted-foreground italic",
               hasReactions && "pb-5"
             )}
-            onContextMenu={(e) => {
+            onContextMenu={(e: React.MouseEvent) => {
               e.preventDefault();
               setIsMenuOpen(true);
             }}
@@ -291,7 +291,7 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
           className="w-auto p-1"
           side={isSentByMe ? "left" : "right"}
           align="center"
-          onOpenAutoFocus={(e) => e.preventDefault()}
+          onOpenAutoFocus={(e: Event) => e.preventDefault()}
         >
           <ChatMessageActions
             message={message}

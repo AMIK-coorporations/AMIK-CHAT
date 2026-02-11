@@ -46,24 +46,65 @@ function toCamelCase(obj: any): any {
     return obj;
 }
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function getDocFromInsforge<T = any>(
     table: string,
     id: string
 ): Promise<T | null> {
-    try {
+    const MAX_RETRIES = 3;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         const { data, error } = await db_insforge
             .from(table)
             .select('*')
             .eq('id', id)
             .maybeSingle();
 
-        if (error) throw error;
-        return data ? toCamelCase(data) as T : null;
-    } catch (error) {
+        if (!error) {
+            return data ? toCamelCase(data) as T : null;
+        }
+
+        // Check if it's a rate limit or transient error worth retrying
+        const status = (error as any)?.code === '429' || (error as any)?.status === 429 ||
+            (error as any)?.message?.includes('Too Many Requests') ||
+            (error as any)?.message?.includes('rate') ||
+            (error as any)?.code === 'PGRST' ||
+            (error as any)?.statusCode === 429;
+
+        if (status && attempt < MAX_RETRIES) {
+            const waitMs = 500 * Math.pow(2, attempt); // 500, 1000, 2000
+            console.warn(`Rate limited on ${table}/${id}, retrying in ${waitMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+            await delay(waitMs);
+            continue;
+        }
+
         console.error(`Error getting doc from Insforge (${table}/${id}):`, error);
-        return null;
+        throw error;
     }
+    return null; // TypeScript requires this
 }
+
+/** Lookup a user_contacts row by its composite key (user_id + contact_id) */
+export async function getContactDoc<T = any>(
+    userId: string,
+    contactId: string
+): Promise<T | null> {
+    const { data, error } = await db_insforge
+        .from('user_contacts')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('contact_id', contactId)
+        .maybeSingle();
+
+    if (error) {
+        console.error(`Error getting contact doc (${userId}/${contactId}):`, error);
+        throw error;
+    }
+    return data ? toCamelCase(data) as T : null;
+}
+
+// Tables that use a composite primary key (no 'id' column)
+const COMPOSITE_KEY_TABLES = ['user_contacts'];
 
 export async function setDocInInsforge(
     table: string,
@@ -71,7 +112,9 @@ export async function setDocInInsforge(
     data: any
 ): Promise<void> {
     try {
-        const dbData = toSnakeCase({ ...data, id });
+        const isComposite = COMPOSITE_KEY_TABLES.includes(table);
+        const raw = isComposite ? data : { ...data, id };
+        const dbData = toSnakeCase(raw);
         const { error } = await db_insforge
             .from(table)
             .upsert(dbData);

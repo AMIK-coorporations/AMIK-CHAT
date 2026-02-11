@@ -1,4 +1,4 @@
-import { setDocInInsforge, getDocFromInsforge, updateDocInInsforge } from './insforgeUtils';
+import { setDocInInsforge, getDocFromInsforge, getContactDoc, updateDocInInsforge } from './insforgeUtils';
 import type { ContactRequest, User } from '@/lib/types';
 import { createOrNavigateToChat } from './chatUtils';
 
@@ -38,7 +38,7 @@ export const sendContactRequest = async ({
   };
 
   // Check if already contacts in InsForge
-  const existingContact = await getDocFromInsforge('user_contacts', `${senderId}_${targetUserId}`);
+  const existingContact = await getContactDoc(senderId, targetUserId);
   if (existingContact) {
     throw new ContactRequestError('already-contact', 'پہلے سے رابطہ ہے');
   }

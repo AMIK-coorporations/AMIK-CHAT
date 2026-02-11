@@ -3,9 +3,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useCall } from '@/hooks/useCall';
 import { useAuth } from '@/hooks/useAuth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { User } from '@/lib/types';
 import CallInterface from '@/components/chat/CallInterface';
 
 interface CallContextType {

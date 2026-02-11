@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, VideoOff, Loader2, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getDocFromInsforge, setDocInInsforge } from '@/lib/insforgeUtils';
+import { getDocFromInsforge, getContactDoc, setDocInInsforge } from '@/lib/insforgeUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -103,7 +103,7 @@ export default function ScanPage() {
       }
 
       // Check for existing contact in InsForge
-      const existingContactData = await getDocFromInsforge('user_contacts', `${currentUser.id}_${contactId}`);
+      const existingContactData = await getContactDoc(currentUser.id, contactId);
 
       if (existingContactData) {
         const chatId = await createOrNavigateToChat(currentUser.id, userData, contactData);

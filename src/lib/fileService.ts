@@ -1,12 +1,11 @@
-import { ref, push, set, get } from 'firebase/database';
-import { rtdb } from '@/lib/firebase';
+import { insforge } from './insforge';
 
 export interface FileAttachment {
   id: string;
   fileName: string;
   fileType: string;
   fileSize: number;
-  fileData: string; // Base64 encoded
+  fileUrl: string;
   senderId: string;
   timestamp: number;
   chatId: string;
@@ -31,77 +30,60 @@ export class FileService {
       throw new Error('File type not supported');
     }
 
-    // Convert file to base64
-    const base64Data = await this.fileToBase64(file);
+    // InsForge Storage Upload
+    try {
+      const { data, error } = await insforge.storage
+        .from('uploads')
+        .uploadAuto(file);
 
-    const fileAttachment: Omit<FileAttachment, 'id'> = {
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      fileData: base64Data,
-      senderId: senderId,
-      timestamp: Date.now(),
-      chatId: chatId
-    };
+      if (error || !data) {
+        throw new Error(error?.message || 'Failed to upload file to InsForge');
+      }
 
-    // Store in Realtime Database
-    const fileRef = ref(rtdb, `files/${chatId}`);
-    const newFileRef = push(fileRef);
-    await set(newFileRef, fileAttachment);
+      const fileAttachment: FileAttachment = {
+        id: data.key,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        fileUrl: data.url,
+        senderId: senderId,
+        timestamp: Date.now(),
+        chatId: chatId
+      };
 
-    return { ...fileAttachment, id: newFileRef.key! };
+      return fileAttachment;
+    } catch (error: any) {
+      console.error('InsForge upload error:', error);
+      throw error;
+    }
   }
 
-  static async downloadFile(fileId: string, chatId: string): Promise<FileAttachment | null> {
+  static async downloadFile(fileId: string, chatId: string): Promise<Blob | null> {
     try {
-      const fileRef = ref(rtdb, `files/${chatId}/${fileId}`);
-      const snapshot = await get(fileRef);
+      const { data, error } = await insforge.storage
+        .from('uploads')
+        .download(fileId);
 
-      if (snapshot.exists()) {
-        return { id: fileId, ...snapshot.val() } as FileAttachment;
-      }
-      return null;
+      if (error) throw error;
+      return data;
     } catch (error) {
-      console.error('Error downloading file:', error);
+      console.error('Error downloading file from InsForge:', error);
       return null;
     }
   }
 
   static async deleteFile(fileId: string, chatId: string): Promise<boolean> {
     try {
-      const fileRef = ref(rtdb, `files/${chatId}/${fileId}`);
-      await set(fileRef, null);
+      const { error } = await insforge.storage
+        .from('uploads')
+        .remove(fileId);
+
+      if (error) throw error;
       return true;
     } catch (error) {
-      console.error('Error deleting file:', error);
+      console.error('Error deleting file from InsForge:', error);
       return false;
     }
-  }
-
-  private static fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Remove data URL prefix to get just the base64 data
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  static base64ToBlob(base64: string, mimeType: string): Blob {
-    const byteCharacters = atob(base64);
-    const byteNumbers = new Array(byteCharacters.length);
-
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-
-    const byteArray = new Uint8Array(byteNumbers);
-    return new Blob([byteArray], { type: mimeType });
   }
 
   static formatFileSize(bytes: number): string {
@@ -111,4 +93,4 @@ export class FileService {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
-} 
+}

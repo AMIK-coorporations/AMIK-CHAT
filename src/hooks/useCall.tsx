@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { callService, type CallState } from '@/lib/callService';
 import { useToast } from './use-toast';
-import { getDocWithRetry } from '@/lib/firestoreUtils';
-import { doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getDocFromInsforge } from '@/lib/insforgeUtils';
 import type { User } from '@/lib/types';
 
 export interface CallData {
@@ -50,7 +48,7 @@ export function useCall() {
       async (callData) => {
         try {
           // Get caller's user data
-          const callerData = await getDocWithRetry<User>(doc(db, 'users', callData.from));
+          const callerData = await getDocFromInsforge<User>('users', callData.from);
 
           setCallData({
             isIncoming: true,
@@ -100,7 +98,7 @@ export function useCall() {
 
     try {
       // Get remote user's data
-      const remoteUserData = await getDocWithRetry<User>(doc(db, 'users', remoteUserId));
+      const remoteUserData = await getDocFromInsforge<User>('users', remoteUserId);
 
       const callId = await callService.initiateCall(remoteUserId, isVideo, currentUser.id);
 
@@ -135,7 +133,7 @@ export function useCall() {
     try {
       await callService.acceptCall(callData.callId, currentUser.id);
 
-      setCallData(prev => prev ? {
+      setCallData((prev: CallData | null) => prev ? {
         ...prev,
         isIncoming: false,
         isOutgoing: true

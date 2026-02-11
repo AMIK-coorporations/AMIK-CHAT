@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { ReactNode } from 'react';
 
 import { AuthProvider } from '@/hooks/useAuth';
 import { CallProvider } from '@/context/CallContext';

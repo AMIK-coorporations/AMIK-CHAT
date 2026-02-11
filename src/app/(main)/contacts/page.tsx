@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Users, UserPlus, Loader2, Plus, MessageCircle, ScanLine, Landmark, Clock3, CheckCheck, XCircle } from "lucide-react";
 
@@ -16,7 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { acceptContactRequest, rejectContactRequest } from '@/lib/contactRequestService';
 
-function ContactItem({ contact, onClick, isCreatingChat }: { contact: User; onClick: () => void; isCreatingChat: boolean; }) {
+const ContactItem: React.FC<{ contact: User; onClick: () => void | Promise<void>; isCreatingChat: boolean; }> = ({ contact, onClick, isCreatingChat }) => {
   return (
     <div
       onClick={onClick}
@@ -24,7 +24,7 @@ function ContactItem({ contact, onClick, isCreatingChat }: { contact: User; onCl
       data-testid={`contact-item-${contact.id}`}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => {
+      onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onClick();
@@ -42,7 +42,7 @@ function ContactItem({ contact, onClick, isCreatingChat }: { contact: User; onCl
       {isCreatingChat && <Loader2 className="h-5 w-5 animate-spin" data-testid="creating-chat-spinner" />}
     </div>
   );
-}
+};
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<User[]>([]);
@@ -73,8 +73,13 @@ export default function ContactsPage() {
     const fetchInitialContacts = async () => {
       try {
         const userContacts = await getQueryFromInsforge<any>('user_contacts', (q) => q.eq('user_id', currentUser.id));
-        const contactPromises = userContacts.map(uc => getDocFromInsforge<User>('users', uc.contactId));
-        const contactsData = (await Promise.all(contactPromises)).filter(Boolean) as User[];
+        const contactResults = await Promise.allSettled(
+          userContacts.map(uc => getDocFromInsforge<User>('users', uc.contactId))
+        );
+        const contactsData = contactResults
+          .filter((r): r is PromiseFulfilledResult<User | null> => r.status === 'fulfilled')
+          .map(r => r.value)
+          .filter(Boolean) as User[];
         setContacts(contactsData);
       } catch (err) {
         console.error("Failed to fetch initial contacts from InsForge:", err);
@@ -88,11 +93,16 @@ export default function ContactsPage() {
     // Primary listener for contacts updates
     const insforgeUnsubscribe = onSnapshotFromInsforge(`user_contacts:${currentUser.id}`, 'UPDATE_user_contact', async (payload) => {
       if (payload.userId === currentUser.id) {
-        const contactDoc = await getDocFromInsforge<User>('users', payload.contactId);
+        let contactDoc: User | null = null;
+        try {
+          contactDoc = await getDocFromInsforge<User>('users', payload.contactId);
+        } catch (err) {
+          console.error('Failed to fetch contact in realtime handler:', err);
+        }
         if (contactDoc) {
-          setContacts(prev => {
-            if (prev.find(c => c.id === contactDoc.id)) {
-              return prev.map(c => c.id === contactDoc.id ? contactDoc : c);
+          setContacts((prev: User[]) => {
+            if (prev.find((c: User) => c.id === contactDoc.id)) {
+              return prev.map((c: User) => c.id === contactDoc.id ? contactDoc : c);
             }
             return [...prev, contactDoc];
           });
@@ -131,14 +141,14 @@ export default function ContactsPage() {
     const insforgeUnsubscribe = onSnapshotFromInsforge(`contact_requests:${currentUser.id}`, 'UPDATE_contact_request', (payload) => {
       const request = payload as ContactRequest;
       if (request.toUserId === currentUser.id) {
-        setReceivedRequests(prev => {
-          const idx = prev.findIndex(r => r.id === request.id || (r.fromUserId === request.fromUserId && r.toUserId === request.toUserId));
+        setReceivedRequests((prev: ContactRequest[]) => {
+          const idx = prev.findIndex((r: ContactRequest) => r.id === request.id || (r.fromUserId === request.fromUserId && r.toUserId === request.toUserId));
           if (idx >= 0) { const n = [...prev]; n[idx] = request; return n; }
           return [...prev, request];
         });
       } else if (request.fromUserId === currentUser.id) {
-        setSentRequests(prev => {
-          const idx = prev.findIndex(r => r.id === request.id || (r.fromUserId === request.fromUserId && r.toUserId === request.toUserId));
+        setSentRequests((prev: ContactRequest[]) => {
+          const idx = prev.findIndex((r: ContactRequest) => r.id === request.id || (r.fromUserId === request.fromUserId && r.toUserId === request.toUserId));
           if (idx >= 0) { const n = [...prev]; n[idx] = request; return n; }
           return [...prev, request];
         });
@@ -320,7 +330,7 @@ export default function ContactsPage() {
               </div>
             ) : contacts.length > 0 ? (
               <div className="divide-y">
-                {contacts.map(contact => (
+                {contacts.map((contact: User) => (
                   <ContactItem
                     key={contact.id}
                     contact={contact}
@@ -346,11 +356,11 @@ export default function ContactsPage() {
                 <h2 className="text-sm font-semibold text-muted-foreground">موصولہ درخواستیں</h2>
                 {requestsLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
               </div>
-              {receivedRequests.filter(r => r.status === 'pending').length === 0 ? (
+              {receivedRequests.filter((r: ContactRequest) => r.status === 'pending').length === 0 ? (
                 <p className="text-sm text-muted-foreground">کوئی نئی درخواست نہیں۔</p>
               ) : (
                 <div className="space-y-3">
-                  {receivedRequests.filter(r => r.status === 'pending').map(request => (
+                  {receivedRequests.filter((r: ContactRequest) => r.status === 'pending').map((request: ContactRequest) => (
                     <div key={request.id} className="flex items-center gap-3 rounded-lg border p-3">
                       <Avatar className="h-10 w-10 border">
                         <AvatarImage src={request.fromAvatarUrl} alt={request.fromName ?? 'User'} />
@@ -396,7 +406,7 @@ export default function ContactsPage() {
                 <p className="text-sm text-muted-foreground">ابھی تک کوئی درخواست نہیں بھیجی گئی۔</p>
               ) : (
                 <div className="space-y-3">
-                  {sentRequests.map(request => (
+                  {sentRequests.map((request: ContactRequest) => (
                     <div key={request.id} className="flex items-center gap-3 rounded-lg border p-3">
                       <Avatar className="h-10 w-10 border">
                         <AvatarImage src={request.toAvatarUrl} alt={request.toName ?? 'User'} />
