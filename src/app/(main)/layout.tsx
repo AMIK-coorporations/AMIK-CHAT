@@ -68,7 +68,7 @@ export default function MainAppLayout({
 
     // Subscribe to REALTIME chat updates
     const unsubscribe = onSnapshotFromInsforge(`chats:*`, '*', (payload: any) => {
-      if (payload?.participant_ids?.includes(user!.id)) {
+      if (payload?.participantIds?.includes(user!.id)) {
         setChats((prev: Chat[]) => {
           const index = prev.findIndex((c: Chat) => c.id === payload.id);
           let newList = [...prev];
