@@ -56,6 +56,47 @@ export default function MainAppLayout({
           return timeB - timeA;
         });
         setChats(chatsData);
+
+        // Self-healing: Check for missing participant info and fix it
+        chatsData.forEach(async (chat) => {
+          const otherId = chat.participantIds.find(id => id !== user.id) || user.id;
+          if (!chat.participantsInfo || !chat.participantsInfo[otherId] || !chat.participantsInfo[user.id]) {
+            console.log(`Self-healing chat ${chat.id}: missing info for ${otherId} or ${user.id}`);
+            try {
+              // Fetch missing user data
+              let updates: any = {};
+              let paramsToFetch = [otherId];
+              if (otherId !== user.id) paramsToFetch.push(user.id);
+
+              const usersData = await Promise.all(paramsToFetch.map(async (uid) => {
+                const u = await getDocFromInsforge<any>('users', uid);
+                return { uid, data: u };
+              }));
+
+              const newParticipantsInfo = { ...(chat.participantsInfo || {}) };
+
+              usersData.forEach(({ uid, data }) => {
+                if (data) {
+                  newParticipantsInfo[uid] = {
+                    name: data.name || data.displayName || 'User',
+                    avatarUrl: data.avatarUrl || data.photoURL || '',
+                    email: data.email
+                  };
+                }
+              });
+
+              // Update database if we found new info
+              if (JSON.stringify(newParticipantsInfo) !== JSON.stringify(chat.participantsInfo)) {
+                const { updateDocInInsforge } = await import("@/lib/insforgeUtils");
+                await updateDocInInsforge('chats', chat.id, { participantsInfo: newParticipantsInfo });
+                console.log(`Self-healed chat ${chat.id}`);
+              }
+            } catch (err) {
+              console.error(`Failed to self-heal chat ${chat.id}`, err);
+            }
+          }
+        });
+
       } catch (error) {
         console.error("Failed to fetch chats from InsForge:", error);
       } finally {

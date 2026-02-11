@@ -441,21 +441,42 @@ export default function ChatView({ chatId }: { chatId: string }) {
             <p className="text-center text-muted-foreground">پیغامات لوڈ ہو رہے ہیں...</p>
           ) : messages.length === 0 ? (
             <p className="text-center text-muted-foreground">ابھی تک کوئی پیغام نہیں۔ گفتگو شروع کریں!</p>
-          ) : messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              translation={translations[message.id]}
-              isTranslated={!!translations[message.id]}
-              isTranslating={translatingId === message.id}
-              onCopy={handleCopy}
-              onTranslate={handleToggleTranslation}
-              onDeleteForEveryone={handleDeleteMessage}
-              onForward={() => setMessageToForward(message)}
-              onReact={handleReactToMessage}
-              onDeleteForMe={() => handleDeleteForMe(message.id)}
-            />
-          ))}
+          ) : messages.map((msg) => {
+            const isMe = msg.senderId === currentUser?.id;
+            // Handle timestamp: it could be a string (ISO), a Date object, or a Firestore-like object
+            const ts = msg.timestamp;
+            const msgDate = ts && typeof ts === 'object' && 'seconds' in ts
+              ? new Date(ts.seconds * 1000)
+              : new Date(ts || Date.now());
+
+            const showDateSeparator = false; // Placeholder for now
+
+            return (
+              <div key={msg.id} id={`message-${msg.id}`}>
+                {showDateSeparator && (
+                  <div className="flex items-center justify-center my-4">
+                    <span className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full">
+                      {/* {formatDateSeparator(msgDate)} */} {/* Uncomment and implement formatDateSeparator if needed */}
+                    </span>
+                  </div>
+                )}
+                <MessageBubble
+                  message={msg}
+                  senderName={isMe ? (userData?.name || currentUser?.displayName || 'You') : (otherParticipant?.name || 'User')}
+                  senderAvatar={isMe ? (userData?.avatarUrl || currentUser?.photoURL || '') : (otherParticipant?.avatarUrl || '')}
+                  isTranslated={!!translations[msg.id]}
+                  translation={translations[msg.id]}
+                  isTranslating={translatingId === msg.id}
+                  onDeleteForEveryone={handleDeleteMessage} // Assuming handleDeleteMessage is the correct function
+                  onTranslate={handleToggleTranslation} // Assuming handleToggleTranslation is the correct function
+                  onForward={(m) => setMessageToForward(m)}
+                  onReact={handleReactToMessage} // Assuming handleReactToMessage is the correct function
+                  onDeleteForMe={() => handleDeleteForMe(msg.id)} // Assuming this function exists in scope
+                  onCopy={handleCopy}
+                />
+              </div>
+            );
+          })}
         </div>
       </ScrollArea>
       <ForwardMessageDialog

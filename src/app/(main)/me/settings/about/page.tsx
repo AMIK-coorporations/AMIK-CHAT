@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Shield, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Shield, FileText, ShieldCheck, ScrollText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -32,7 +32,7 @@ export default function AboutPage() {
                     <CardContent className="p-0">
                         <div className="divide-y">
                             <Link href="/privacy-policy" className="flex items-center p-4 transition-colors hover:bg-muted/50">
-                                <FileText className="h-6 w-6 text-accent mr-4" />
+                                <ShieldCheck className="h-6 w-6 text-accent mr-4" />
                                 <div className="flex-1">
                                     <p className="font-medium">پرائیویسی پالیسی</p>
                                     <p className="text-sm text-muted-foreground">ہماری پالیسی پڑھیں</p>
@@ -40,7 +40,7 @@ export default function AboutPage() {
                                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
                             </Link>
                             <Link href="/terms-of-services" className="flex items-center p-4 transition-colors hover:bg-muted/50">
-                                <FileText className="h-6 w-6 text-accent mr-4" />
+                                <ScrollText className="h-6 w-6 text-accent mr-4" />
                                 <div className="flex-1">
                                     <p className="font-medium">شرائط و ضوابط</p>
                                     <p className="text-sm text-muted-foreground">استعمال کی شرائط</p>

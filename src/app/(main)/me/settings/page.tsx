@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Shield, SunMoon } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserCog, RectangleEllipsis, Palette, Info } from "lucide-react";
 
 
 export default function SettingsPage() {
@@ -24,7 +24,7 @@ export default function SettingsPage() {
           <CardContent className="p-0">
             <div className="divide-y">
               <Link href="/me/settings/account" className="flex items-center p-4 transition-colors hover:bg-muted/50">
-                <Shield className="h-6 w-6 text-accent mr-4" />
+                <UserCog className="h-6 w-6 text-accent mr-4" />
                 <div className="flex-1">
                   <p className="font-medium">کھاتہ اور حفاظت</p>
                   <p className="text-sm text-muted-foreground">پاس ورڈ، اکاؤنٹ کی تفصیلات</p>
@@ -32,7 +32,7 @@ export default function SettingsPage() {
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Link>
               <Link href="/me/settings/change-pin" className="flex items-center p-4 transition-colors hover:bg-muted/50">
-                <Shield className="h-6 w-6 text-accent mr-4" />
+                <RectangleEllipsis className="h-6 w-6 text-accent mr-4" />
                 <div className="flex-1">
                   <p className="font-medium">پیسوں کا پن تبدیل کریں</p>
                   <p className="text-sm text-muted-foreground">اپنے سیکیورٹی پن کو تبدیل کریں</p>
@@ -40,7 +40,7 @@ export default function SettingsPage() {
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Link>
               <Link href="/me/settings/theme" className="flex items-center p-4 transition-colors hover:bg-muted/50">
-                <SunMoon className="h-6 w-6 text-accent mr-4" />
+                <Palette className="h-6 w-6 text-accent mr-4" />
                 <div className="flex-1">
                   <p className="font-medium">پس منظر</p>
                   <p className="text-sm text-muted-foreground">اندھیرا، روشنی، آلہ کی طے شدہ</p>
@@ -48,7 +48,7 @@ export default function SettingsPage() {
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Link>
               <Link href="/me/settings/about" className="flex items-center p-4 transition-colors hover:bg-muted/50">
-                <Shield className="h-6 w-6 text-accent mr-4" />
+                <Info className="h-6 w-6 text-accent mr-4" />
                 <div className="flex-1">
                   <p className="font-medium">ایپ کے بارے میں</p>
                   <p className="text-sm text-muted-foreground">ورژن، شرائط اور پرائیویسی</p>

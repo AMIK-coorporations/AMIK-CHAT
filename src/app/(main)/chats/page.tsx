@@ -29,10 +29,9 @@ export default function ChatsPage() {
     const targetId = otherParticipantId || currentUser.id;
 
     const participantInfo = chat.participantsInfo?.[targetId];
-    if (!participantInfo) return false;
 
-    // Check name
-    const name = participantInfo.name || participantInfo.displayName || '';
+    // Check name (permissive: if no info, include it unless search term is active)
+    const name = participantInfo?.name || participantInfo?.displayName || 'Unknown User';
     return name.toLowerCase().includes(searchTerm.toLowerCase());
   });
 

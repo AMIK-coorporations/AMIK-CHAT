@@ -10,9 +10,12 @@ import ChatMessageActions from './ChatMessageActions';
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { FileMessageCard } from "./FileCards";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface MessageBubbleProps {
   message: Message;
+  senderName?: string;
+  senderAvatar?: string;
   translation?: string;
   isTranslated: boolean;
   isTranslating: boolean;
@@ -24,7 +27,7 @@ interface MessageBubbleProps {
   onCopy: (text: string) => void;
 }
 
-export default function MessageBubble({ message, translation, isTranslated, isTranslating, ...handlers }: MessageBubbleProps) {
+export default function MessageBubble({ message, senderName, senderAvatar, translation, isTranslated, isTranslating, ...handlers }: MessageBubbleProps) {
   const { user: currentUser } = useAuth();
   const isSentByMe = message.senderId === currentUser?.id;
   const [isPlaying, setIsPlaying] = useState(false);
@@ -187,7 +190,7 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
             fileSize={message.fileSize || 0}
             fileType={message.fileType || 'application/octet-stream'}
             fileUrl={message.fileUrl || ''}
-            onDownload={handleFileDownload}
+            onDownload={() => handleFileDownload(message.fileUrl || '', message.fileName || 'File')}
           />
         );
 
@@ -199,7 +202,7 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
             fileType={message.fileType || 'image/jpeg'}
             fileUrl={message.imageUrl || ''}
             isImage={true}
-            onDownload={handleFileDownload}
+            onDownload={() => handleFileDownload(message.imageUrl || '', message.fileName || 'Image')}
           />
         );
 
@@ -241,94 +244,116 @@ export default function MessageBubble({ message, translation, isTranslated, isTr
     }
   };
 
-  return (
-    <div className={cn("flex flex-col gap-1.5", isSentByMe ? "items-end" : "items-start")}>
-      <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <PopoverTrigger asChild>
-          <div
-            ref={messageRef}
-            className={cn(
-              "group relative max-w-sm rounded-lg px-3 py-2 lg:max-w-lg cursor-pointer select-none",
-              isSentByMe
-                ? "rounded-br-none bg-primary text-primary-foreground"
-                : "rounded-bl-none bg-card text-card-foreground border",
-              message.isDeleted && "bg-muted text-muted-foreground italic",
-              hasReactions && "pb-5"
-            )}
-            onContextMenu={(e: React.MouseEvent) => {
-              e.preventDefault();
-              setIsMenuOpen(true);
-            }}
-            onTouchStart={handleLongPressStart}
-            onTouchEnd={handleLongPressEnd}
-            onTouchCancel={handleLongPressCancel}
-            onMouseDown={handleLongPressStart}
-            onMouseUp={handleLongPressEnd}
-            onMouseLeave={handleLongPressCancel}
-          >
-            {message.isForwarded && !message.isDeleted && (
-              <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
-                <CornerUpRight className="h-3 w-3" />
-                <span>فارورڈ شدہ</span>
-              </div>
-            )}
-            {renderMessageContent()}
-            {hasReactions && (
-              <div className={cn("absolute -bottom-3 flex items-center gap-0.5 z-10", isSentByMe ? "right-2" : "left-2")}>
-                {Object.entries(message.reactions!).map(([emoji, uids]) => (
-                  uids.length > 0 && (
-                    <div key={emoji} className="flex items-center bg-background border rounded-full px-1.5 py-0.5 shadow-sm text-xs">
-                      <span>{emoji}</span>
-                      {uids.length > 1 && <span className="ml-1 text-muted-foreground">{uids.length}</span>}
-                    </div>
-                  )
-                ))}
-              </div>
-            )}
-          </div>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-auto p-1"
-          side={isSentByMe ? "left" : "right"}
-          align="center"
-          onOpenAutoFocus={(e: Event) => e.preventDefault()}
-        >
-          <ChatMessageActions
-            message={message}
-            isTranslated={isTranslated}
-            onClose={() => setIsMenuOpen(false)}
-            {...handlers}
-          />
-        </PopoverContent>
-      </Popover>
+  const longPressHandlers = {
+    onTouchStart: handleLongPressStart,
+    onTouchEnd: handleLongPressEnd,
+    onTouchCancel: handleLongPressCancel,
+    onMouseDown: handleLongPressStart,
+    onMouseUp: handleLongPressEnd,
+    onMouseLeave: handleLongPressCancel
+  };
 
-      {isTranslating && (
-        <div className={cn(
-          "flex items-center gap-2 text-sm max-w-sm rounded-lg px-3 py-2 lg:max-w-lg",
-          isSentByMe
-            ? "rounded-br-none bg-primary text-primary-foreground"
-            : "rounded-bl-none bg-card text-card-foreground border"
-        )}>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>ترجمہ کیا جا رہا ہے...</span>
-        </div>
+  return (
+    <div className={cn("flex gap-2 items-end", isSentByMe ? "justify-end" : "justify-start")}>
+      {!isSentByMe && (
+        <Avatar className="h-8 w-8 border shrink-0">
+          <AvatarImage src={senderAvatar} alt={senderName} />
+          <AvatarFallback>{(senderName || '?').charAt(0)}</AvatarFallback>
+        </Avatar>
       )}
 
-      {translation && !isTranslating && (
-        <div className={cn(
-          "max-w-sm rounded-lg px-3 py-2 lg:max-w-lg",
-          isSentByMe
-            ? "rounded-br-none bg-primary text-primary-foreground"
-            : "rounded-bl-none bg-card text-card-foreground border"
-        )}>
-          <p className="text-base text-right" style={{ wordBreak: 'break-word', direction: 'rtl' }}>
-            {translation}
-          </p>
-          <div className="flex items-center gap-1.5 text-xs opacity-80 pt-1.5 mt-1.5 border-t border-t-black/10 dark:border-t-white/20">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>اے ایم آئی کے سے ترجمہ شدہ</span>
+      <div className={cn("flex flex-col gap-1.5", isSentByMe ? "items-end" : "items-start")}>
+        <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+          <PopoverTrigger asChild>
+            <div
+              ref={messageRef}
+              className={cn(
+                "group relative max-w-sm rounded-lg px-3 py-2 lg:max-w-lg cursor-pointer select-none",
+                isSentByMe
+                  ? "rounded-br-none bg-primary text-primary-foreground"
+                  : "rounded-bl-none bg-card text-card-foreground border",
+                message.isDeleted && "bg-muted text-muted-foreground italic",
+                hasReactions && "pb-5"
+              )}
+              onContextMenu={(e: React.MouseEvent) => {
+                e.preventDefault();
+                setIsMenuOpen(true);
+              }}
+              {...longPressHandlers}
+            >
+              {message.isForwarded && !message.isDeleted && (
+                <div className="flex items-center gap-1 text-xs opacity-70 mb-1">
+                  <CornerUpRight className="h-3 w-3" />
+                  <span>فارورڈ شدہ</span>
+                </div>
+              )}
+
+              {renderMessageContent()}
+
+              {hasReactions && (
+                <div className={cn("absolute -bottom-3 flex items-center gap-0.5 z-10", isSentByMe ? "right-2" : "left-2")}>
+                  {Object.entries(message.reactions!).map(([emoji, uids]) => (
+                    uids.length > 0 && (
+                      <div key={emoji} className="flex items-center bg-background border rounded-full px-1.5 py-0.5 shadow-sm text-xs">
+                        <span>{emoji}</span>
+                        {uids.length > 1 && <span className="ml-1 text-muted-foreground">{uids.length}</span>}
+                      </div>
+                    )
+                  ))}
+                </div>
+              )}
+            </div>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-auto p-1"
+            side={isSentByMe ? "left" : "right"}
+            align="center"
+            onOpenAutoFocus={(e: Event) => e.preventDefault()}
+          >
+            <ChatMessageActions
+              message={message}
+              isTranslated={isTranslated}
+              onClose={() => setIsMenuOpen(false)}
+              {...handlers}
+            />
+          </PopoverContent>
+        </Popover>
+
+        {isTranslating && (
+          <div className={cn(
+            "flex items-center gap-2 text-sm max-w-sm rounded-lg px-3 py-2 lg:max-w-lg",
+            isSentByMe
+              ? "rounded-br-none bg-primary text-primary-foreground"
+              : "rounded-bl-none bg-card text-card-foreground border"
+          )}>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>ترجمہ کیا جا رہا ہے...</span>
           </div>
-        </div>
+        )}
+
+        {translation && !isTranslating && (
+          <div className={cn(
+            "max-w-sm rounded-lg px-3 py-2 lg:max-w-lg",
+            isSentByMe
+              ? "rounded-br-none bg-primary text-primary-foreground"
+              : "rounded-bl-none bg-card text-card-foreground border"
+          )}>
+            <p className="text-base text-right" style={{ wordBreak: 'break-word', direction: 'rtl' }}>
+              {translation}
+            </p>
+            <div className="flex items-center gap-1.5 text-xs opacity-80 pt-1.5 mt-1.5 border-t border-t-black/10 dark:border-t-white/20">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>اے ایم آئی کے سے ترجمہ شدہ</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {isSentByMe && (
+        <Avatar className="h-8 w-8 border shrink-0">
+          <AvatarImage src={senderAvatar} alt={senderName} />
+          <AvatarFallback>{(senderName || '?').charAt(0)}</AvatarFallback>
+        </Avatar>
       )}
     </div>
   );
