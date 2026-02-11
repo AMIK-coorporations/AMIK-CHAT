@@ -6,10 +6,8 @@ import { ChevronLeft, MoreHorizontal, Phone, Video } from 'lucide-react';
 import ChatView from '@/components/chat/ChatView';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { notFound, useRouter } from 'next/navigation';
-import { doc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { getDocWithRetry, getQueryWithRetry, updateDocWithRetry } from '@/lib/firestoreUtils';
-import type { User } from '@/lib/types';
+import { getDocFromInsforge, updateDocInInsforge, getQueryFromInsforge } from '@/lib/insforgeUtils';
+import type { User, Message } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useCall } from '@/hooks/useCall';
 import { Button } from '@/components/ui/button';
@@ -27,11 +25,10 @@ export default function ChatPage({ params }: { params: { id: string } }) {
 
     const fetchChatInfo = async () => {
       try {
-        const chatDocRef = doc(db, 'chats', id);
-        const chatData = await getDocWithRetry(chatDocRef);
+        const chatData = await getDocFromInsforge<any>('chats', id);
 
         if (!chatData) {
-          console.error("Chat not found:", id);
+          console.error("Chat not found in InsForge:", id);
           router.push('/chats');
           return;
         }
@@ -62,35 +59,10 @@ export default function ChatPage({ params }: { params: { id: string } }) {
               bio: otherInfo.bio ?? ''
             });
           }
-        } else if (chatData.participantsInfo && chatData.participantsInfo[currentUser.id]) {
-          // Handle self-chat case by loading current user's info
-          const selfInfo = chatData.participantsInfo[currentUser.id];
-          setOtherParticipant({
-            id: currentUser.id,
-            email: selfInfo.email ?? '',
-            displayName: selfInfo.displayName ?? selfInfo.name ?? 'Unknown',
-            name: selfInfo.name ?? selfInfo.displayName ?? 'Unknown',
-            avatarUrl: selfInfo.avatarUrl ?? selfInfo.photoURL ?? '',
-            photoURL: selfInfo.photoURL ?? selfInfo.avatarUrl ?? '',
-            phoneNumber: selfInfo.phoneNumber ?? '',
-            createdAt: new Date(),
-            lastSeen: new Date(),
-            isOnline: selfInfo.isOnline ?? false,
-            status: selfInfo.status ?? '',
-            bio: selfInfo.bio ?? ''
-          });
         }
       } catch (error: any) {
-        console.error("Error fetching chat info:", error);
-
-        // Handle specific error cases
-        if (error.code === 'permission-denied') {
-          console.error("Permission denied accessing chat");
-          router.push('/chats');
-        } else {
-          // For other errors, redirect to chats page instead of calling notFound()
-          router.push('/chats');
-        }
+        console.error("Error fetching chat info via InsForge:", error);
+        router.push('/chats');
       } finally {
         setLoading(false);
       }
@@ -103,42 +75,37 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     if (!currentUser || !id) return;
 
     const markMessagesAsRead = async () => {
-      const messagesRef = collection(db, 'chats', id, 'messages');
-      const unreadMessagesQuery = query(messagesRef, where('isRead', '==', false));
-      const querySnapshot = await getDocs(unreadMessagesQuery);
+      try {
+        const unreadMessages = await getQueryFromInsforge<Message>('messages', q =>
+          q.eq('chat_id', id).eq('is_read', false).neq('sender_id', currentUser.id)
+        );
 
-      if (querySnapshot.empty) return;
+        if (unreadMessages.length === 0) return;
 
-      const batch = writeBatch(db);
-      let needsCommit = false;
-      querySnapshot.docs.forEach(doc => {
-        if (doc.data().senderId !== currentUser.id) {
-          batch.update(doc.ref, { isRead: true });
-          needsCommit = true;
+        // Update each message in InsForge
+        await Promise.all(unreadMessages.map(msg =>
+          updateDocInInsforge('messages', msg.id, { isRead: true })
+        ));
+
+        // Update Chat unreadCount and lastMessage status
+        const chatData = await getDocFromInsforge<any>('chats', id);
+        if (chatData) {
+          const updates: any = {};
+          if (chatData.lastMessage && chatData.lastMessage.senderId !== currentUser.id) {
+            updates.lastMessage = { ...chatData.lastMessage, isRead: true };
+          }
+
+          // Clear unread count for current user
+          if (chatData.unreadCount && chatData.unreadCount[currentUser.id]) {
+            updates.unreadCount = { ...chatData.unreadCount, [currentUser.id]: 0 };
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await updateDocInInsforge('chats', id, updates);
+          }
         }
-      });
-
-      if (!needsCommit) return;
-
-      const chatRef = doc(db, 'chats', id);
-      const chatData = await getDocWithRetry(chatRef);
-      if (chatData) {
-        if (chatData.lastMessage && chatData.lastMessage.senderId !== currentUser.id) {
-          batch.update(chatRef, { 'lastMessage.isRead': true });
-          // Note: updateDocWithRetry isn't batch-compatible, 
-          // but we'll trigger a separate sync for the chat object if it's the last message
-          updateDocWithRetry(chatRef, { 'lastMessage.isRead': true }).catch(console.error);
-        }
-      }
-
-      await batch.commit();
-
-      // InsForge Sync (Mark Messages as Read)
-      // Ideally we'd iterate and update each in InsForge too
-      for (const doc of querySnapshot.docs) {
-        if (doc.data().senderId !== currentUser.id) {
-          updateDocWithRetry(doc.ref, { isRead: true }).catch(console.error);
-        }
+      } catch (error) {
+        console.error("Error marking messages as read in InsForge:", error);
       }
     };
 

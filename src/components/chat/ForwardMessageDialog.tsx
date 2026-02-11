@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase';
 import { getDocFromInsforge, getQueryFromInsforge } from '@/lib/insforgeUtils';
 import { useAuth } from '@/hooks/useAuth';
 import type { User, Message } from '@/lib/types';
@@ -44,15 +43,29 @@ export default function ForwardMessageDialog({ message, onClose, onForward }: Fo
     if (!open || !currentUser) return;
 
     const fetchContacts = async () => {
+      if (!currentUser) return;
       setLoading(true);
       try {
-        const userContacts = await getQueryFromInsforge<any>('user_contacts', (q) => q.eq('user_id', currentUser.id));
-        const contactPromises = userContacts.map(uc => getDocFromInsforge<User>('users', uc.contactId));
-        const contactDocs = await Promise.all(contactPromises);
-        const contactsData = contactDocs.filter((doc): doc is User => doc !== null);
-        setContacts(contactsData);
+        // Fetch from user_contacts table in InsForge
+        const userContacts = await getQueryFromInsforge<any>('user_contacts', q =>
+          q.eq('user_id', currentUser.id)
+        );
+
+        const fetchedContacts: User[] = userContacts.map((uc: any) => ({
+          id: uc.contactId,
+          displayName: uc.contactName || 'Unknown',
+          name: uc.contactName || 'Unknown',
+          avatarUrl: uc.contactAvatarUrl || '',
+          photoURL: uc.contactAvatarUrl || '',
+          email: '', // Not strictly needed for the list
+          createdAt: new Date(),
+          lastSeen: new Date(),
+          isOnline: false
+        } as User));
+
+        setContacts(fetchedContacts);
       } catch (error) {
-        console.error("Error fetching contacts for forwarding:", error);
+        console.error("Error fetching contacts for forwarding via InsForge:", error);
       } finally {
         setLoading(false);
       }

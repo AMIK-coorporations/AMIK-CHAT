@@ -10,11 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { SendHorizonal } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import { Label } from "@/components/ui/label";
-import { onSnapshotFromInsforge, getQueryFromInsforge, setDocInInsforge, updateDocInInsforge } from '@/lib/insforgeUtils';
-import { getDocWithRetry, updateDocWithRetry, setDocWithRetry } from '@/lib/firestoreUtils';
-import { doc, collection, query, orderBy, onSnapshot, getDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-// Translation is handled server-side via API to avoid bundling AI SDK on client
+import { onSnapshotFromInsforge, getQueryFromInsforge, setDocInInsforge, updateDocInInsforge, getDocFromInsforge } from '@/lib/insforgeUtils';
 import { useToast } from "@/hooks/use-toast";
 import ForwardMessageDialog from "./ForwardMessageDialog";
 import { createOrNavigateToChat } from "@/lib/chatUtils";
@@ -39,11 +35,9 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
     const fetchChatInfo = async () => {
       try {
-        const chatDocRef = doc(db, 'chats', chatId);
-        const chatDoc = await getDoc(chatDocRef);
+        const chatData = await getDocFromInsforge<any>('chats', chatId);
 
-        if (chatDoc.exists()) {
-          const chatData = chatDoc.data();
+        if (chatData) {
           const otherParticipantId = chatData.participantIds?.find((participantId: string) => participantId !== currentUser.id);
 
           if (otherParticipantId && chatData.participantsInfo) {
@@ -67,7 +61,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
           }
         }
       } catch (error) {
-        console.error("Error fetching chat info:", error);
+        console.error("Error fetching chat info via InsForge:", error);
       }
     };
 
@@ -80,65 +74,40 @@ export default function ChatView({ chatId }: { chatId: string }) {
       return;
     }
 
-    // Set loading timeout (30 seconds)
+    // Set loading timeout
     let loadingTimeout: NodeJS.Timeout | null = setTimeout(() => {
       setLoading(false);
-      toast({
-        variant: 'destructive',
-        title: 'لوڈنگ میں مسئلہ',
-        description: 'پیغامات لوڈ نہیں ہو سکے۔ براہ کرم صفحہ ریفریش کریں۔',
-        duration: 5000,
-      });
-    }, 30000);
+    }, 10000);
 
-    const q = query(collection(db, `chats/${chatId}/messages`), orderBy("timestamp", "asc"));
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
+    const loadInitialMessages = async () => {
+      try {
+        const msgs = await getQueryFromInsforge<Message>('messages', q =>
+          q.eq('chat_id', chatId).order('timestamp', { ascending: true })
+        );
+
         if (loadingTimeout) {
           clearTimeout(loadingTimeout);
           loadingTimeout = null;
         }
-        const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+
         setMessages(msgs);
         setLoading(false);
 
-        // Auto-translate incoming messages that aren't in Urdu
+        // Auto-translate logic
         msgs.forEach(async (msg) => {
-          if (msg.senderId !== currentUser?.id && // Only incoming messages
-            !translations[msg.id] && // Not already translated
-            !isUrduText(msg.text)) { // Not already in Urdu
-            // Auto-translate after a short delay
-            setTimeout(() => {
-              handleAutoTranslate(msg.id, msg.text);
-            }, 1000);
+          if (msg.senderId !== currentUser?.id && !translations[msg.id] && !isUrduText(msg.text)) {
+            setTimeout(() => handleAutoTranslate(msg.id, msg.text), 1000);
           }
         });
-      },
-      (error) => {
-        if (loadingTimeout) {
-          clearTimeout(loadingTimeout);
-          loadingTimeout = null;
-        }
-        console.error('Error loading messages:', error);
+      } catch (error) {
+        console.error("Error loading initial messages from InsForge:", error);
         setLoading(false);
-
-        const errorMessage = error.code === 'permission-denied'
-          ? 'پیغامات تک رسائی کی اجازت نہیں ہے۔'
-          : error.code === 'unavailable'
-            ? 'نیٹ ورک کنکشن نہیں ہے۔ براہ کرم اپنا انٹرنیٹ چیک کریں۔'
-            : 'پیغامات لوڈ کرنے میں مسئلہ پیش آیا۔';
-
-        toast({
-          variant: 'destructive',
-          title: 'خرابی',
-          description: errorMessage,
-          duration: 5000,
-        });
       }
-    );
+    };
 
-    // InsForge Sync (Snapshot)
+    loadInitialMessages();
+
+    // Real-time updates from InsForge
     const insforgeUnsubscribe = onSnapshotFromInsforge(`messages:${chatId}`, 'UPDATE_message', (payload) => {
       setMessages(prev => {
         const index = prev.findIndex(m => m.id === payload.id);
@@ -147,13 +116,11 @@ export default function ChatView({ chatId }: { chatId: string }) {
           newMsgs[index] = { ...newMsgs[index], ...payload };
           return newMsgs;
         } else {
-          // Check if it's the right chat
           if (payload.chatId === chatId) {
-            return [...prev, payload].sort((a, b) => {
-              const t1 = a.timestamp;
-              const t2 = b.timestamp;
-              return (new Date(t1).getTime()) - (new Date(t2).getTime());
-            });
+            const newMsgs = [...prev, payload].sort((a, b) =>
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+            return newMsgs;
           }
         }
         return prev;
@@ -161,13 +128,10 @@ export default function ChatView({ chatId }: { chatId: string }) {
     });
 
     return () => {
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-      }
-      unsubscribe();
+      if (loadingTimeout) clearTimeout(loadingTimeout);
       insforgeUnsubscribe();
     };
-  }, [chatId, currentUser?.id, toast]);
+  }, [chatId, currentUser?.id]);
   useEffect(() => {
     if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
@@ -207,13 +171,13 @@ export default function ChatView({ chatId }: { chatId: string }) {
       return;
     }
 
-    const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
     try {
-      await updateDocWithRetry(messageRef, {
+      const timestamp = new Date();
+      await updateDocInInsforge('messages', messageId, {
         text: 'یہ پیغام حذف کر دیا گیا',
         isDeleted: true,
         reactions: {},
-        deletedAt: serverTimestamp(),
+        deletedAt: timestamp,
         deletedBy: currentUser.id
       });
 
@@ -226,7 +190,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
       toast({ title: 'پیغام حذف کر دیا گیا', description: 'پیغام سب کے لیے حذف کر دیا گیا ہے۔' });
     } catch (error) {
-      console.error("Error deleting message:", error);
+      console.error("Error deleting message via InsForge:", error);
       toast({ variant: 'destructive', title: 'خرابی', description: 'پیغام حذف نہیں کیا جا سکا' });
     }
   };
@@ -242,8 +206,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
     try {
       // Mark message as deleted for current user only
-      const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
-      await updateDocWithRetry(messageRef, {
+      await updateDocInInsforge('messages', messageId, {
         [`deletedFor.${currentUser.id}`]: true
       });
 
@@ -256,7 +219,7 @@ export default function ChatView({ chatId }: { chatId: string }) {
 
       toast({ title: 'پیغام حذف کر دیا گیا', description: 'پیغام آپ کے لیے حذف کر دیا گیا ہے۔' });
     } catch (error) {
-      console.error("Error deleting message for me:", error);
+      console.error("Error deleting message for me via InsForge:", error);
       toast({ variant: 'destructive', title: 'خرابی', description: 'پیغام حذف نہیں کیا جا سکا' });
     }
   };
@@ -339,15 +302,11 @@ export default function ChatView({ chatId }: { chatId: string }) {
   const handleReactToMessage = async (messageId: string, emoji: string) => {
     if (!currentUser) return;
 
-    const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
-
     try {
-      const messageDoc = await getDoc(messageRef);
-      if (!messageDoc.exists()) return;
+      const messageData = await getDocFromInsforge<Message>('messages', messageId);
+      if (!messageData) return;
 
-      const messageData = messageDoc.data() as Message;
       const reactions = messageData.reactions || {};
-
       const uidsWithThisReaction = reactions[emoji] || [];
 
       Object.keys(reactions).forEach(key => {
@@ -368,10 +327,10 @@ export default function ChatView({ chatId }: { chatId: string }) {
         reactions[emoji] = [...uidsWithThisReaction, currentUser.id];
       }
 
-      await updateDocWithRetry(messageRef, { reactions });
+      await updateDocInInsforge('messages', messageId, { reactions });
 
     } catch (error) {
-      console.error("Error reacting to message:", error);
+      console.error("Error reacting to message via InsForge:", error);
       toast({ variant: 'destructive', title: 'خرابی', description: 'ردعمل نہیں دے سکے' });
     }
   };
@@ -382,68 +341,47 @@ export default function ChatView({ chatId }: { chatId: string }) {
     const toastRef = toast({ description: "فارورڈ کیا جا رہا ہے..." });
 
     try {
-      const batch = writeBatch(db);
-
       const contactDocs = await Promise.all(
-        selectedContactIds.map(id => getDocWithRetry<User>(doc(db, 'users', id)))
+        selectedContactIds.map(id => getDocFromInsforge<User>('users', id))
       );
 
       for (const contact of contactDocs) {
         if (!contact) continue;
 
         const chatId = await createOrNavigateToChat(currentUser.id, userData, contact);
-        const chatRef = doc(db, 'chats', chatId);
-        const messagesColRef = collection(chatRef, 'messages');
-        const newMessageRef = doc(messagesColRef);
-
-        const timestamp = serverTimestamp();
+        const messageId = crypto.randomUUID();
+        const timestamp = new Date();
 
         const forwardedMessageData: Partial<Message> = {
+          id: messageId,
           text: messageToForward.text,
           senderId: currentUser.id,
           timestamp: timestamp,
           isRead: false,
           isForwarded: true,
+          chatId: chatId,
+          type: messageToForward.type || 'text'
         };
 
-        batch.set(newMessageRef, forwardedMessageData);
-        batch.update(chatRef, {
+        // InsForge Only - Forwarded Message
+        await setDocInInsforge('messages', messageId, forwardedMessageData);
+
+        await updateDocInInsforge('chats', chatId, {
           lastMessage: {
             text: forwardedMessageData.text,
             senderId: currentUser.id,
             timestamp: timestamp,
             isRead: false,
-          }
+          },
+          updatedAt: timestamp
         });
-
-        // InsForge Sync (Forwarded Message)
-        try {
-          const insforgeTimestamp = new Date();
-          await setDocInInsforge('messages', newMessageRef.id, {
-            ...forwardedMessageData,
-            chatId: chatId,
-            timestamp: insforgeTimestamp
-          });
-          await updateDocInInsforge('chats', chatId, {
-            lastMessage: {
-              text: forwardedMessageData.text,
-              senderId: currentUser.id,
-              timestamp: insforgeTimestamp,
-              isRead: false,
-            },
-            updatedAt: insforgeTimestamp
-          });
-        } catch (error) {
-          console.error("InsForge forward message sync failed:", error);
-        }
       }
 
-      await batch.commit();
       toast({ title: "کامیابی", description: `پیغام ${selectedContactIds.length} رابطوں کو فارورڈ کر دیا گیا ہے۔` });
       setMessageToForward(null);
 
     } catch (error) {
-      console.error("Error forwarding message:", error);
+      console.error("Error forwarding message via InsForge:", error);
       toast({ variant: 'destructive', title: 'خرابی', description: 'پیغام فارورڈ نہیں کیا جا سکا' });
     } finally {
       toastRef.dismiss();

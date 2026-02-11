@@ -24,8 +24,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCall } from "@/hooks/useCall";
-import { db } from "@/lib/firebase";
-import { collection, serverTimestamp, writeBatch, doc, getDoc } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import EmojiPicker from "./EmojiPicker";
@@ -33,7 +31,8 @@ import { cn } from "@/lib/utils";
 import { FileService } from "@/lib/fileService";
 import { VoiceService } from "@/lib/voiceService";
 import { FilePreviewCard } from "./FileCards";
-import { setDocInInsforge, updateDocInInsforge } from "@/lib/insforgeUtils";
+import { setDocInInsforge, updateDocInInsforge, getDocFromInsforge } from "@/lib/insforgeUtils";
+import type { User as AppUser } from '@/lib/types'; // Assuming AppUser is defined in types
 
 interface ChatInputProps {
   chatId: string;
@@ -65,51 +64,57 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
     if (!currentUser || !remoteUserId || !userData || ensuredContactsRef.current) return;
 
     try {
-      const remoteUserRef = doc(db, 'users', remoteUserId);
-      const remoteUserSnap = await getDoc(remoteUserRef);
-      if (!remoteUserSnap.exists()) return;
-      const remoteData = remoteUserSnap.data() as any;
+      const remoteUser = await getDocFromInsforge<AppUser>('users', remoteUserId);
+      if (!remoteUser) return;
 
-      const batch = writeBatch(db);
-      const timestamp = serverTimestamp();
+      const timestamp = new Date();
 
-      batch.set(doc(db, 'users', currentUser.id, 'contacts', remoteUserId), {
-        addedAt: timestamp,
-        contactName: remoteData.name ?? remoteData.displayName ?? 'Unknown User',
-        contactAvatarUrl: remoteData.avatarUrl ?? remoteData.photoURL ?? '',
-      }, { merge: true });
+      // Set up mutual contacts in InsForge
+      // Current user side
+      await setDocInInsforge('user_contacts', `${currentUser.id}_${remoteUserId}`, {
+        userId: currentUser.id,
+        contactId: remoteUserId,
+        contactName: remoteUser.name ?? remoteUser.displayName ?? 'Unknown User',
+        contactAvatarUrl: remoteUser.avatarUrl ?? remoteUser.photoURL ?? '',
+        addedAt: timestamp
+      });
 
-      batch.set(doc(db, 'users', remoteUserId, 'contacts', currentUser.id), {
-        addedAt: timestamp,
-        contactName: userData.name ?? (userData as any).displayName ?? 'Unknown User',
-        contactAvatarUrl: userData.avatarUrl ?? (userData as any).photoURL ?? '',
-      }, { merge: true });
+      // Remote user side (optional, might fail due to RLS but we try)
+      try {
+        await setDocInInsforge('user_contacts', `${remoteUserId}_${currentUser.id}`, {
+          userId: remoteUserId,
+          contactId: currentUser.id,
+          contactName: userData.name ?? userData.displayName ?? 'Unknown User',
+          contactAvatarUrl: userData.avatarUrl ?? userData.photoURL ?? '',
+          addedAt: timestamp
+        });
+      } catch (rlsErr) {
+        console.warn("Could not sync mutual contact in InsForge (expected if RLS is strict):", rlsErr);
+      }
 
-      await batch.commit();
       ensuredContactsRef.current = true;
     } catch (error) {
-      console.error("Error ensuring contacts:", error);
+      console.error("Error ensuring contacts in InsForge:", error);
     }
   }, [currentUser, remoteUserId, userData]);
 
   // Handle sending text messages
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newMessage.trim() === "" || !currentUser) return;
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newMessage.trim() || !currentUser) return;
 
-    const messageText = newMessage;
+    const messageText = newMessage.trim();
     setNewMessage("");
 
     try {
       await ensureMutualContacts();
-      const chatRef = doc(db, 'chats', chatId);
-      const messagesColRef = collection(chatRef, 'messages');
-      const newMessageRef = doc(messagesColRef);
 
-      const batch = writeBatch(db);
-      const timestamp = serverTimestamp();
+      const messageId = crypto.randomUUID();
+      const timestamp = new Date();
 
       const messageData = {
+        id: messageId,
+        chatId: chatId,
         text: messageText,
         senderId: currentUser.id,
         timestamp: timestamp,
@@ -117,39 +122,19 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         type: 'text'
       };
 
-      batch.set(newMessageRef, messageData);
-      batch.update(chatRef, {
+      // InsForge Only - Sending Message
+      await setDocInInsforge('messages', messageId, messageData);
+
+      // Update Chat lastMessage
+      await updateDocInInsforge('chats', chatId, {
         lastMessage: {
           text: messageText,
           senderId: currentUser.id,
           timestamp: timestamp,
           isRead: false,
-        }
+        },
+        updatedAt: timestamp
       });
-
-      await batch.commit();
-
-      // InsForge Sync
-      try {
-        const timestamp = new Date();
-        const insforgeMessage = {
-          ...messageData,
-          chatId: chatId,
-          timestamp: timestamp
-        };
-        await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
-        await updateDocInInsforge('chats', chatId, {
-          lastMessage: {
-            text: messageText,
-            senderId: currentUser.id,
-            timestamp: timestamp,
-            isRead: false,
-          },
-          updatedAt: timestamp
-        });
-      } catch (error) {
-        console.error("InsForge send message sync failed:", error);
-      }
 
       // Send to Pipedream webhook
       try {
@@ -173,9 +158,9 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
       onMessageSent?.();
       toast({ title: 'پیغام بھیجا گیا', description: 'آپ کا پیغام کامیابی سے بھیجا گیا' });
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast({ variant: 'destructive', title: 'خرابی', description: 'پیغام بھیج نہیں سکا' });
+    } catch (error: any) {
+      console.error("Error sending message via InsForge:", error);
+      toast({ variant: 'destructive', title: 'خرابی', description: error.message || 'پیغام بھیج نہیں سکا' });
     }
   };
 
@@ -222,25 +207,25 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
   };
 
   // Send selected files
+  // Send selected files
   const sendSelectedFiles = async () => {
     if (selectedFiles.length === 0 || !currentUser) return;
 
     try {
       await ensureMutualContacts();
       setIsUploading(true);
-      const batch = writeBatch(db);
-      const chatRef = doc(db, 'chats', chatId);
-      const messagesColRef = collection(chatRef, 'messages');
 
       for (const file of selectedFiles) {
         try {
           // Upload file using FileService
           const fileAttachment = await FileService.uploadFile(file, chatId, currentUser.id);
 
-          const newMessageRef = doc(messagesColRef);
-          const timestamp = serverTimestamp();
+          const messageId = crypto.randomUUID();
+          const timestamp = new Date();
 
           const messageData: any = {
+            id: messageId,
+            chatId: chatId,
             text: file.name,
             senderId: currentUser.id,
             timestamp: timestamp,
@@ -250,8 +235,6 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
             fileSize: file.size,
             fileType: file.type,
             fileId: fileAttachment.id, // Reference to RTDB file
-            // Store the base64 data directly in the message for immediate display
-            fileData: fileAttachment.fileData
           };
 
           // Add type-specific properties
@@ -261,22 +244,9 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
             messageData.fileUrl = `data:${file.type};base64,${fileAttachment.fileData}`;
           }
 
-          console.log('Sending file message:', messageData);
+          // InsForge Only - Sending File Message
+          await setDocInInsforge('messages', messageId, messageData);
 
-          batch.set(newMessageRef, messageData);
-
-          // InsForge Sync (Individual File Message)
-          try {
-            const insforgeTimestamp = new Date();
-            const insforgeMessage = {
-              ...messageData,
-              chatId: chatId,
-              timestamp: insforgeTimestamp
-            };
-            await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
-          } catch (error) {
-            console.error("InsForge file message sync failed:", error);
-          }
         } catch (error: any) {
           console.error(`Error uploading file ${file.name}:`, error);
           toast({
@@ -287,64 +257,48 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         }
       }
 
-      // Update chat with last message
-      batch.update(chatRef, {
+      // Update chat with last message info
+      const finalTimestamp = new Date();
+      await updateDocInInsforge('chats', chatId, {
         lastMessage: {
           text: `${selectedFiles.length} فائلیں`,
           senderId: currentUser.id,
-          timestamp: serverTimestamp(),
+          timestamp: finalTimestamp,
           isRead: false,
-        }
+        },
+        updatedAt: finalTimestamp
       });
 
-      await batch.commit();
-
-      // InsForge Sync (Chat UpdatedAt)
-      try {
-        const insforgeTimestamp = new Date();
-        await updateDocInInsforge('chats', chatId, {
-          lastMessage: {
-            text: `${selectedFiles.length} فائلیں`,
-            senderId: currentUser.id,
-            timestamp: insforgeTimestamp,
-            isRead: false,
-          },
-          updatedAt: insforgeTimestamp
-        });
-      } catch (error) {
-        console.error("InsForge last message sync failed:", error);
-      }
-      setSelectedFiles([]); // Clear selected files
+      setSelectedFiles([]);
       onMessageSent?.();
-      toast({ title: 'فائلیں بھیجی گئیں', description: `${selectedFiles.length} فائلیں کامیابی سے بھیجی گئیں` });
+      toast({ title: `${selectedFiles.length} فائلیں بھیجی گئیں` });
     } catch (error) {
-      console.error("Error uploading files:", error);
-      toast({ variant: 'destructive', title: 'خرابی', description: 'فائلیں اپ لوڈ نہیں ہو سکیں' });
+      console.error("Error sending selected files via InsForge:", error);
+      toast({ variant: 'destructive', title: 'خرابی', description: 'فائلیں بھیج نہیں سکا' });
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Simple file upload function
+  // Simple file upload function for multiple files (e.g. from drag & drop)
   const handleMultipleFiles = async (files: File[]) => {
-    if (!currentUser) return;
+    if (!currentUser || files.length === 0) return;
 
     try {
       await ensureMutualContacts();
       setIsUploading(true);
-      const batch = writeBatch(db);
-      const chatRef = doc(db, 'chats', chatId);
-      const messagesColRef = collection(chatRef, 'messages');
 
       for (const file of files) {
         try {
           // Upload file using FileService
           const fileAttachment = await FileService.uploadFile(file, chatId, currentUser.id);
 
-          const newMessageRef = doc(messagesColRef);
-          const timestamp = serverTimestamp();
+          const messageId = crypto.randomUUID();
+          const timestamp = new Date();
 
           const messageData: any = {
+            id: messageId,
+            chatId: chatId,
             text: file.name,
             senderId: currentUser.id,
             timestamp: timestamp,
@@ -363,20 +317,8 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
             messageData.fileUrl = `data:${file.type};base64,${fileAttachment.fileData}`;
           }
 
-          batch.set(newMessageRef, messageData);
-
-          // InsForge Sync (Individual File Message)
-          try {
-            const insforgeTimestamp = new Date();
-            const insforgeMessage = {
-              ...messageData,
-              chatId: chatId,
-              timestamp: insforgeTimestamp
-            };
-            await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
-          } catch (error) {
-            console.error("InsForge file message sync failed:", error);
-          }
+          // InsForge Only - Sending File Message
+          await setDocInInsforge('messages', messageId, messageData);
         } catch (error: any) {
           console.error(`Error uploading file ${file.name}:`, error);
           toast({
@@ -388,36 +330,21 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       }
 
       // Update chat with last message
-      batch.update(chatRef, {
+      const finalTimestamp = new Date();
+      await updateDocInInsforge('chats', chatId, {
         lastMessage: {
           text: `${files.length} فائلیں`,
           senderId: currentUser.id,
-          timestamp: serverTimestamp(),
+          timestamp: finalTimestamp,
           isRead: false,
-        }
+        },
+        updatedAt: finalTimestamp
       });
 
-      await batch.commit();
-
-      // InsForge Sync (Chat UpdatedAt)
-      try {
-        const insforgeTimestamp = new Date();
-        await updateDocInInsforge('chats', chatId, {
-          lastMessage: {
-            text: `${files.length} فائلیں`,
-            senderId: currentUser.id,
-            timestamp: insforgeTimestamp,
-            isRead: false,
-          },
-          updatedAt: insforgeTimestamp
-        });
-      } catch (error) {
-        console.error("InsForge last message sync failed:", error);
-      }
       onMessageSent?.();
       toast({ title: `${files.length} فائلیں بھیجی گئیں` });
     } catch (error) {
-      console.error("Error uploading multiple files:", error);
+      console.error("Error uploading multiple files via InsForge:", error);
       toast({ variant: 'destructive', title: 'خرابی', description: 'فائلیں بھیج نہیں سکا' });
     } finally {
       setIsUploading(false);
@@ -504,14 +431,12 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         const { latitude, longitude } = position.coords;
         const locationText = `📍 مقام: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 
-        const chatRef = doc(db, 'chats', chatId);
-        const messagesColRef = collection(chatRef, 'messages');
-        const newMessageRef = doc(messagesColRef);
-
-        const batch = writeBatch(db);
-        const timestamp = serverTimestamp();
+        const messageId = crypto.randomUUID();
+        const timestamp = new Date();
 
         const messageData = {
+          id: messageId,
+          chatId: chatId,
           text: locationText,
           senderId: currentUser?.id,
           timestamp: timestamp,
@@ -520,43 +445,23 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
           location: { latitude, longitude }
         };
 
-        batch.set(newMessageRef, messageData);
-        batch.update(chatRef, {
+        // InsForge Only - Location Message
+        await setDocInInsforge('messages', messageId, messageData);
+
+        await updateDocInInsforge('chats', chatId, {
           lastMessage: {
             text: '📍 مقام شیئر کیا گیا',
             senderId: currentUser?.id,
             timestamp: timestamp,
             isRead: false,
-          }
+          },
+          updatedAt: timestamp
         });
 
-        await batch.commit();
-
-        // InsForge Sync (Location)
-        try {
-          const insforgeTimestamp = new Date();
-          const insforgeMessage = {
-            ...messageData,
-            chatId: chatId,
-            timestamp: insforgeTimestamp
-          };
-          await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
-          await updateDocInInsforge('chats', chatId, {
-            lastMessage: {
-              text: '📍 مقام شیئر کیا گیا',
-              senderId: currentUser?.id,
-              timestamp: insforgeTimestamp,
-              isRead: false,
-            },
-            updatedAt: insforgeTimestamp
-          });
-        } catch (error) {
-          console.error("InsForge location share sync failed:", error);
-        }
         onMessageSent?.();
         toast({ title: 'مقام شیئر کیا گیا' });
       } catch (error) {
-        console.error("Geolocation error:", error);
+        console.error("Geolocation error via InsForge:", error);
         toast({ variant: 'destructive', title: 'خرابی', description: 'مقام حاصل نہیں کیا جا سکا' });
       }
     } else {
@@ -571,14 +476,12 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
     try {
       const contactText = `👤 رابطہ: ${userData?.name || userData?.displayName || 'نامعلوم'}\n📧 ای میل: ${currentUser.email || 'نامعلوم'}`;
 
-      const chatRef = doc(db, 'chats', chatId);
-      const messagesColRef = collection(chatRef, 'messages');
-      const newMessageRef = doc(messagesColRef);
-
-      const batch = writeBatch(db);
-      const timestamp = serverTimestamp();
+      const messageId = crypto.randomUUID();
+      const timestamp = new Date();
 
       const messageData = {
+        id: messageId,
+        chatId: chatId,
         text: contactText,
         senderId: currentUser.id,
         timestamp: timestamp,
@@ -586,43 +489,23 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         type: 'contact'
       };
 
-      batch.set(newMessageRef, messageData);
-      batch.update(chatRef, {
+      // InsForge Only - Contact Share
+      await setDocInInsforge('messages', messageId, messageData);
+
+      await updateDocInInsforge('chats', chatId, {
         lastMessage: {
           text: '👤 رابطہ شیئر کیا گیا',
           senderId: currentUser.id,
           timestamp: timestamp,
           isRead: false,
-        }
+        },
+        updatedAt: timestamp
       });
 
-      await batch.commit();
-
-      // InsForge Sync (Contact)
-      try {
-        const insforgeTimestamp = new Date();
-        const insforgeMessage = {
-          ...messageData,
-          chatId: chatId,
-          timestamp: insforgeTimestamp
-        };
-        await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
-        await updateDocInInsforge('chats', chatId, {
-          lastMessage: {
-            text: '👤 رابطہ شیئر کیا گیا',
-            senderId: currentUser.id,
-            timestamp: insforgeTimestamp,
-            isRead: false,
-          },
-          updatedAt: insforgeTimestamp
-        });
-      } catch (error) {
-        console.error("InsForge contact share sync failed:", error);
-      }
       onMessageSent?.();
       toast({ title: 'رابطہ شیئر کیا گیا' });
     } catch (error) {
-      console.error("Error sharing contact:", error);
+      console.error("Error sharing contact via InsForge:", error);
       toast({ variant: 'destructive', title: 'خرابی', description: 'رابطہ شیئر نہیں کیا جا سکا' });
     }
   };
@@ -716,14 +599,12 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
       await ensureMutualContacts();
       setIsUploading(true);
 
-      const chatRef = doc(db, 'chats', chatId);
-      const messagesColRef = collection(chatRef, 'messages');
-      const newMessageRef = doc(messagesColRef);
-
-      const batch = writeBatch(db);
-      const timestamp = serverTimestamp();
+      const messageId = crypto.randomUUID();
+      const timestamp = new Date();
 
       const messageData = {
+        id: messageId,
+        chatId: chatId,
         text: 'آواز کا پیغام',
         senderId: currentUser.id,
         timestamp: timestamp,
@@ -734,43 +615,23 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         voiceMessageId: voiceMessage.id // Reference to RTDB voice message
       };
 
-      batch.set(newMessageRef, messageData);
-      batch.update(chatRef, {
+      // InsForge Only - Voice Message
+      await setDocInInsforge('messages', messageId, messageData);
+
+      await updateDocInInsforge('chats', chatId, {
         lastMessage: {
           text: 'آواز کا پیغام',
           senderId: currentUser.id,
           timestamp: timestamp,
           isRead: false,
-        }
+        },
+        updatedAt: timestamp
       });
 
-      await batch.commit();
-
-      // InsForge Sync (Voice)
-      try {
-        const insforgeTimestamp = new Date();
-        const insforgeMessage = {
-          ...messageData,
-          chatId: chatId,
-          timestamp: insforgeTimestamp
-        };
-        await setDocInInsforge('messages', newMessageRef.id, insforgeMessage);
-        await updateDocInInsforge('chats', chatId, {
-          lastMessage: {
-            text: 'آواز کا پیغام',
-            senderId: currentUser.id,
-            timestamp: insforgeTimestamp,
-            isRead: false,
-          },
-          updatedAt: insforgeTimestamp
-        });
-      } catch (error) {
-        console.error("InsForge voice message sync failed:", error);
-      }
       onMessageSent?.();
       toast({ title: 'آواز کا پیغام بھیجا گیا' });
     } catch (error) {
-      console.error("Error sending voice message:", error);
+      console.error("Error sending voice message via InsForge:", error);
       toast({ variant: 'destructive', title: 'خرابی', description: 'آواز کا پیغام بھیج نہیں سکا' });
     } finally {
       setIsUploading(false);

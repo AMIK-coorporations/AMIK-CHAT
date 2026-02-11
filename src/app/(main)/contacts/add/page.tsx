@@ -10,7 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getDocFromInsforge } from '@/lib/insforgeUtils';
+import { getDocFromInsforge, setDocInInsforge } from '@/lib/insforgeUtils';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import type { User } from '@/lib/types';
 import { sendContactRequest, ContactRequestError } from '@/lib/contactRequestService';
@@ -62,8 +64,37 @@ export default function AddContactPage() {
         return;
       }
 
-      // First, check if the target user exists
-      const userDoc = await getDocFromInsforge<User>('users', trimmedId);
+      // First, check if the target user exists in InsForge
+      let userDoc = await getDocFromInsforge<User>('users', trimmedId);
+
+      // Fallback to Firestore if not in InsForge
+      if (!userDoc) {
+        console.log("User not found in InsForge, checking Firestore fallback...");
+        const firestoreDoc = await getDoc(doc(db, 'users', trimmedId));
+        if (firestoreDoc.exists()) {
+          const fsData = firestoreDoc.data() as any;
+          userDoc = {
+            id: trimmedId,
+            email: fsData.email || '',
+            displayName: fsData.name || fsData.displayName || 'User',
+            name: fsData.name || fsData.displayName || 'User',
+            avatarUrl: fsData.avatarUrl || fsData.photoURL || '',
+            photoURL: fsData.photoURL || fsData.avatarUrl || '',
+            createdAt: new Date(),
+            lastSeen: new Date(),
+            isOnline: false,
+            ...fsData
+          };
+
+          // Auto-sync to InsForge
+          try {
+            await setDocInInsforge('users', trimmedId, userDoc);
+            console.log("Successfully synced user from Firestore to InsForge");
+          } catch (syncErr) {
+            console.error("Failed to sync fallback user to InsForge:", syncErr);
+          }
+        }
+      }
 
       if (!userDoc) {
         if (timeoutRef.current) {
@@ -103,8 +134,6 @@ export default function AddContactPage() {
         timeoutRef.current = null;
       }
       console.error("Error adding contact:", error);
-      console.error("Error code:", error.code);
-      console.error("Error message:", error.message);
 
       if (error instanceof ContactRequestError) {
         let message = 'کچھ غلط ہو گیا۔';
@@ -126,24 +155,11 @@ export default function AddContactPage() {
           description: message,
         });
       } else {
-        // Provide more specific error messages
-        let errorMessage = 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
-
-        if (error.code === 'permission-denied') {
-          errorMessage = 'سیکیورٹی قوانین کو چیک کریں۔ Firebase اجازت مسترد کر دی گئی۔ براہ کرم اپنے Firestore سیکیورٹی قوانین کو Firebase کنسول میں اپ ڈیٹ کریں۔';
-        } else if (error.code === 'unavailable') {
-          errorMessage = 'Firebase سروس دستیاب نہیں ہے۔ براہ کرم اپنا انٹرنیٹ کنکشن چیک کریں۔';
-        } else if (error.code === 'deadline-exceeded') {
-          errorMessage = 'درخواست کا وقت ختم ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-
         toast({
           variant: 'destructive',
           title: 'رابطہ شامل کرنے میں خرابی',
-          description: errorMessage,
-          duration: 10000, // Show for 10 seconds so user can read it
+          description: error.message || 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔',
+          duration: 10000,
         });
       }
       setLoading(false);
