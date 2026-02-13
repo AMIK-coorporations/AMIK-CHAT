@@ -10,6 +10,7 @@ import ChatMessageActions from './ChatMessageActions';
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { FileMessageCard } from "./FileCards";
+import { FilePreviewModal } from "./FilePreviewModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface MessageBubbleProps {
@@ -32,6 +33,7 @@ export default function MessageBubble({ message, senderName, senderAvatar, trans
   const isSentByMe = message.senderId === currentUser?.id;
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messageRef = useRef<HTMLDivElement>(null);
@@ -203,6 +205,7 @@ export default function MessageBubble({ message, senderName, senderAvatar, trans
             fileUrl={message.imageUrl || ''}
             isImage={true}
             onDownload={handleFileDownload}
+            onPreview={() => setIsPreviewOpen(true)}
           />
         );
 
@@ -355,6 +358,16 @@ export default function MessageBubble({ message, senderName, senderAvatar, trans
           <AvatarFallback>{(senderName || '?').charAt(0)}</AvatarFallback>
         </Avatar>
       )}
+
+      {/* File Preview Modal */}
+      <FilePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        fileUrl={message.imageUrl || message.fileUrl || ''}
+        fileName={message.fileName || 'File'}
+        fileType={message.fileType || (message.type === 'image' ? 'image/jpeg' : 'application/octet-stream')}
+        onDownload={handleFileDownload}
+      />
     </div>
   );
 }

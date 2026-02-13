@@ -164,8 +164,9 @@ export function FileMessageCard({
   duration,
   onDownload,
   onPlay,
+  onPreview,
   isPlaying
-}: FileMessageCardProps) {
+}: FileMessageCardProps & { onPreview?: () => void }) {
   const getFileIcon = () => {
     if (isImage) return <ImageIcon className="h-6 w-6 text-blue-500" />;
     if (isAudio) return <Play className="h-6 w-6 text-green-500" />;
@@ -189,7 +190,7 @@ export function FileMessageCard({
   };
 
   return (
-    <Card className="w-full max-w-sm border border-gray-200 bg-white shadow-sm">
+    <Card className="w-full max-w-sm border border-gray-200 bg-white shadow-sm overflow-hidden">
       <CardContent className="p-3">
         <div className="flex items-center gap-3">
           {getFileIcon()}
@@ -224,15 +225,20 @@ export function FileMessageCard({
           </div>
         </div>
 
-        {/* Image Preview */}
+        {/* Image Preview with Overlay */}
         {isImage && (
-          <div className="mt-2">
+          <div className="mt-2 relative group cursor-pointer" onClick={onPreview}>
             <img
               src={fileUrl}
               alt={fileName}
-              className="w-full h-32 object-cover rounded-lg border"
-              onClick={() => window.open(fileUrl, '_blank')}
+              className="w-full h-48 object-cover rounded-lg border transition-opacity group-hover:opacity-90"
             />
+            {/* Center Download/View Button Overlay */}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors rounded-lg">
+              <div className="bg-black/50 p-2 rounded-full backdrop-blur-sm text-white hover:bg-black/70 transition-colors">
+                <Download className="h-6 w-6" />
+              </div>
+            </div>
           </div>
         )}
 
@@ -252,4 +258,4 @@ export function FileMessageCard({
       </CardContent>
     </Card>
   );
-} 
+}

@@ -48,13 +48,34 @@ export class FileService {
       // But based on avatarService usage (data.url), we assume it's there. 
       // If not, we might need insforge.storage.from('uploads').getPublicUrl(path).
 
+
       let fileUrl = data.url;
       if (!fileUrl) {
         fileUrl = insforge.storage.from('uploads').getPublicUrl(path);
       }
 
+      // Persist file metadata to 'files' table
+      const fileId = data.key || path;
+      const { error: dbError } = await insforge.database.from('files').insert({
+        id: fileId,
+        bucket_id: 'uploads',
+        file_path: path,
+        public_url: fileUrl,
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size,
+        user_id: senderId,
+        chat_id: chatId,
+        created_at: new Date().toISOString()
+      });
+
+      if (dbError) {
+        console.error('Failed to save file metadata to DB:', dbError);
+        // Proceeding anyway as the file is uploaded, but this is an issue.
+      }
+
       const fileAttachment: FileAttachment = {
-        id: data.key || path, // Use key or path as ID
+        id: fileId, // Use the DB ID (file path in this case)
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,

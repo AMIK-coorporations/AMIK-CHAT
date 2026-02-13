@@ -234,7 +234,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
             fileName: file.name,
             fileSize: file.size,
             fileType: file.type,
-            fileId: fileAttachment.id, // Reference to RTDB file
+            fileId: fileAttachment.id
           };
 
           // Add type-specific properties
@@ -307,7 +307,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
             fileName: file.name,
             fileSize: file.size,
             fileType: file.type,
-            fileId: fileAttachment.id // Reference to RTDB file
+            fileId: fileAttachment.id
           };
 
           // Add type-specific properties
