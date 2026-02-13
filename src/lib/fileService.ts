@@ -50,8 +50,7 @@ export class FileService {
 
       let fileUrl = data.url;
       if (!fileUrl) {
-        const { data: publicUrlData } = insforge.storage.from('uploads').getPublicUrl(path);
-        fileUrl = publicUrlData.publicUrl;
+        fileUrl = insforge.storage.from('uploads').getPublicUrl(path);
       }
 
       const fileAttachment: FileAttachment = {
