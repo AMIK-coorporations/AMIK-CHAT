@@ -45,7 +45,7 @@ export function FilePreviewCard({ file, onRemove, onSend, isUploading }: FilePre
       setIsAudio(true);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
-      
+
       // Get audio duration
       const audio = new Audio(url);
       audio.addEventListener('loadedmetadata', () => {
@@ -149,30 +149,22 @@ export function FilePreviewCard({ file, onRemove, onSend, isUploading }: FilePre
           </div>
         )}
 
-        {/* Send Button */}
-        <Button
-          onClick={() => onSend(file)}
-          disabled={isUploading}
-          className="w-full"
-        >
-          {isUploading ? 'بھیج رہا ہے...' : 'فائل بھیجیں'}
-        </Button>
       </CardContent>
     </Card>
   );
 }
 
-export function FileMessageCard({ 
-  fileName, 
-  fileSize, 
-  fileType, 
-  fileUrl, 
-  isImage, 
-  isAudio, 
-  duration, 
-  onDownload, 
-  onPlay, 
-  isPlaying 
+export function FileMessageCard({
+  fileName,
+  fileSize,
+  fileType,
+  fileUrl,
+  isImage,
+  isAudio,
+  duration,
+  onDownload,
+  onPlay,
+  isPlaying
 }: FileMessageCardProps) {
   const getFileIcon = () => {
     if (isImage) return <ImageIcon className="h-6 w-6 text-blue-500" />;

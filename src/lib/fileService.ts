@@ -32,22 +32,36 @@ export class FileService {
 
     // InsForge Storage Upload
     try {
+      const timestamp = Date.now();
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const path = `${senderId}/${timestamp}_${cleanFileName}`;
+
       const { data, error } = await insforge.storage
         .from('uploads')
-        .uploadAuto(file);
+        .upload(path, file);
 
       if (error || !data) {
         throw new Error(error?.message || 'Failed to upload file to InsForge');
       }
 
+      // Construct public URL if data.url is missing (sometimes upload returns key but not url directly in some versions)
+      // But based on avatarService usage (data.url), we assume it's there. 
+      // If not, we might need insforge.storage.from('uploads').getPublicUrl(path).
+
+      let fileUrl = data.url;
+      if (!fileUrl) {
+        const { data: publicUrlData } = insforge.storage.from('uploads').getPublicUrl(path);
+        fileUrl = publicUrlData.publicUrl;
+      }
+
       const fileAttachment: FileAttachment = {
-        id: data.key,
+        id: data.key || path, // Use key or path as ID
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
-        fileUrl: data.url,
+        fileUrl: fileUrl,
         senderId: senderId,
-        timestamp: Date.now(),
+        timestamp: timestamp,
         chatId: chatId
       };
 
