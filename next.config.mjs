@@ -84,23 +84,7 @@ const nextConfig = {
   staticPageGenerationTimeout: 120,
   // Ensure static assets are properly copied
   trailingSlash: false,
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: '/pages/:path*',
-          has: [{ type: 'host', value: 'docs.amikchat.site' }],
-          destination: '/docs/:path*',
-        },
-        {
-          source: '/:path*',
-          has: [{ type: 'host', value: 'docs.amikchat.site' }],
-          destination: '/docs/:path*',
-        },
-      ],
-      afterFiles: [],
-    };
-  },
+
 };
 
 export default nextConfig;
