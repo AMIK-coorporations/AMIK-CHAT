@@ -9,11 +9,13 @@ import { Analytics } from "@vercel/analytics/next";
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import PrefetchRoutes from '@/components/PrefetchRoutes';
 import { ThemeProvider } from './ThemeProvider';
+import OneSignalInitializer from '@/components/OneSignalInitializer';
 
 export default function RootProviders({ children }: { children: React.ReactNode }) {
     return (
         <ErrorBoundary>
             <AuthProvider>
+                <OneSignalInitializer />
                 <CallProvider>
                     <ThemeProvider>
                         <PrefetchRoutes />
