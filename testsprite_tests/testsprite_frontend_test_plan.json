@@ -1,1400 +1,575 @@
 [
   {
     "id": "TC001",
-    "title": "Send a text message and observe delivery/read status indicators",
-    "description": "Verifies a user can send a text message in a 1:1 chat and see it appear with a visible status indicator update.",
-    "category": "Chat Messaging",
+    "title": "User Registration with Valid Data",
+    "description": "Verify that a user can successfully register with valid email, password, and profile information and is redirected to the main app.",
+    "category": "functional",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "Navigate to the signup page."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+        "description": "Enter a valid email address, strong password, and complete required profile details."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Submit the registration form."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on any chat conversation in the chat list"
+        "description": "Check the user account is created and email is verified (if applicable)."
       },
       {
         "type": "assertion",
-        "description": "Verify element \"Message input\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Type \"Hello from E2E test\" into the message input field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Send\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Hello from E2E test\" is visible in the chat messages area"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Message status (sent/delivered/read)\" is visible for the most recent message"
+        "description": "Verify the user is redirected to the main chat interface."
       }
     ]
   },
   {
     "id": "TC002",
-    "title": "Messages load successfully when opening an existing chat",
-    "description": "Verifies the chat screen loads and previously sent messages are visible when opening a conversation.",
-    "category": "Chat Messaging",
+    "title": "User Login with Correct Credentials",
+    "description": "Check login functionality with valid email and password results in a successful session and entry into the chat app.",
+    "category": "functional",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "Go to the login page."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+        "description": "Input a registered email and corresponding password."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Click the login button."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on any chat conversation in the chat list"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Chat header\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Messages list\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Message input\" is visible"
+        "description": "Confirm that login is successful and user is redirected to the chat interface."
       }
     ]
   },
   {
     "id": "TC003",
-    "title": "Send a message containing emojis using the emoji picker",
-    "description": "Verifies a user can open the emoji picker, insert an emoji into the message, and send it successfully.",
-    "category": "Chat Messaging",
-    "priority": "Medium",
+    "title": "User Login Failure with Incorrect Credentials",
+    "description": "Verify error handling and appropriate error messages display when entering invalid email or password during login.",
+    "category": "error handling",
+    "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "Open the login page."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+        "description": "Enter an unregistered email or incorrect password."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Click on login."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on any chat conversation in the chat list"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Message input\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Emoji\" button near the message input"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Emoji picker\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Select an emoji from the emoji picker"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Send\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify the most recent message bubble contains an emoji"
+        "description": "Check that login fails and a relevant error message appears."
       }
     ]
   },
   {
     "id": "TC004",
-    "title": "Attempt to send an empty message is blocked",
-    "description": "Verifies the UI prevents sending a blank message and does not add an empty message bubble to the chat.",
-    "category": "Chat Messaging",
-    "priority": "High",
+    "title": "Profile Editing and Avatar Upload",
+    "description": "Test that a logged-in user can edit profile information including uploading an avatar image with validation.",
+    "category": "functional",
+    "priority": "Medium",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "Login and navigate to the profile edit page."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+        "description": "Change profile fields such as display name and upload a valid avatar image file."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Save the changes."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Verify updated profile data is persisted and avatar is displayed correctly."
       },
       {
         "type": "action",
-        "description": "Click on any chat conversation in the chat list"
+        "description": "Attempt to upload invalid avatar file format (e.g., .exe or too large)."
       },
       {
         "type": "assertion",
-        "description": "Verify element \"Message input\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Send\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Message cannot be empty\" is visible"
+        "description": "Confirm proper error handling and rejection of invalid files."
       }
     ]
   },
   {
     "id": "TC005",
-    "title": "Retry is not available until a send error is shown",
-    "description": "Verifies the chat UI does not show a retry control when there is no failed message.",
-    "category": "Chat Messaging",
-    "priority": "Medium",
+    "title": "Real-time Text Messaging Between Two Users",
+    "description": "Verify sending and receiving plain text messages in real-time between two different users with less than 1 second latency.",
+    "category": "functional",
+    "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "User A logs in and opens chat with User B."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+        "description": "User B logs in on another device or browser and opens chat with User A."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "User A sends a text message to User B."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Confirm User B receives the message within 1 second."
       },
       {
         "type": "action",
-        "description": "Click on any chat conversation in the chat list"
+        "description": "User B replies with a text message."
       },
       {
         "type": "assertion",
-        "description": "Verify element \"Retry\" is not visible"
+        "description": "Confirm User A receives reply instantly."
       }
     ]
   },
   {
     "id": "TC006",
-    "title": "Send message using Enter key from the message input",
-    "description": "Verifies a user can send a message by pressing Enter and the message appears in the conversation.",
-    "category": "Chat Messaging",
-    "priority": "Medium",
+    "title": "Sending and Receiving Multimedia Messages",
+    "description": "Test sending images, files, voice messages, locations, and contacts in chat and receiving them correctly with previews where applicable.",
+    "category": "functional",
+    "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "Open a chat conversation."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Send an image file and verify it uploads and preview is shown before sending."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Ensure the recipient receives the image and can view/download it."
       },
       {
         "type": "action",
-        "description": "Click on any chat conversation in the chat list"
-      },
-      {
-        "type": "action",
-        "description": "Type \"Sent with Enter\" into the message input field"
-      },
-      {
-        "type": "action",
-        "description": "Press Enter"
+        "description": "Send a document file and confirm upload progress is visible."
       },
       {
         "type": "assertion",
-        "description": "Verify text \"Sent with Enter\" is visible in the chat messages area"
+        "description": "Recipient can download the document successfully."
+      },
+      {
+        "type": "action",
+        "description": "Send a voice recording and share current location."
+      },
+      {
+        "type": "assertion",
+        "description": "Receiver can play voice message and view shared location on map."
+      },
+      {
+        "type": "action",
+        "description": "Share a contact from user's contact list."
+      },
+      {
+        "type": "assertion",
+        "description": "Recipient can add shared contact easily via provided information."
       }
     ]
   },
   {
     "id": "TC007",
-    "title": "Send a longer multi-sentence text message and verify it renders fully",
-    "description": "Verifies a longer message can be sent and displayed without truncation in the message bubble.",
-    "category": "Chat Messaging",
-    "priority": "Low",
+    "title": "Peer-to-Peer Voice Call Establishment and Controls",
+    "description": "Verify that two users can initiate a peer-to-peer voice call, connection is established within 3 seconds, and call controls (mute, hang up) function properly.",
+    "category": "functional",
+    "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "User A initiates a voice call to User B via the chat interface."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "User B receives call notification and accepts the call."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Confirm voice connection is established within 3 seconds."
       },
       {
         "type": "action",
-        "description": "Click on any chat conversation in the chat list"
-      },
-      {
-        "type": "action",
-        "description": "Type \"This is a longer message. It has multiple sentences to verify full rendering in the bubble.\" into the message input field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Send\" button"
+        "description": "User A mutes microphone using call control UI."
       },
       {
         "type": "assertion",
-        "description": "Verify text \"This is a longer message. It has multiple sentences to verify full rendering in the bubble.\" is visible in the chat messages area"
+        "description": "Verify User B cannot hear User A's voice while muted."
+      },
+      {
+        "type": "action",
+        "description": "User A ends the call using the hang-up button."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm call terminates cleanly on both sides."
       }
     ]
   },
   {
     "id": "TC008",
-    "title": "Send button is disabled or does nothing when no attachment is selected",
-    "description": "Verifies the user cannot send an empty attachment message when no file is selected.",
-    "category": "File & Media Sharing",
-    "priority": "Low",
+    "title": "Peer-to-Peer Video Call Establishment and Controls",
+    "description": "Validate video call connection is established properly, video streams are shown, and call controls such as camera on/off and hang up operate correctly.",
+    "category": "functional",
+    "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "User A starts a video call to User B."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Log in\" button"
+        "description": "User B accepts video call request."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Verify video streams are displayed for both users promptly."
       },
       {
         "type": "action",
-        "description": "Click on any chat conversation in the chat list"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Send\" button"
+        "description": "User B turns off camera using call controls."
       },
       {
         "type": "assertion",
-        "description": "Verify that no new file/image preview message appears in the chat"
+        "description": "Confirm User A no longer sees User B's video feed but call audio continues."
+      },
+      {
+        "type": "action",
+        "description": "User B turns camera on again."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify User A receives video feed again."
+      },
+      {
+        "type": "action",
+        "description": "Either user ends the video call."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm call disconnects for both users."
       }
     ]
   },
   {
     "id": "TC009",
-    "title": "Edit profile: change name only and save",
-    "description": "Verifies changing only the name and saving updates the visible profile name.",
-    "category": "Profile Management",
+    "title": "Adding a Contact via AMIK ID Search",
+    "description": "Test the ability to search for a user by AMIK ID, send a contact request, and receive proper notifications.",
+    "category": "functional",
     "priority": "Medium",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "User A navigates to contacts add/search page."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+        "description": "Search for User B by entering their AMIK ID."
+      },
+      {
+        "type": "assertion",
+        "description": "User B's profile is found and displayed."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+        "description": "User A sends a contact request to User B."
       },
       {
-        "type": "action",
-        "description": "Click the \"Login\" button"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Me\" or \"Profile\" in the main navigation"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Edit profile\" button"
-      },
-      {
-        "type": "action",
-        "description": "Fill \"Test User Updated\" into the name field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Save\" button"
+        "type": "assertion",
+        "description": "User B receives a notification for the contact request."
       }
     ]
   },
   {
     "id": "TC010",
-    "title": "After saving, updated name is visible on profile overview page",
-    "description": "Verifies that after saving a new name, the /me profile overview shows the updated name.",
-    "category": "Profile Management",
-    "priority": "High",
+    "title": "Accepting and Rejecting Contact Requests",
+    "description": "Verify that contact requests can be accepted or rejected, updating contact lists mutually and sending appropriate notifications.",
+    "category": "functional",
+    "priority": "Medium",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "User B views received contact requests."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+        "description": "User B accepts a contact request from User A."
+      },
+      {
+        "type": "assertion",
+        "description": "User A and User B are added mutually to each other's contacts."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+        "description": "User B rejects another contact request."
       },
       {
-        "type": "action",
-        "description": "Click the \"Login\" button"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Me\" or \"Profile\" in the main navigation"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Edit profile\" button"
-      },
-      {
-        "type": "action",
-        "description": "Fill \"Test User Updated\" into the name field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Save\" button"
+        "type": "assertion",
+        "description": "Requester is notified of rejection and no mutual contact is created."
       }
     ]
   },
   {
     "id": "TC011",
-    "title": "Save with empty name: shows required/validation message",
-    "description": "Verifies clearing the name field and attempting to save shows a visible validation message and does not silently succeed.",
-    "category": "Profile Management",
+    "title": "Adding Contact via QR Code Scanner",
+    "description": "Ensure the QR code scanner correctly scans a valid AMIK QR code, allowing users to add contacts efficiently.",
+    "category": "functional",
     "priority": "Medium",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "User opens the QR code scanner mini-program within the app."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+        "description": "Scan a valid contact QR code containing another user’s AMIK ID."
+      },
+      {
+        "type": "assertion",
+        "description": "Display contact info extracted from QR code and option to send contact request."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+        "description": "Send contact request from the scanned QR code contact."
       },
       {
-        "type": "action",
-        "description": "Click the \"Login\" button"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Me\" or \"Profile\" in the main navigation"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Edit profile\" button"
-      },
-      {
-        "type": "action",
-        "description": "Fill \"\" into the name field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Save\" button"
+        "type": "assertion",
+        "description": "Confirm contact request is sent and notification received."
       }
     ]
   },
   {
     "id": "TC012",
-    "title": "Send a contact request from Add Contacts search and verify it appears in Requests",
-    "description": "Verifies a user can search for another user, send a contact request, and see the request listed under Requests in Contacts.",
-    "category": "Contact Management",
+    "title": "Automatic English to Urdu Message Translation",
+    "description": "Validate AI-powered message translation feature performs automatic translation from English to Urdu with fallback dictionary usage upon failure.",
+    "category": "functional",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Send a message in English to a bilingual-enabled chat."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Confirm the message is automatically translated to Urdu for the recipient."
       },
       {
         "type": "action",
-        "description": "Click on \"Contacts\" in the app navigation"
+        "description": "Simulate translation API failure or unrecognized phrases."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/contacts\""
+        "description": "Verify fallback dictionary translations are used and displayed appropriately."
+      },
+      {
+        "type": "action",
+        "description": "Send a message originally in Urdu."
       },
       {
         "type": "assertion",
-        "description": "Verify text \"Requests\" is visible"
+        "description": "Confirm translation direction and accuracy from Urdu to English if applicable."
       }
     ]
   },
   {
     "id": "TC013",
-    "title": "Search and add contact from /contacts/add and confirm request sent success state",
-    "description": "Verifies the Add Contact flow shows results and indicates the request was sent after clicking Add.",
-    "category": "Contact Management",
+    "title": "File Upload and Progress Display",
+    "description": "Test uploading various supported file types in chat with upload progress bar and preview, ensuring successful sending and receiving.",
+    "category": "functional",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "Open chat and select 'attach file'."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Upload image, document, audio, and video files individually."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Contacts\" in the app navigation"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Add\" or \"Add Contact\""
+        "description": "Upload progress is displayed accurately for each file."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/contacts/add\""
+        "description": "Preview is available prior to sending for image and video files."
       },
       {
         "type": "action",
-        "description": "Type \"test\" into the search field"
+        "description": "Send each file successfully."
+      },
+      {
+        "type": "assertion",
+        "description": "Recipient receives files and can preview or download them without errors."
       }
     ]
   },
   {
     "id": "TC014",
-    "title": "From /contacts/add, handle empty search results and show QR scan suggestion",
-    "description": "Verifies that when no users match the query, the UI shows a \"no users found\" state and suggests scanning QR or trying a different query.",
-    "category": "Contact Management",
+    "title": "Drag-and-Drop File Upload Functionality",
+    "description": "Verify drag-and-drop file input works correctly within chat, supporting multiple files and showing previews before sending.",
+    "category": "functional",
     "priority": "Medium",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Drag one or more valid files into the chat input area."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Files appear in the preview pane with thumbnails where applicable."
       },
       {
         "type": "action",
-        "description": "Click on \"Contacts\" in the app navigation"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Add\" or \"Add Contact\""
+        "description": "Send files to recipient."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/contacts/add\""
-      },
-      {
-        "type": "action",
-        "description": "Type \"zzzz_no_such_user_12345\" into the search field"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"No users found\" is visible"
+        "description": "Confirm recipient receives all files correctly and can access them."
       }
     ]
   },
   {
     "id": "TC015",
-    "title": "Contacts list page loads and shows key sections (Contacts and Requests)",
-    "description": "Verifies that the Contacts page renders and exposes the main list and the Requests section/tab for managing contact requests.",
-    "category": "Contact Management",
-    "priority": "High",
+    "title": "QR Code Generation and Styling",
+    "description": "Test correct generation of styled QR codes representing user AMIK IDs and validate scanning by others adds contact correctly.",
+    "category": "functional",
+    "priority": "Medium",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Navigate to user profile to generate personal AMIK QR code."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Verify generated QR code includes accurate AMIK ID data and visual styling matches design."
       },
       {
         "type": "action",
-        "description": "Click on \"Contacts\" in the app navigation"
+        "description": "Use different devices or apps to scan the QR code."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/contacts\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Contacts\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Requests\" is visible"
+        "description": "Confirm scanned QR code data is valid and allows adding user as contact."
       }
     ]
   },
   {
     "id": "TC016",
-    "title": "Switch to Requests tab and verify Requests list area is visible",
-    "description": "Verifies that the user can open the Requests section/tab and see the list area for pending requests.",
-    "category": "Contact Management",
+    "title": "Mini-Programs Launch and Operation",
+    "description": "Verify mini-programs such as AI agents and QR code scanner launch correctly within the app environment and function as intended.",
+    "category": "functional",
     "priority": "Medium",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "Open the mini-programs section within the app."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Launch AI agent mini-program and interact with it."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Confirm AI agent responds correctly and integration is stable."
       },
       {
         "type": "action",
-        "description": "Click on \"Contacts\" in the app navigation"
+        "description": "Open QR code scanner mini-program and scan multiple sample codes."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/contacts\""
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Requests\" tab"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Requests list\" is visible"
+        "description": "Check scanning results are accurate and consistent."
       }
     ]
   },
   {
     "id": "TC017",
-    "title": "Search field behavior: typing query updates visible results area",
-    "description": "Verifies that entering a query into the Add Contacts search input shows a results area (either results list or empty-state messaging).",
-    "category": "Contact Management",
-    "priority": "Low",
+    "title": "Message Deletion and Privacy Controls",
+    "description": "Validate users can delete messages with correct options (single message, conversation) and that privacy settings are enforced across sessions.",
+    "category": "security",
+    "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
+        "description": "Send multiple messages in a chat."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Delete a single message and observe effects on sender's and receiver's chat."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Deleted message is removed correctly and replaced with deletion indicator or removed completely."
       },
       {
         "type": "action",
-        "description": "Click on \"Contacts\" in the app navigation"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Add\" or \"Add Contact\""
+        "description": "Delete an entire conversation history."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/contacts/add\""
+        "description": "Confirm conversation is cleared locally as per privacy controls without affecting the other user’s chat data."
       },
       {
         "type": "action",
-        "description": "Type \"a\" into the search field"
+        "description": "Change privacy settings for profile visibility and session management."
       },
       {
         "type": "assertion",
-        "description": "Verify element \"Search results area\" is visible"
+        "description": "Verify settings persist and enforce rules such as blocking users or session expiry."
       }
     ]
   },
   {
     "id": "TC018",
-    "title": "Gracefully handle duplicate add attempt (already requested/added) with visible feedback",
-    "description": "Verifies the UI provides visible feedback when attempting to add the same contact again (e.g., button disabled, 'Requested', or an error message).",
-    "category": "Contact Management",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Contacts\" in the app navigation"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Add\" or \"Add Contact\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/contacts/add\""
-      },
-      {
-        "type": "action",
-        "description": "Type \"test\" into the search field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Add contact\" button for the first visible user"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Request sent\" is visible"
-      }
-    ]
-  },
-  {
-    "id": "TC019",
-    "title": "Use fallback link to reach manual contact add page from scanner",
-    "description": "Verifies the fallback action from the scanner routes the user to the manual add contacts page.",
-    "category": "QR Scanner (Add Contacts / Payments)",
+    "title": "Cross-browser and Device Responsive UI Testing",
+    "description": "Ensure the web application UI renders and functions consistently across major desktop and mobile browsers with responsive layout.",
+    "category": "ui",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Open AMIK CHAT on latest Chrome, Firefox, Safari, Edge on desktop."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
+        "description": "Verify UI layout, components, and interactions work without major issues."
       },
       {
         "type": "action",
-        "description": "Click on the \"Scan\" or \"QR Scanner\" entry in the main navigation"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/scan"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Manual search\" or \"Go to Contacts Add\" link"
+        "description": "Access the app on iOS Safari and Android Chrome mobile browsers."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/contacts/add\""
-      }
-    ]
-  },
-  {
-    "id": "TC020",
-    "title": "Scanner page loads with visible scanning guidance/state",
-    "description": "Verifies the scanner page presents a visible scanning state or instruction so users know how to proceed.",
-    "category": "QR Scanner (Add Contacts / Payments)",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
+        "description": "Confirm responsive design adjusts UI properly and functionality is intact."
       },
       {
         "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
+        "description": "Resize browser windows to test responsive breakpoints."
       },
       {
         "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on the \"Scan\" or \"QR Scanner\" entry in the main navigation"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/scan"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Point camera at QR code\" is visible"
-      }
-    ]
-  },
-  {
-    "id": "TC021",
-    "title": "Translate a message successfully and show translated text under the original",
-    "description": "Verifies a user can translate a chat message and see the translated output displayed beneath the original message.",
-    "category": "Translation",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Log in\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on the first chat conversation in the chat list"
-      },
-      {
-        "type": "action",
-        "description": "Click on the message actions/menu icon for a visible message in the conversation"
-      },
-      {
-        "type": "action",
-        "description": "Click \"Translate\" in the message actions menu"
-      }
-    ]
-  },
-  {
-    "id": "TC022",
-    "title": "Translation result is visibly rendered beneath the original message",
-    "description": "Verifies that after translating, the UI shows a translated text block beneath the original message (not replacing it).",
-    "category": "Translation",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Log in\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on the first chat conversation in the chat list"
-      },
-      {
-        "type": "action",
-        "description": "Click on the message actions/menu icon for a visible message in the conversation"
-      },
-      {
-        "type": "action",
-        "description": "Click \"Translate\" in the message actions menu"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Translated\" is visible"
-      }
-    ]
-  },
-  {
-    "id": "TC023",
-    "title": "Translation shows an in-progress indicator while loading",
-    "description": "Verifies the UI indicates that translation is being processed after the user requests translation.",
-    "category": "Translation",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Log in\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on the first chat conversation in the chat list"
-      },
-      {
-        "type": "action",
-        "description": "Click on the message actions/menu icon for a visible message in the conversation"
-      },
-      {
-        "type": "action",
-        "description": "Click \"Translate\" in the message actions menu"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Translating\" is visible"
-      }
-    ]
-  },
-  {
-    "id": "TC024",
-    "title": "Cancel/close the message actions menu without translating",
-    "description": "Verifies the user can open the message menu and dismiss it without triggering translation.",
-    "category": "Translation",
-    "priority": "Low",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Log in\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on the first chat conversation in the chat list"
-      },
-      {
-        "type": "action",
-        "description": "Click on the message actions/menu icon for a visible message in the conversation"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Translate\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Press Escape"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Translate\" is not visible"
-      }
-    ]
-  },
-  {
-    "id": "TC025",
-    "title": "Repeatedly clicking Translate does not create duplicate translated blocks",
-    "description": "Verifies that translating the same message multiple times does not create multiple duplicated translated sections under the message.",
-    "category": "Translation",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Log in\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on the first chat conversation in the chat list"
-      },
-      {
-        "type": "action",
-        "description": "Click on the message actions/menu icon for a visible message in the conversation"
-      },
-      {
-        "type": "action",
-        "description": "Click \"Translate\" in the message actions menu"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Translated\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on the message actions/menu icon for the same message again"
-      },
-      {
-        "type": "action",
-        "description": "Click \"Translate\" in the message actions menu"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Translated\" is visible"
-      }
-    ]
-  },
-  {
-    "id": "TC026",
-    "title": "Money page loads and shows wallet placeholder content",
-    "description": "Verifies that an authenticated user can reach the Money/Wallet page and sees placeholder UI indicating incomplete implementation.",
-    "category": "Money / Wallet (Placeholder)",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Money\" in the main navigation"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/money\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Wallet\" is visible"
-      }
-    ]
-  },
-  {
-    "id": "TC027",
-    "title": "Money page indicates transactions are not supported (placeholder messaging visible)",
-    "description": "Verifies the Money/Wallet page communicates that real transactions are not available yet.",
-    "category": "Money / Wallet (Placeholder)",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Money\" in the main navigation"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/money\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"not implemented\" is visible"
-      }
-    ]
-  },
-  {
-    "id": "TC028",
-    "title": "Attempt to initiate a transaction from Money page shows not-implemented or blocked state",
-    "description": "Verifies that initiating a transaction from the placeholder UI results in a visible message or blocked action rather than completing a transaction.",
-    "category": "Money / Wallet (Placeholder)",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Money\" in the main navigation"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/money\""
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Initiate Transaction\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"not supported\" is visible"
-      }
-    ]
-  },
-  {
-    "id": "TC029",
-    "title": "Click Send payment shows validation or unsupported error and user remains on Money page",
-    "description": "Verifies that attempting to send a payment results in a visible validation/unsupported message and does not navigate away from /money.",
-    "category": "Money / Wallet (Placeholder)",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Money\" in the main navigation"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/money\""
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Send payment\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"not yet supported\" is visible"
-      }
-    ]
-  },
-  {
-    "id": "TC030",
-    "title": "Send payment with empty required fields shows validation message (if form is present)",
-    "description": "Verifies that if the Send payment UI exposes inputs, submitting without data produces visible validation feedback.",
-    "category": "Money / Wallet (Placeholder)",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Money\" in the main navigation"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/money\""
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Send payment\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"required\" is visible"
-      }
-    ]
-  },
-  {
-    "id": "TC031",
-    "title": "Money page does not allow completing a payment flow (no success confirmation)",
-    "description": "Verifies the placeholder does not misleadingly show a successful transaction confirmation.",
-    "category": "Money / Wallet (Placeholder)",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /login"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_USER}}\" into the email field"
-      },
-      {
-        "type": "action",
-        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
-      },
-      {
-        "type": "action",
-        "description": "Click the \"Login\" button"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/\""
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Money\" in the main navigation"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/money\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Payment successful\" is not visible"
+        "description": "Validate no overlapping, missing components, or usability problems occur."
       }
     ]
   }
