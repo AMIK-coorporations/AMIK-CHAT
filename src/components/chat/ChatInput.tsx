@@ -269,6 +269,22 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         updatedAt: finalTimestamp
       });
 
+      // Trigger Push Notification for Files
+      if (remoteUserId) {
+        const senderName = userData?.name || userData?.displayName || "User";
+        fetch('/api/send-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            receiverId: remoteUserId,
+            title: `نیا پیغام: ${senderName}`,
+            message: `📷 ${selectedFiles.length} فائلیں بھیجی گئیں`,
+            chatId: chatId,
+            type: 'file'
+          })
+        }).catch(err => console.error("Push trigger failed:", err));
+      }
+
       setSelectedFiles([]);
       onMessageSent?.();
       toast({ title: `${selectedFiles.length} فائلیں بھیجی گئیں` });
@@ -458,6 +474,22 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
           updatedAt: timestamp
         });
 
+        // Trigger Push Notification for Location
+        if (remoteUserId) {
+          const senderName = currentUser?.displayName || "User";
+          fetch('/api/send-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              receiverId: remoteUserId,
+              title: `نیا پیغام: ${senderName}`,
+              message: `📍 مقام شیئر کیا گیا`,
+              chatId: chatId,
+              type: 'location'
+            })
+          }).catch(err => console.error("Push trigger failed:", err));
+        }
+
         onMessageSent?.();
         toast({ title: 'مقام شیئر کیا گیا' });
       } catch (error) {
@@ -501,6 +533,22 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         },
         updatedAt: timestamp
       });
+
+      // Trigger Push Notification for Contact
+      if (remoteUserId) {
+        const senderName = userData?.name || userData?.displayName || "User";
+        fetch('/api/send-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            receiverId: remoteUserId,
+            title: `نیا پیغام: ${senderName}`,
+            message: `👤 رابطہ شیئر کیا گیا`,
+            chatId: chatId,
+            type: 'contact'
+          })
+        }).catch(err => console.error("Push trigger failed:", err));
+      }
 
       onMessageSent?.();
       toast({ title: 'رابطہ شیئر کیا گیا' });
@@ -626,6 +674,22 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
         },
         updatedAt: timestamp
       });
+
+      // Trigger Push Notification for Voice
+      if (remoteUserId) {
+        const senderName = userData?.name || userData?.displayName || "User";
+        fetch('/api/send-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            receiverId: remoteUserId,
+            title: `نیا پیغام: ${senderName}`,
+            message: `🎤 آواز کا پیغام`,
+            chatId: chatId,
+            type: 'voice'
+          })
+        }).catch(err => console.error("Push trigger failed:", err));
+      }
 
       onMessageSent?.();
       toast({ title: 'آواز کا پیغام بھیجا گیا' });

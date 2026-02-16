@@ -5,6 +5,7 @@ import { insforge } from '@/lib/insforge';
 import { getDocFromInsforge, updateDocInInsforge, setDocInInsforge } from '@/lib/insforgeUtils';
 import type { User } from '@/lib/types';
 import type { UserSchema } from '@insforge/sdk';
+import { initializeOneSignal, getPlayerId, setExternalUserId } from '@/lib/onesignal';
 
 interface AuthContextType {
   user: UserSchema | null;
@@ -64,6 +65,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.location.href = '/login';
     } catch (error) {
       console.error("Sign out failed:", error);
+    }
+  };
+
+  // OneSignal Initialization
+  useEffect(() => {
+    initializeOneSignal();
+  }, []);
+
+  const syncPlayerId = async (userId: string) => {
+    try {
+      const playerId = await getPlayerId();
+      if (playerId) {
+        await updateDocInInsforge('users', userId, { onesignal_player_id: playerId });
+      }
+      await setExternalUserId(userId);
+    } catch (e) {
+      console.error("Error syncing player ID:", e);
     }
   };
 
