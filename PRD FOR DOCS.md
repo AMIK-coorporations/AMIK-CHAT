@@ -690,4 +690,3 @@ category: "getting-started"
 
 ---
 
-**Note**: This PRD focuses exclusively on the documentation portal and should be used as a guide for implementation. All sensitive technical details are intentionally abstracted in user-facing documentation..
