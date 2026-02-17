@@ -7,15 +7,7 @@ const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY!;
 
 // Initialize OneSignal Client
 const configuration = OneSignal.createConfiguration({
-    authMethods: {
-        app_key: {
-            tokenProvider: {
-                getToken() {
-                    return ONESIGNAL_REST_API_KEY;
-                }
-            }
-        }
-    }
+    restApiKey: ONESIGNAL_REST_API_KEY
 });
 const client = new OneSignal.DefaultApi(configuration);
 
