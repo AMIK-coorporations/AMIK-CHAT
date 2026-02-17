@@ -20,7 +20,7 @@ export async function POST(request: Request) {
         }
 
         // 1. Get Receiver's Player ID from InsForge Database
-        const { data: user, error } = await insforge
+        const { data: user, error } = await insforge.database
             .from('users')
             .select('onesignal_player_id')
             .eq('id', receiverId)
