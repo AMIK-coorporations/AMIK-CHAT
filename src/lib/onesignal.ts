@@ -18,6 +18,23 @@ export const initializeOneSignal = async () => {
                 allowLocalhostAsSecureOrigin: true,
                 notifyButton: {
                     enable: true,
+                    prenotify: true,
+                    showCredit: false,
+                    text: {
+                        'tip.state.unsubscribed': 'Subscribe to notifications',
+                        'tip.state.subscribed': "You're subscribed to notifications",
+                        'tip.state.blocked': "You've blocked notifications",
+                        'message.action.subscribed': "Thanks for subscribing!",
+                        'message.action.resubscribed': "You're subscribed to notifications",
+                        'message.action.unsubscribed': "You won't receive notifications again",
+                        'dialog.main.title': 'Manage Site Notifications',
+                        'dialog.main.button.subscribe': 'SUBSCRIBE',
+                        'dialog.main.button.unsubscribe': 'UNSUBSCRIBE',
+                        'dialog.blocked.title': 'Unblock Notifications',
+                        'dialog.blocked.message': 'Follow these instructions to allow notifications:',
+                        'message.action.subscribing': "Subscribing...",
+                        'message.prenotify': "Click to subscribe to notifications"
+                    }
                 },
             });
         }
@@ -36,11 +53,21 @@ export const getPlayerId = async (): Promise<string | null> => {
                 return window.median.onesignal.info.oneSignalUserId || null;
             }
             return new Promise((resolve) => {
-                if (!window.median?.onesignal) resolve(null);
-                window.median.onesignal.onesignalInfo = (data: any) => {
+                if (!window.median?.onesignal) {
+                    resolve(null);
+                    return;
+                }
+                const os = window.median.onesignal;
+                os.onesignalInfo = (data: any) => {
                     resolve(data.oneSignalUserId);
                 };
-                window.median.onesignal.info();
+                if (typeof os.info === 'function') {
+                    os.info();
+                } else {
+                    // Fallback if info is just an object property in some versions
+                    resolve((os.info as any)?.oneSignalUserId || null);
+                }
+
             });
         } else {
             const state = await OneSignal.User.PushSubscription.id;

@@ -5,7 +5,7 @@ declare global {
         median?: {
             onesignal?: {
                 register: () => void;
-                info: {
+                info: (() => void) & {
                     oneSignalUserId?: string;
                 };
                 onesignalInfo?: (data: any) => void;
