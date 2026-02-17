@@ -476,7 +476,7 @@ export default function ChatInput({ chatId, onMessageSent, remoteUserId }: ChatI
 
         // Trigger Push Notification for Location
         if (remoteUserId) {
-          const senderName = currentUser?.displayName || "User";
+          const senderName = userData?.name || userData?.displayName || "User";
           fetch('/api/send-push', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
