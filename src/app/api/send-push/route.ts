@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         // 2. Send Notification
         const notification = new OneSignal.Notification();
         notification.app_id = ONESIGNAL_APP_ID;
-        notification.include_player_ids = [playerId];
+        notification.include_subscription_ids = [playerId];
         notification.headings = { en: title || 'New Message' };
         notification.contents = { en: message };
         notification.data = {
