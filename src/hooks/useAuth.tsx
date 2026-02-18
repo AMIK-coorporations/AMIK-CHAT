@@ -129,6 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserData(newUser);
           }
         }
+
+        // Sync OneSignal Player ID
+        syncPlayerId(u.id);
       } else {
         setUser(null);
         setUserData(null);
