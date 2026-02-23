@@ -1,19 +1,16 @@
-"use client";
+import { Metadata } from 'next';
+import BackButton from '@/components/BackButton';
 
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+export const metadata: Metadata = {
+    title: 'Privacy Policy | AMIK CHAT',
+    description: 'Privacy Policy for AMIK CHAT application.',
+};
 
 export default function PrivacyPolicyPage() {
-    const router = useRouter();
-
     return (
         <div className="flex flex-col min-h-screen bg-background">
             <header className="sticky top-0 z-10 flex items-center gap-4 bg-background p-3 border-b">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <ChevronLeft className="h-6 w-6" />
-                </Button>
+                <BackButton />
                 <h1 className="text-lg font-semibold">Privacy Policy</h1>
             </header>
             <main className="flex-1 p-6 max-w-4xl mx-auto prose dark:prose-invert">
