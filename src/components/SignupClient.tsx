@@ -209,9 +209,9 @@ export default function SignupClient() {
                             )}
                         </Button>
                         <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
-                            <Link href="/privacy-policy" className="hover:underline">Privacy Policy</Link>
+                            <Link href="/privacy-policy" className="hover:underline">پرائیویسی پالیسی</Link>
                             <span>•</span>
-                            <Link href="/terms-of-services" className="hover:underline">Terms & Conditions</Link>
+                            <Link href="/terms-of-services" className="hover:underline">شرائط و ضوابط</Link>
                         </div>
                         <div className="mt-4 text-center text-sm">
                             پہلے سے کھاتہ ہے؟{" "}
