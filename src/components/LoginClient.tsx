@@ -176,6 +176,11 @@ export default function LoginClient() {
                                 </svg>
                             )}
                         </Button>
+                        <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
+                            <Link href="/privacy-policy" className="hover:underline">Privacy Policy</Link>
+                            <span>•</span>
+                            <Link href="/terms-of-services" className="hover:underline">Terms & Conditions</Link>
+                        </div>
                         <div className="mt-4 text-center text-sm">
                             کھاتہ نہیں ہے؟{" "}
                             <Link href="/signup" className="underline text-accent">
