@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   description: 'ایک جدید چیٹ ایپلیکیشن',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon-v3.png',
-    shortcut: '/favicon-v3.png',
+    icon: '/favicon-transparent.png',
+    shortcut: '/favicon-transparent.png',
     apple: "/logo.png",
   },
 };
