@@ -61,6 +61,7 @@ export default function SignupClient() {
             if (!authData?.user) throw new Error("سائن اپ ناکام ہو گیا۔");
 
             const userId = authData.user.id;
+            const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
             const userDoc = {
                 name: username,
@@ -70,14 +71,19 @@ export default function SignupClient() {
                 photoURL: `https://placehold.co/100x100.png?text=${username.charAt(0)}`,
                 createdAt: new Date(),
                 lastSeen: new Date(),
-                isOnline: true
+                isOnline: true,
+                isOtpVerified: false,
+                otpCode: generatedOtp
             };
 
             // Create in InsForge Database
             try {
                 console.log("Creating profile in InsForge...", userId);
                 await setDocInInsforge('users', userId, userDoc);
-                console.log("InsForge profile created");
+                if (typeof window !== 'undefined') {
+                    sessionStorage.setItem(`otp_${userId}`, generatedOtp);
+                }
+                console.log("InsForge profile created with OTP");
             } catch (error) {
                 console.error("InsForge profile creation failed:", error);
             }
@@ -85,14 +91,15 @@ export default function SignupClient() {
             // Show success message
             toast({
                 title: 'کھاتہ بن گیا!',
-                description: 'آپ کا کھاتہ کامیابی سے بن گیا ہے۔',
+                description: `آپ کا کھاتہ کامیابی سے بن گیا ہے۔ تصدیقی کوڈ: ${generatedOtp}`,
+                duration: 10000,
             });
 
             // Wait for auth state to update
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 800));
 
-            // Use window.location for a full page reload to ensure auth state is properly set
-            window.location.href = '/chats';
+            // Redirect to OTP page after signup
+            window.location.href = '/otp';
 
         } catch (error: any) {
             let description = "ایک نامعلوم خرابی پیش آگئی۔";

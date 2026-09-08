@@ -19,6 +19,8 @@ export interface User {
   status?: string;
   bio?: string;
   securityPin?: string;
+  isOtpVerified?: boolean;
+  otpCode?: string;
 }
 
 export interface Message {

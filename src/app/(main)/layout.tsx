@@ -18,7 +18,7 @@ export default function MainAppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userData, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast, dismiss } = useToast();
@@ -33,7 +33,13 @@ export default function MainAppLayout({
   const [isPulling, setIsPulling] = useState(false);
 
   useEffect(() => {
-    if (!user) {
+    if (!authLoading && user && userData && userData.isOtpVerified === false) {
+      router.replace('/otp');
+    }
+  }, [user, userData, authLoading, router]);
+
+  useEffect(() => {
+    if (!user || userData?.isOtpVerified === false) {
       setChatsLoading(false);
       return;
     }
@@ -188,7 +194,7 @@ export default function MainAppLayout({
     setIsPulling(false);
   };
 
-  if (authLoading || !user) {
+  if (authLoading || !user || (userData && userData.isOtpVerified === false)) {
     return (
       <div className="flex h-screen items-center justify-center p-4">
         <div className="w-full max-w-sm space-y-4">
