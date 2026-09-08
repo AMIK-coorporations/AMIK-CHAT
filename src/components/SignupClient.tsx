@@ -24,9 +24,9 @@ export default function SignupClient() {
     useEffect(() => {
         if (!authLoading && user && !loading) {
             const hasPendingOtp = typeof window !== 'undefined' && sessionStorage.getItem(`otp_${user.id}`);
-            if (userData?.isOtpVerified === false || hasPendingOtp) {
+            if ((userData as any)?.isOtpVerified === false || hasPendingOtp) {
                 router.replace('/otp');
-            } else if (userData && userData.isOtpVerified !== false) {
+            } else if (userData && (userData as any).isOtpVerified !== false) {
                 router.replace('/chats');
             }
         }
