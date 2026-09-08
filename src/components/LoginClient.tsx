@@ -19,13 +19,18 @@ export default function LoginClient() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
-    const { user, loading: authLoading } = useAuth();
+    const { user, userData, loading: authLoading } = useAuth();
 
     useEffect(() => {
         if (!authLoading && user) {
-            router.replace('/chats');
+            const hasPendingOtp = typeof window !== 'undefined' && sessionStorage.getItem(`otp_${user.id}`);
+            if (userData?.isOtpVerified === false || hasPendingOtp) {
+                router.replace('/otp');
+            } else if (userData && userData.isOtpVerified !== false) {
+                router.replace('/chats');
+            }
         }
-    }, [user, authLoading, router]);
+    }, [user, userData, authLoading, router]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();

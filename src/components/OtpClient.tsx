@@ -34,8 +34,9 @@ export default function OtpClient() {
             return;
         }
 
-        // If user is already OTP verified, redirect to /chats
-        if (userData && userData.isOtpVerified !== false) {
+        // If user is already OTP verified and has no pending OTP, redirect to /chats
+        const hasPendingOtp = typeof window !== 'undefined' && sessionStorage.getItem(`otp_${user.id}`);
+        if (userData && userData.isOtpVerified !== false && !hasPendingOtp) {
             router.replace("/chats");
             return;
         }

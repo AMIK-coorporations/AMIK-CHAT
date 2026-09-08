@@ -19,13 +19,18 @@ export default function SignupClient() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
-    const { user, loading: authLoading } = useAuth();
+    const { user, userData, loading: authLoading } = useAuth();
 
     useEffect(() => {
-        if (!authLoading && user) {
-            router.replace('/chats');
+        if (!authLoading && user && !loading) {
+            const hasPendingOtp = typeof window !== 'undefined' && sessionStorage.getItem(`otp_${user.id}`);
+            if (userData?.isOtpVerified === false || hasPendingOtp) {
+                router.replace('/otp');
+            } else if (userData && userData.isOtpVerified !== false) {
+                router.replace('/chats');
+            }
         }
-    }, [user, authLoading, router]);
+    }, [user, userData, authLoading, loading, router]);
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,13 +81,15 @@ export default function SignupClient() {
                 otpCode: generatedOtp
             };
 
+            // Store in sessionStorage immediately
+            if (typeof window !== 'undefined') {
+                sessionStorage.setItem(`otp_${userId}`, generatedOtp);
+            }
+
             // Create in InsForge Database
             try {
                 console.log("Creating profile in InsForge...", userId);
                 await setDocInInsforge('users', userId, userDoc);
-                if (typeof window !== 'undefined') {
-                    sessionStorage.setItem(`otp_${userId}`, generatedOtp);
-                }
                 console.log("InsForge profile created with OTP");
             } catch (error) {
                 console.error("InsForge profile creation failed:", error);
@@ -91,14 +98,11 @@ export default function SignupClient() {
             // Show success message
             toast({
                 title: 'کھاتہ بن گیا!',
-                description: `آپ کا کھاتہ کامیابی سے بن گیا ہے۔ تصدیقی کوڈ: ${generatedOtp}`,
-                duration: 10000,
+                description: `آپ کا کھاتہ کامیابی سے بن گیا ہے۔ او ٹی پی صفحہ کھولا جا رہا ہے...`,
+                duration: 5000,
             });
 
-            // Wait for auth state to update
-            await new Promise(resolve => setTimeout(resolve, 800));
-
-            // Redirect to OTP page after signup
+            // Redirect immediately to OTP page
             window.location.href = '/otp';
 
         } catch (error: any) {

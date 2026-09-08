@@ -33,13 +33,17 @@ export default function MainAppLayout({
   const [isPulling, setIsPulling] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user && userData && userData.isOtpVerified === false) {
-      router.replace('/otp');
+    if (!authLoading && user) {
+      const hasPendingOtp = typeof window !== 'undefined' && sessionStorage.getItem(`otp_${user.id}`);
+      if (userData?.isOtpVerified === false || hasPendingOtp) {
+        router.replace('/otp');
+      }
     }
   }, [user, userData, authLoading, router]);
 
   useEffect(() => {
-    if (!user || userData?.isOtpVerified === false) {
+    const hasPendingOtp = user && typeof window !== 'undefined' && sessionStorage.getItem(`otp_${user.id}`);
+    if (!user || userData?.isOtpVerified === false || hasPendingOtp) {
       setChatsLoading(false);
       return;
     }
