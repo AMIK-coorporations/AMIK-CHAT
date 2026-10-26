@@ -32,6 +32,22 @@ export default function MainAppLayout({
   const pullStartYRef = useRef<number | null>(null);
   const [isPulling, setIsPulling] = useState(false);
 
+  // pathname کو ref میں رکھیں تاکہ ہر صفحہ بدلنے پر چیٹس دوبارہ لوڈ اور ریئل ٹائم دوبارہ سبسکرائب نہ ہو
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
+  // جو چیٹس ایک بار درست (self-heal) ہو چکیں انہیں اس سیشن میں دوبارہ نہ چھیڑیں
+  const healedChatIds = useRef<Set<string>>(new Set());
+
+  // لاگ اِن نہیں (یا سیشن ختم) تو خالی اسکرین کے بجائے لاگ اِن صفحے پر بھیجیں
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login');
+    }
+  }, [user, authLoading, router]);
+
   useEffect(() => {
     if (!authLoading && user) {
       const hasPendingOtp = typeof window !== 'undefined' && sessionStorage.getItem(`otp_${user.id}`);
@@ -69,8 +85,10 @@ export default function MainAppLayout({
 
         // Self-healing: Check for missing participant info and fix it
         chatsData.forEach(async (chat) => {
+          if (healedChatIds.current.has(chat.id)) return;
           const otherId = chat.participantIds.find(id => id !== user.id) || user.id;
           if (!chat.participantsInfo || !chat.participantsInfo[otherId] || !chat.participantsInfo[user.id]) {
+            healedChatIds.current.add(chat.id);
             console.log(`Self-healing chat ${chat.id}: missing info for ${otherId} or ${user.id}`);
             try {
               // Fetch missing user data
@@ -131,7 +149,7 @@ export default function MainAppLayout({
 
           const chat = payload as Chat;
           const lastMessage = chat.lastMessage;
-          const isViewingChat = pathname === `/chats/${chat.id}`;
+          const isViewingChat = pathnameRef.current === `/chats/${chat.id}`;
 
           if (lastMessage && lastMessage.senderId !== user.id && !lastMessage.isRead && !isViewingChat) {
             const messageKey = `${chat.id}-${lastMessage.timestamp}`;
@@ -171,7 +189,7 @@ export default function MainAppLayout({
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [user?.id, pathname, router, toast, dismiss]);
+  }, [user?.id, router, toast, dismiss]);
 
   const handleMainTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const el = mainRef.current;

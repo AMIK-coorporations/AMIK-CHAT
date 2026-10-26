@@ -85,6 +85,16 @@ const nextConfig = {
   // Ensure static assets are properly copied
   trailingSlash: false,
 
+  // لاگ اِن سیشن کو اپنے ڈومین پر رکھنے کے لیے InsForge auth کا proxy
+  async rewrites() {
+    const insforgeBase = (process.env.NEXT_PUBLIC_INSFORGE_API_BASE_URL || 'https://484txp7m.ap-southeast.insforge.app').replace(/\/$/, '');
+    return [
+      {
+        source: '/api/auth/:path*',
+        destination: `${insforgeBase}/api/auth/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

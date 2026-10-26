@@ -45,11 +45,11 @@ export default function SignupClient() {
         const email = target.email.value;
         const password = target.password.value;
 
-        if (password.length < 6) {
+        if (password.length < 8 || !/[0-9]/.test(password)) {
             toast({
                 variant: "destructive",
-                title: "خفیہ کوڈ بہت چھوٹا ہے",
-                description: "خفیہ کوڈ کم از کم 6 حروف کا ہونا چاہیے۔",
+                title: "خفیہ کوڈ کمزور ہے",
+                description: "خفیہ کوڈ کم از کم 8 حروف کا ہو اور اس میں کم از کم ایک ہندسہ (0-9) شامل ہو۔",
             });
             setLoading(false);
             return;
@@ -84,8 +84,6 @@ export default function SignupClient() {
                     createdAt: new Date(),
                     lastSeen: new Date(),
                     isOnline: true,
-                    isOtpVerified: true,
-                    otpCode: null
                 };
                 try {
                     await setDocInInsforge('users', userId, userDoc);
@@ -154,7 +152,7 @@ export default function SignupClient() {
                         <form onSubmit={handleSignup} className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="username">صارف نام</Label>
-                                <Input id="username" name="username" type="text" placeholder="آپ کا نام" required />
+                                <Input id="username" name="username" type="text" placeholder="اپنا صارف نام لکھیں" required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email">برقی خط</Label>

@@ -113,21 +113,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const dbUser = await getDocFromInsforge<User>('users', u.id);
+        // نوٹ: users ٹیبل میں is_otp_verified / otp_code کالم موجود نہیں، اس لیے یہ فیلڈز ڈیٹا بیس میں نہیں لکھے جاتے
         if (dbUser) {
-          if (dbUser.isOtpVerified === false) {
-            try {
-              await updateDocInInsforge('users', u.id, { isOtpVerified: true, otpCode: null });
-            } catch (err) {
-              console.error("Failed to clear OTP flag:", err);
-            }
-            setUserData({ ...dbUser, isOtpVerified: true, otpCode: undefined });
-          } else {
-            setUserData(dbUser);
-          }
+          setUserData({ ...dbUser, isOtpVerified: true });
         } else {
           // If no profile in DB yet, create one from Auth metadata (New Signup via OAuth)
           const meta = (u as any).user_metadata || u.metadata || {};
-          const displayName = meta.full_name || meta.name || meta.displayName || u.email?.split('@')[0] || 'User';
+          const pendingName = typeof window !== 'undefined' ? sessionStorage.getItem('amik_pending_verify_name') : null;
+          const displayName = pendingName || meta.full_name || meta.name || meta.displayName || u.email?.split('@')[0] || 'User';
           const avatarUrl = meta.avatar_url || meta.picture || meta.avatar || `https://placehold.co/100x100.png?text=${displayName.charAt(0)}`;
 
           const newUser: User = {
@@ -140,17 +133,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             createdAt: new Date(),
             lastSeen: new Date(),
             isOnline: true,
-            isOtpVerified: true
           };
 
           // Save to InsForge Database
           try {
             await setDocInInsforge('users', u.id, newUser);
-            setUserData(newUser);
           } catch (err) {
             console.error("Failed to create user profile in DB:", err);
-            setUserData(newUser);
           }
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('amik_pending_verify_name');
+          }
+          setUserData({ ...newUser, isOtpVerified: true });
         }
 
         // Sync OneSignal Player ID

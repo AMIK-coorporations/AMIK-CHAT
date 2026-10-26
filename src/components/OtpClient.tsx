@@ -9,7 +9,7 @@ import { Loader2, ArrowRight, RotateCw, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { insforge } from "@/lib/insforge";
-import { getDocFromInsforge, setDocInInsforge, updateDocInInsforge } from "@/lib/insforgeUtils";
+import { getDocFromInsforge, setDocInInsforge } from "@/lib/insforgeUtils";
 import AppLogo from "@/components/AppLogo";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
@@ -117,9 +117,7 @@ export default function OtpClient() {
             // Create / update the app profile now that a session exists
             try {
                 const existing = await getDocFromInsforge<any>("users", verifiedUser.id);
-                if (existing) {
-                    await updateDocInInsforge("users", verifiedUser.id, { isOtpVerified: true, otpCode: null });
-                } else {
+                if (!existing) {
                     const storedName = (typeof window !== "undefined" ? sessionStorage.getItem("amik_pending_verify_name") : "") || "";
                     const username = storedName || (verifiedUser.profile as any)?.name || pendingEmail.split("@")[0];
                     await setDocInInsforge("users", verifiedUser.id, {
@@ -131,8 +129,6 @@ export default function OtpClient() {
                         createdAt: new Date(),
                         lastSeen: new Date(),
                         isOnline: true,
-                        isOtpVerified: true,
-                        otpCode: null,
                     });
                 }
             } catch (profileError) {
