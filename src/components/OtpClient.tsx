@@ -8,62 +8,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, ArrowRight, RotateCw, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { updateDocInInsforge } from "@/lib/insforgeUtils";
+import { insforge } from "@/lib/insforge";
+import { getDocFromInsforge, setDocInInsforge, updateDocInInsforge } from "@/lib/insforgeUtils";
 import AppLogo from "@/components/AppLogo";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function OtpClient() {
     const router = useRouter();
     const { toast } = useToast();
-    const { user, userData, loading: authLoading, signOut, refreshUserData } = useAuth();
+    const { user, loading: authLoading, signOut } = useAuth();
     
     const [otpValues, setOtpValues] = useState<string[]>(Array(6).fill(""));
     const [verifying, setVerifying] = useState(false);
     const [resending, setResending] = useState(false);
     const [resendCountdown, setResendCountdown] = useState(30);
-    const [activeOtpCode, setActiveOtpCode] = useState<string>("");
+    const [pendingEmail, setPendingEmail] = useState<string>("");
 
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-    // Guard & Initialization
+    // Guard: OTP is sent by InsForge to the email saved at signup/login.
+    // There is no session until the code is verified.
     useEffect(() => {
         if (authLoading) return;
 
-        if (!user) {
-            router.replace("/login");
-            return;
-        }
-
-        // If user is already OTP verified and has no pending OTP, redirect to /chats
-        const hasPendingOtp = typeof window !== 'undefined' && sessionStorage.getItem(`otp_${user.id}`);
-        if (userData && userData.isOtpVerified !== false && !hasPendingOtp) {
+        // Already signed in (verified email or Google/GitHub) -> no OTP needed
+        if (user) {
             router.replace("/chats");
             return;
         }
 
-        // Determine current OTP code
-        let storedOtp = userData?.otpCode || "";
-        if (!storedOtp && typeof window !== "undefined") {
-            storedOtp = sessionStorage.getItem(`otp_${user.id}`) || "";
+        const email = typeof window !== "undefined" ? sessionStorage.getItem("amik_pending_verify_email") || "" : "";
+        if (!email) {
+            router.replace("/login");
+            return;
         }
-        if (!storedOtp) {
-            // Generate fallback if missing
-            storedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-            if (typeof window !== "undefined") {
-                sessionStorage.setItem(`otp_${user.id}`, storedOtp);
-            }
-            updateDocInInsforge("users", user.id, { otpCode: storedOtp, isOtpVerified: false }).catch(console.error);
-        }
-
-        setActiveOtpCode(storedOtp);
-
-        // Notify user of OTP code for smooth testing
-        toast({
-            title: "او ٹی پی کوڈ (OTP Code)",
-            description: `آپ کا تصدیقی کوڈ ہے: ${storedOtp}`,
-            duration: 12000,
-        });
-    }, [user, userData, authLoading, router, toast]);
+        setPendingEmail(email);
+    }, [user, authLoading, router]);
 
     // Resend countdown timer
     useEffect(() => {
@@ -116,38 +96,62 @@ export default function OtpClient() {
             return;
         }
 
+        if (!pendingEmail) return;
         setVerifying(true);
 
         try {
-            const expectedOtp = activeOtpCode || userData?.otpCode || (typeof window !== "undefined" ? sessionStorage.getItem(`otp_${user?.id}`) : "");
+            // InsForge checks the real code and creates the logged-in session
+            const { data, error } = await insforge.auth.verifyEmail({ email: pendingEmail, otp: enteredOtp });
 
-            // Verification logic: check entered OTP against expected OTP or universal test code '123456'
-            if (enteredOtp === expectedOtp || enteredOtp === "123456" || (expectedOtp && enteredOtp === expectedOtp.trim())) {
-                if (user?.id) {
-                    await updateDocInInsforge("users", user.id, {
-                        isOtpVerified: true,
-                        otpCode: null,
-                    });
-                    if (typeof window !== "undefined") {
-                        sessionStorage.removeItem(`otp_${user.id}`);
-                    }
-                    await refreshUserData();
-                }
-
-                toast({
-                    title: "تصدیق کامیاب!",
-                    description: "آپ کا کھاتہ کامیابی سے تصدیق ہو گیا ہے۔",
-                });
-
-                await new Promise((r) => setTimeout(r, 600));
-                window.location.href = "/chats";
-            } else {
+            if (error || !data?.user) {
                 toast({
                     variant: "destructive",
                     title: "تصدیق ناکام",
                     description: "درج کردہ او ٹی پی کوڈ غلط ہے۔ براہ کرم دوبارہ کوشش کریں۔",
                 });
+                return;
             }
+
+            const verifiedUser = data.user;
+
+            // Create / update the app profile now that a session exists
+            try {
+                const existing = await getDocFromInsforge<any>("users", verifiedUser.id);
+                if (existing) {
+                    await updateDocInInsforge("users", verifiedUser.id, { isOtpVerified: true, otpCode: null });
+                } else {
+                    const storedName = (typeof window !== "undefined" ? sessionStorage.getItem("amik_pending_verify_name") : "") || "";
+                    const username = storedName || (verifiedUser.profile as any)?.name || pendingEmail.split("@")[0];
+                    await setDocInInsforge("users", verifiedUser.id, {
+                        name: username,
+                        displayName: username,
+                        email: pendingEmail,
+                        avatarUrl: `https://placehold.co/100x100.png?text=${username.charAt(0)}`,
+                        photoURL: `https://placehold.co/100x100.png?text=${username.charAt(0)}`,
+                        createdAt: new Date(),
+                        lastSeen: new Date(),
+                        isOnline: true,
+                        isOtpVerified: true,
+                        otpCode: null,
+                    });
+                }
+            } catch (profileError) {
+                console.error("Profile setup after OTP failed:", profileError);
+            }
+
+            if (typeof window !== "undefined") {
+                sessionStorage.removeItem("amik_pending_verify_email");
+                sessionStorage.removeItem("amik_pending_verify_name");
+                sessionStorage.removeItem(`otp_${verifiedUser.id}`);
+            }
+
+            toast({
+                title: "تصدیق کامیاب!",
+                description: "آپ کا کھاتہ کامیابی سے تصدیق ہو گیا ہے۔",
+            });
+
+            await new Promise((r) => setTimeout(r, 600));
+            window.location.href = "/chats";
         } catch (error: any) {
             console.error("OTP verification error:", error);
             toast({
@@ -161,26 +165,18 @@ export default function OtpClient() {
     };
 
     const handleResend = async () => {
-        if (resendCountdown > 0 || !user?.id) return;
+        if (resendCountdown > 0 || !pendingEmail) return;
         setResending(true);
 
         try {
-            const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-            await updateDocInInsforge("users", user.id, {
-                otpCode: newOtp,
-                isOtpVerified: false,
-            });
+            const { error } = await insforge.auth.resendVerificationEmail({ email: pendingEmail });
+            if (error) throw error;
 
-            if (typeof window !== "undefined") {
-                sessionStorage.setItem(`otp_${user.id}`, newOtp);
-            }
-
-            setActiveOtpCode(newOtp);
             setResendCountdown(30);
 
             toast({
                 title: "نیا او ٹی پی بھیج دیا گیا!",
-                description: `آپ کا نیا تصدیقی کوڈ ہے: ${newOtp}`,
+                description: "آپ کے ای میل پر نیا تصدیقی کوڈ بھیج دیا گیا ہے۔",
                 duration: 10000,
             });
         } catch (error: any) {
@@ -195,7 +191,20 @@ export default function OtpClient() {
         }
     };
 
-    if (authLoading || !user || (userData && userData.isOtpVerified !== false)) {
+    // Leave the OTP screen and log in with another account
+    const handleOtherAccount = () => {
+        if (typeof window !== "undefined") {
+            sessionStorage.removeItem("amik_pending_verify_email");
+            sessionStorage.removeItem("amik_pending_verify_name");
+        }
+        if (user) {
+            signOut();
+        } else {
+            window.location.href = "/login";
+        }
+    };
+
+    if (authLoading || user || !pendingEmail) {
         return (
             <div className="relative flex min-h-screen w-full items-center justify-center bg-background p-4">
                 <LoadingOverlay />
@@ -215,9 +224,9 @@ export default function OtpClient() {
                     <CardHeader className="text-center pb-4">
                         <CardTitle className="text-2xl font-bold">او ٹی پی تصدیق</CardTitle>
                         <CardDescription className="mt-2 text-sm text-muted-foreground dir-rtl">
-                            {user?.email ? (
+                            {pendingEmail ? (
                                 <span>
-                                    آپ کے ای میل <span className="font-semibold text-foreground">{user.email}</span> پر 6 ہندسوں کا کوڈ بھیج دیا گیا ہے۔
+                                    آپ کے ای میل <span className="font-semibold text-foreground">{pendingEmail}</span> پر 6 ہندسوں کا کوڈ بھیج دیا گیا ہے۔
                                 </span>
                             ) : (
                                 <span>براہ کرم اپنا 6 ہندسوں کا تصدیقی کوڈ درج کریں</span>
@@ -256,14 +265,6 @@ export default function OtpClient() {
                             </Button>
                         </form>
 
-                        {/* Active OTP Code Display for quick testing */}
-                        {activeOtpCode && (
-                            <div className="p-3 bg-muted/50 rounded-lg text-center border text-xs text-muted-foreground">
-                                <span className="block font-medium mb-1">ٹیسٹ کوڈ (Test OTP Code):</span>
-                                <span className="font-mono text-base font-bold text-accent tracking-widest">{activeOtpCode}</span>
-                            </div>
-                        )}
-
                         <div className="space-y-3 pt-2 text-center border-t text-sm">
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                                 <span>کوڈ موصول نہیں ہوا؟</span>
@@ -294,7 +295,7 @@ export default function OtpClient() {
                                     variant="outline"
                                     size="sm"
                                     className="w-full text-xs text-muted-foreground flex items-center justify-center gap-1.5"
-                                    onClick={() => signOut()}
+                                    onClick={handleOtherAccount}
                                 >
                                     <LogOut className="h-3.5 w-3.5" />
                                     <span>دیگر کھاتے سے لاگ ان کریں</span>

@@ -66,6 +66,26 @@ export default function LoginClient() {
             let errorMessage = 'داخلہ ناکام ہوا۔ براہ کرم اپنے اسناد چیک کریں۔';
 
             const errorStr = error.message || String(error);
+
+            // Signed up but email not verified yet: send a fresh OTP and open /otp
+            if (/verif/i.test(errorStr) || error.statusCode === 403) {
+                try {
+                    await insforge.auth.resendVerificationEmail({ email: email.trim() });
+                } catch (resendError) {
+                    console.error("Resend verification failed:", resendError);
+                }
+                if (typeof window !== 'undefined') {
+                    sessionStorage.setItem('amik_pending_verify_email', email.trim());
+                }
+                toast({
+                    title: 'ای میل کی تصدیق باقی ہے',
+                    description: 'آپ کے ای میل پر 6 ہندسوں کا کوڈ بھیج دیا گیا ہے۔',
+                    duration: 5000,
+                });
+                setLoading(false);
+                window.location.href = '/otp';
+                return;
+            }
             if (error.statusCode === 401 || errorStr.includes('Invalid credentials') || errorStr.includes('invalid-credential')) {
                 errorMessage = 'غلط ای میل یا خفیہ کوڈ۔ براہ کرم دوبارہ کوشش کریں۔';
             } else if (error.statusCode === 404) {

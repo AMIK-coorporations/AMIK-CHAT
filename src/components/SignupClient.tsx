@@ -63,42 +63,47 @@ export default function SignupClient() {
             });
 
             if (authError) throw authError;
-            if (!authData?.user) throw new Error("سائن اپ ناکام ہو گیا۔");
 
-            const userId = authData.user.id;
-            const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-            const userDoc = {
-                name: username,
-                displayName: username,
-                email: email,
-                avatarUrl: `https://placehold.co/100x100.png?text=${username.charAt(0)}`,
-                photoURL: `https://placehold.co/100x100.png?text=${username.charAt(0)}`,
-                createdAt: new Date(),
-                lastSeen: new Date(),
-                isOnline: true,
-                isOtpVerified: false,
-                otpCode: generatedOtp
-            };
-
-            // Store in sessionStorage immediately
+            // او ٹی پی اب InsForge خود ای میل پر بھیجتا ہے (requireEmailVerification)۔
+            // تصدیق تک کوئی سیشن نہیں ہوتا، اس لیے ای میل اور نام محفوظ کر کے /otp پر بھیجیں۔
+            // پروفائل تصدیق کے بعد OtpClient میں بنتی ہے۔
             if (typeof window !== 'undefined') {
-                sessionStorage.setItem(`otp_${userId}`, generatedOtp);
+                sessionStorage.setItem('amik_pending_verify_email', email.trim());
+                sessionStorage.setItem('amik_pending_verify_name', username.trim());
             }
 
-            // Create in InsForge Database
-            try {
-                console.log("Creating profile in InsForge...", userId);
-                await setDocInInsforge('users', userId, userDoc);
-                console.log("InsForge profile created with OTP");
-            } catch (error) {
-                console.error("InsForge profile creation failed:", error);
+            // Already verified (verification turned off on the project): session exists.
+            if (authData?.accessToken && authData?.user) {
+                const userId = authData.user.id;
+                const userDoc = {
+                    name: username,
+                    displayName: username,
+                    email: email,
+                    avatarUrl: `https://placehold.co/100x100.png?text=${username.charAt(0)}`,
+                    photoURL: `https://placehold.co/100x100.png?text=${username.charAt(0)}`,
+                    createdAt: new Date(),
+                    lastSeen: new Date(),
+                    isOnline: true,
+                    isOtpVerified: true,
+                    otpCode: null
+                };
+                try {
+                    await setDocInInsforge('users', userId, userDoc);
+                } catch (error) {
+                    console.error("InsForge profile creation failed:", error);
+                }
+                if (typeof window !== 'undefined') {
+                    sessionStorage.removeItem('amik_pending_verify_email');
+                    sessionStorage.removeItem('amik_pending_verify_name');
+                }
+                window.location.href = '/chats';
+                return;
             }
 
             // Show success message
             toast({
                 title: 'کھاتہ بن گیا!',
-                description: `آپ کا کھاتہ کامیابی سے بن گیا ہے۔ او ٹی پی صفحہ کھولا جا رہا ہے...`,
+                description: `آپ کے ای میل پر 6 ہندسوں کا کوڈ بھیج دیا گیا ہے۔ او ٹی پی صفحہ کھولا جا رہا ہے...`,
                 duration: 5000,
             });
 

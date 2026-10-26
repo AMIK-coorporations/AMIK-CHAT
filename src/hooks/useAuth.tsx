@@ -106,15 +106,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(u);
 
         // Fetch detailed user profile from database
+        // A session only exists after InsForge verified the email (OTP) or
+        // after Google/GitHub sign-in, so the app-level OTP flag is cleared here.
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem(`otp_${u.id}`);
+        }
+
         const dbUser = await getDocFromInsforge<User>('users', u.id);
         if (dbUser) {
-          setUserData(dbUser);
+          if (dbUser.isOtpVerified === false) {
+            try {
+              await updateDocInInsforge('users', u.id, { isOtpVerified: true, otpCode: null });
+            } catch (err) {
+              console.error("Failed to clear OTP flag:", err);
+            }
+            setUserData({ ...dbUser, isOtpVerified: true, otpCode: undefined });
+          } else {
+            setUserData(dbUser);
+          }
         } else {
           // If no profile in DB yet, create one from Auth metadata (New Signup via OAuth)
           const meta = (u as any).user_metadata || u.metadata || {};
           const displayName = meta.full_name || meta.name || meta.displayName || u.email?.split('@')[0] || 'User';
           const avatarUrl = meta.avatar_url || meta.picture || meta.avatar || `https://placehold.co/100x100.png?text=${displayName.charAt(0)}`;
-          const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
           const newUser: User = {
             id: u.id,
@@ -126,16 +140,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             createdAt: new Date(),
             lastSeen: new Date(),
             isOnline: true,
-            isOtpVerified: false,
-            otpCode: generatedOtp
+            isOtpVerified: true
           };
 
           // Save to InsForge Database
           try {
             await setDocInInsforge('users', u.id, newUser);
-            if (typeof window !== 'undefined') {
-              sessionStorage.setItem(`otp_${u.id}`, generatedOtp);
-            }
             setUserData(newUser);
           } catch (err) {
             console.error("Failed to create user profile in DB:", err);
