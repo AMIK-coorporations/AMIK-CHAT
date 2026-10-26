@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, LogOut, Settings, UserCircle, QrCode, Plus, MessageCircle, UserPlus, ScanLine, Landmark, Copy, FileText } from "lucide-react";
+import { ChevronRight, Settings, UserCircle, QrCode, Plus, MessageCircle, UserPlus, ScanLine, Landmark, Copy, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { uploadUserAvatarReliable, downloadImage } from '@/lib/avatarService';
 import { useToast } from '@/hooks/use-toast';
 import React from "react";
+import AnimatedDoorIcon from "@/components/AnimatedDoorIcon";
 
 
 export default function MePage() {
@@ -58,11 +59,19 @@ export default function MePage() {
     return () => clearTimeout(timeout);
   }, [authLoading, userData, user, toast]);
 
+  const [loggingOut, setLoggingOut] = React.useState(false);
+
   const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    // پہلے اینیمیشن مکمل ہو، پھر اصل لاگ آؤٹ
+    const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    await new Promise((resolve) => setTimeout(resolve, reduceMotion ? 0 : 900));
     try {
       await signOut();
     } catch (error) {
       console.error("Error signing out: ", error);
+      setLoggingOut(false);
       toast({
         variant: 'destructive',
         title: 'خرابی',
@@ -204,8 +213,8 @@ export default function MePage() {
           </CardContent>
         </Card>
 
-        <Button variant="destructive" className="w-full" onClick={handleLogout}>
-          <LogOut className="h-4 w-4 mr-2" />
+        <Button variant="destructive" className="w-full" onClick={handleLogout} aria-busy={loggingOut}>
+          <AnimatedDoorIcon direction="out" active={loggingOut} className="mr-2" />
           کھاتہ خروج
         </Button>
       </div>

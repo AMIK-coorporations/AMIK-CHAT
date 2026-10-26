@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import AnimatedDoorIcon from '@/components/AnimatedDoorIcon';
 import { useToast } from "@/hooks/use-toast";
 import { insforge } from "@/lib/insforge";
 import { useAuth } from "@/hooks/useAuth";
@@ -165,6 +166,7 @@ export default function SignupClient() {
                             <Button type="submit" className="w-full" disabled={loading}>
                                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                                 کھاتہ بنائیں
+                                <AnimatedDoorIcon direction="in" active={loading} />
                             </Button>
                         </form>
                         <div className="relative my-4">

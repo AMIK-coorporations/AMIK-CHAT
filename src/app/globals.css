@@ -89,3 +89,87 @@
     transform: rotate(360deg);
   }
 }
+/* ===== اینیمیٹڈ دروازہ آئیکن (داخل ہوں / کھاتہ بنائیں / کھاتہ خروج) ===== */
+.amik-door {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.amik-door__svg {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible;
+  fill: currentColor;
+}
+.amik-door__frame { fill: currentColor; opacity: 0.35; }
+.amik-door__panel {
+  transform-box: fill-box;
+  transform-origin: right center;
+  transition: transform 250ms ease;
+}
+.amik-door__knob { fill: currentColor; opacity: 0.4; }
+.amik-door__figure {
+  transform-box: view-box;
+  transform-origin: 50px 86px;
+  transition: transform 250ms ease;
+}
+.amik-door__leg1, .amik-door__leg2, .amik-door__arm1, .amik-door__arm2 {
+  transform-box: fill-box;
+  transform-origin: top center;
+}
+
+/* hover: دروازہ ہلکا کھلتا ہے اور آدمی ایک قدم بڑھتا ہے */
+button:hover .amik-door:not(.amik-door--active) .amik-door__panel { transform: scaleX(0.75); }
+button:hover .amik-door--out:not(.amik-door--active) .amik-door__figure { transform: translateX(-4px); }
+button:hover .amik-door--in:not(.amik-door--active) .amik-door__figure { transform: translateX(4px); }
+
+/* چلنے کی حرکت */
+.amik-door--active .amik-door__leg1 { animation: amik-door-step 0.24s ease-in-out infinite alternate; }
+.amik-door--active .amik-door__leg2 { animation: amik-door-step 0.24s ease-in-out infinite alternate-reverse; }
+.amik-door--active .amik-door__arm1 { animation: amik-door-step 0.24s ease-in-out infinite alternate-reverse; }
+.amik-door--active .amik-door__arm2 { animation: amik-door-step 0.24s ease-in-out infinite alternate; }
+@keyframes amik-door-step {
+  from { transform: rotate(-14deg); }
+  to   { transform: rotate(14deg); }
+}
+
+/* کھاتہ خروج: دروازہ کھلتا ہے، آدمی باہر نکلتا ہے، دروازہ زور سے بند، آدمی گر جاتا ہے */
+.amik-door--out.amik-door--active .amik-door__panel { animation: amik-door-out-panel 0.9s ease forwards; }
+.amik-door--out.amik-door--active .amik-door__figure { animation: amik-door-out-figure 0.9s ease-in forwards; }
+@keyframes amik-door-out-panel {
+  0%   { transform: scaleX(1); }
+  25%  { transform: scaleX(0.25); }
+  55%  { transform: scaleX(0.25); }
+  65%  { transform: scaleX(1.08); }
+  75%, 100% { transform: scaleX(1); }
+}
+@keyframes amik-door-out-figure {
+  0%   { transform: translate(0, 0) rotate(0); opacity: 1; }
+  45%  { transform: translate(-22px, 0) rotate(0); opacity: 1; }
+  65%  { transform: translate(-30px, 0) rotate(-20deg); opacity: 1; }
+  100% { transform: translate(-36px, 90px) rotate(-75deg); opacity: 0; }
+}
+
+/* داخل ہوں / کھاتہ بنائیں: دروازہ کھلتا ہے، آدمی اندر جاتا ہے، دروازہ بند */
+.amik-door--in.amik-door--active .amik-door__panel { animation: amik-door-in-panel 0.9s ease forwards; }
+.amik-door--in.amik-door--active .amik-door__figure { animation: amik-door-in-figure 0.9s ease-in-out forwards; }
+@keyframes amik-door-in-panel {
+  0%   { transform: scaleX(1); }
+  20%  { transform: scaleX(0.2); }
+  70%  { transform: scaleX(0.2); }
+  85%  { transform: scaleX(1.06); }
+  100% { transform: scaleX(1); }
+}
+@keyframes amik-door-in-figure {
+  0%   { transform: translateX(0); opacity: 1; }
+  70%  { transform: translateX(26px); opacity: 1; }
+  80%  { transform: translateX(30px); opacity: 0; }
+  100% { transform: translateX(30px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .amik-door *, .amik-door { animation: none !important; transition: none !important; }
+}

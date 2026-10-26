@@ -13,6 +13,7 @@ import { insforge } from "@/lib/insforge";
 import { useAuth } from "@/hooks/useAuth";
 import AppLogo from '@/components/AppLogo';
 import { Loader2 } from 'lucide-react';
+import AnimatedDoorIcon from '@/components/AnimatedDoorIcon';
 
 export default function LoginClient() {
     const router = useRouter();
@@ -144,6 +145,7 @@ export default function LoginClient() {
                             <Button type="submit" className="w-full" disabled={loading}>
                                 {loading && <span className="mr-2 inline-flex"><div className="amik-spinner w-4 h-4"><span className="amik-spinner-dot" /></div></span>}
                                 داخل ہوں
+                                <AnimatedDoorIcon direction="in" active={loading} />
                             </Button>
                         </form>
                         <div className="relative my-4">
