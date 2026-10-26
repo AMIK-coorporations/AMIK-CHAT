@@ -92,8 +92,15 @@
 /* ===== اینیمیٹڈ دروازہ آئیکن (داخل ہوں / کھاتہ بنائیں / کھاتہ خروج) ===== */
 .amik-door {
   display: inline-flex;
-  width: 1.5rem;
-  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0.2rem;
+  border-radius: 9999px;
+  background: #ffffff;
+  color: #2563eb; /* نمایاں نیلا رنگ تاکہ اینیمیشن صاف نظر آئے */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   flex-shrink: 0;
   overflow: visible;
   pointer-events: none;
@@ -104,13 +111,15 @@
   overflow: visible;
   fill: currentColor;
 }
-.amik-door__frame { fill: currentColor; opacity: 0.35; }
+.amik-door__frame { fill: #93c5fd; opacity: 1; }
 .amik-door__panel {
+  fill: #2563eb;
   transform-box: fill-box;
   transform-origin: right center;
   transition: transform 250ms ease;
 }
-.amik-door__knob { fill: currentColor; opacity: 0.4; }
+.amik-door__knob { fill: #ffffff; opacity: 1; }
+.amik-door__figure { fill: #0f172a; }
 .amik-door__figure {
   transform-box: view-box;
   transform-origin: 50px 86px;
