@@ -55,7 +55,7 @@ export default function WhatsNewPage() {
         <h1 className="flex-1 truncate text-lg font-semibold">نیا کیا ہے</h1>
       </header>
 
-      <div className="p-4" dir="rtl">
+      <div className="p-4">
         <Card>
           <CardContent className="p-0">
             <div className="divide-y">
@@ -64,7 +64,7 @@ export default function WhatsNewPage() {
                   key={i}
                   type="button"
                   onClick={() => setSelected(i)}
-                  className="flex w-full items-center gap-3 p-4 text-right transition-all hover:bg-muted/50 active:scale-[0.98] animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500"
+                  className="flex w-full items-center gap-3 p-4 text-left transition-all hover:bg-muted/50 active:scale-[0.98] animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500"
                   style={{ animationDelay: `${i * 90}ms` }}
                 >
                   <Sparkles className="h-6 w-6 text-accent shrink-0" />
@@ -77,7 +77,7 @@ export default function WhatsNewPage() {
                     </div>
                     <p className="text-xs text-muted-foreground">{u.date}</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 rotate-180 text-muted-foreground" />
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </button>
               ))}
             </div>
