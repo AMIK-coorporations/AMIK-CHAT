@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, Settings, UserCircle, QrCode, Plus, MessageCircle, UserPlus, ScanLine, Landmark, Copy, FileText } from "lucide-react";
+import { ChevronRight, Settings, UserCircle, QrCode, Plus, MessageCircle, UserPlus, ScanLine, Landmark, Copy, FileText, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -202,6 +202,11 @@ export default function MePage() {
               <Link href="/me/settings" className="flex items-center p-4 transition-colors hover:bg-muted/50">
                 <Settings className="h-6 w-6 text-accent mr-4" />
                 <span className="flex-1 font-medium">ترتیبات</span>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Link>
+              <Link href="/me/whats-new" className="flex items-center p-4 transition-colors hover:bg-muted/50">
+                <Sparkles className="h-6 w-6 text-accent mr-4" />
+                <span className="flex-1 font-medium">نیا کیا ہے</span>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Link>
               <Link href="https://docs.amikchat.site" className="flex items-center p-4 transition-colors hover:bg-muted/50">
